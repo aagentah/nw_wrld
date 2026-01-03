@@ -14,33 +14,33 @@ Visuals can be triggered via the built-in 16-step sequencer or by configuring ex
 - **Built-in 16-step pattern sequencer** - Create rhythmic audiovisual compositions without external hardware
 - **External MIDI/OSC support** - Connect Ableton Live, TouchOSC, or any MIDI/OSC source for live performance
 - **Visual module system** - Build custom visuals with p5.js, Three.js, D3.js, or vanilla JavaScript
-- **Hot module reloading** - Edit modules and see changes instantly during development
+- **Hot module reloading** - Edit modules and see changes instantly
+- **Project folder workflow** - Self-contained, portable projects with modules, assets, and data
 - **Flexible method mapping** - Trigger any visual method with sequencer patterns or external signals
 
 ---
 
-## Prerequisites
+## Installation
 
-**Required:**
+### For Users (Recommended)
 
-- **Node.js** version 18 or higher ([Download here](https://nodejs.org/))
-- Basic familiarity with terminal/command line
+Download and install the DMG from [Releases](https://github.com/aagentah/nw_wrld/releases)
 
-**Optional (for live performance with external control):**
+1. Open the DMG and drag nw_wrld to Applications
+2. Launch nw_wrld
+3. Select a folder for your project (or create a new one)
+4. Start creating immediately with 16 included starter modules
 
-- **A DAW** that outputs MIDI (Ableton Live, FL Studio, Logic Pro, etc.)
-- **MIDI routing** setup:
-  - **Mac**: IAC Driver (built-in) - [Setup Guide](https://help.ableton.com/hc/en-us/articles/209774225-Using-virtual-MIDI-buses)
-  - **Windows**: loopMIDI or similar virtual MIDI port
+**No Node.js, terminal, or coding experience required to get started.**
 
----
+### For Developers
 
-## Quick Start
+Build from source to contribute or customize:
 
-Install and run:
+**Prerequisites:** Node.js v18+ and basic terminal knowledge
 
 ```bash
-# 1. Clone or download this repository
+# 1. Clone the repository
 git clone https://github.com/aagentah/nw_wrld.git
 cd nw_wrld
 
@@ -55,6 +55,50 @@ Two windows will open:
 
 - **Dashboard**: Control center for creating tracks, programming patterns, and configuring visuals
 - **Projector**: Visual output window
+
+---
+
+## Project Folders
+
+nw_wrld uses a **project folder** model. Each project is a self-contained folder containing your modules, assets, and data.
+
+### What's Inside a Project Folder
+
+```
+MyProject/
+├── modules/           # Visual modules (hot-reloadable JavaScript files)
+│   ├── Text.js
+│   ├── GridOverlay.js
+│   ├── SpinningCube.js
+│   └── ...16 starter modules
+├── assets/            # Images, JSON, and other resources
+│   ├── images/
+│   │   └── blueprint.png
+│   └── json/
+│       └── meteor.json
+└── nw_wrld_data/      # Tracks, settings, and recordings
+    └── json/
+```
+
+### First Launch Experience
+
+When you first launch nw_wrld, you'll be prompted to select or create a project folder. The app automatically scaffolds a working project with:
+
+- **16 starter modules** - Ready-to-use examples (2D, 3D, text, data visualization)
+- **Sample assets** - Images and JSON data files
+- **Data storage** - Configuration, tracks, and recordings
+
+### Portability
+
+Projects are completely portable - copy the folder to share with others, work across machines, or back up your work. Everything needed to run your audiovisual compositions is contained in one folder.
+
+### Lost Project?
+
+If your project folder is deleted, moved, or disconnected (e.g., external drive unplugged), nw_wrld will detect the issue and prompt you to reselect or choose a different project.
+
+---
+
+## Quick Start
 
 ### 60-Second Test
 
@@ -116,7 +160,14 @@ The built-in sequencer is perfect for testing modules and creating standalone au
 
 ## Advanced: External MIDI/OSC Control
 
-For live performance with external hardware:
+For live performance with external hardware, you can connect MIDI controllers or DAWs.
+
+### Optional Prerequisites
+
+- **A DAW** that outputs MIDI (Ableton Live, FL Studio, Logic Pro, etc.)
+- **MIDI routing** setup:
+  - **Mac**: IAC Driver (built-in) - [Setup Guide](https://help.ableton.com/hc/en-us/articles/209774225-Using-virtual-MIDI-buses)
+  - **Windows**: loopMIDI or similar virtual MIDI port
 
 ### Step 1: Configure MIDI Routing
 
@@ -152,12 +203,43 @@ For live performance with external hardware:
 
 ## Creating Visual Modules
 
-Modules are JavaScript classes that extend `ModuleBase`. Place them in `src/projector/modules/`.
+Modules are JavaScript files in your **project's `modules/` folder**. Edit them with any text editor and nw_wrld hot-reloads automatically.
 
-See the [Module Development Guide](MODULE_DEVELOPMENT.md) for complete documentation on creating custom modules, including:
+### Quick Module Creation
+
+1. Navigate to your project folder
+2. Open the `modules/` directory
+3. Create or edit a `.js` file
+4. Save → nw_wrld detects changes and reloads
+
+### Using the nwWrldSdk
+
+Workspace modules use the global SDK to access functionality and assets:
+
+```javascript
+const { ModuleBase } = globalThis.nwWrldSdk || {};
+
+class MyModule extends ModuleBase {
+  static name = "MyModule";
+  static category = "2D";
+
+  async init() {
+    // Load images from workspace assets
+    const imgUrl = nwWrldSdk.assetUrl("images/blueprint.png");
+
+    // Load JSON data from workspace assets
+    const data = await nwWrldSdk.loadJson("json/data.json");
+  }
+}
+
+export default MyModule;
+```
+
+See the [Module Development Guide](MODULE_DEVELOPMENT.md) for complete documentation including:
 
 - Full module structure and lifecycle
 - Method definitions and option types
+- SDK API reference and asset loading
 - Library usage (p5.js, Three.js, D3.js)
 - Advanced patterns and best practices
 
@@ -185,56 +267,103 @@ Switch modes anytime - your tracks, modules, and methods remain the same. Only t
 
 ---
 
-## Example Modules
+## Starter Modules
 
-Study these modules in `src/projector/modules/`:
+Every new project includes 16 starter modules in your `modules/` folder:
 
-- **Text.js** - Simple text display and manipulation
-- **Corners.js** - DOM-based GUI element
-- **GridOverlay.js** - Canvas-based grid overlay
-- **ThreeTemplate.js** - Three.js 3D template
-- **AsteroidGraph.js** - Complex Three.js visualization
+**2D & UI:**
+
+- **Text** - Configurable text display and manipulation
+- **Corners** - DOM-based corner UI elements
+- **GridOverlay** - Canvas-based grid overlay
+- **GridDots** - Animated dot grid patterns
+- **Frame** - Border frame overlay
+- **Image** - Load images from workspace assets
+- **CodeColumns** - Animated code/text columns
+
+**3D Graphics:**
+
+- **SpinningCube** - Basic Three.js example
+- **CubeCube** - Nested cube visualization
+- **OrbitalPlane** - Orbital mechanics simulation
+- **LowEarthPoint** - Low earth orbit visualization
+
+**Data Visualization:**
+
+- **AsteroidGraph** - p5.js with workspace JSON data
+- **MathOrbitalMap** - Mathematical orbit mapping
+- **CloudPointIceberg** - 3D point cloud
+- **ZKProofVisualizer** - Zero-knowledge proof visualization
+
+**Getting Started:**
+
+- **HelloWorld** - Minimal working example
+
+Study these modules to learn patterns for 2D, 3D, text, and data visualization. All are fully editable in your project's `modules/` folder.
 
 ---
 
 ## Project Structure
+
+### Your Project Folder (Where You Work)
+
+```
+MyProject/
+├── modules/                    # ← YOUR MODULES GO HERE
+│   ├── Text.js
+│   ├── GridOverlay.js
+│   ├── SpinningCube.js
+│   ├── YourCustomModule.js    # Create your own modules here
+│   └── ...16 starter modules
+│
+├── assets/                     # ← YOUR ASSETS GO HERE
+│   ├── images/
+│   │   ├── blueprint.png      # Included starter asset
+│   │   └── your-image.png     # Add your own images
+│   └── json/
+│       ├── meteor.json         # Included starter dataset
+│       └── your-data.json      # Add your own data
+│
+└── nw_wrld_data/               # App data (auto-managed)
+    └── json/
+        ├── userData.json       # Tracks, settings, mappings
+        ├── appState.json       # Current app state
+        ├── config.json         # App configuration
+        └── recordingData.json  # Recording data
+```
+
+### Application Source (For Developers)
 
 ```
 nw_wrld/
 ├── src/
 │   ├── dashboard/              # React UI for control
 │   │   ├── Dashboard.js        # Main dashboard logic
-│   │   ├── modals/             # UI modals (settings, track creation, etc.)
+│   │   ├── modals/             # UI modals
 │   │   ├── components/         # Reusable components
 │   │   └── styles/             # Dashboard styles
 │   │
 │   ├── projector/              # Visual output window
 │   │   ├── Projector.js        # Main projector logic
-│   │   ├── modules/            # ← PUT YOUR MODULES HERE
-│   │   │   ├── Text.js
-│   │   │   ├── GridOverlay.js
-│   │   │   ├── Corners.js
-│   │   │   └── YourModule.js  # Your creations go here
-│   │   ├── templates/
-│   │   │   └── ThreeTemplate.js # 3D module template
-│   │   └── helpers/
-│   │       ├── moduleBase.js   # Base class (the foundation)
-│   │       └── threeBase.js    # Three.js base class
+│   │   ├── helpers/
+│   │   │   ├── moduleBase.js   # Base class (the foundation)
+│   │   │   └── threeBase.js    # Three.js base class
+│   │   └── templates/
+│   │       └── ThreeTemplate.js # 3D module template
 │   │
 │   ├── main/                   # Electron main process
-│   │   └── InputManager.js     # MIDI/OSC input handling
+│   │   ├── InputManager.js     # MIDI/OSC input handling
+│   │   ├── starter_modules/    # Starter modules (seeded into projects)
+│   │   └── workspaceStarterModules.js
 │   │
 │   ├── shared/
-│   │   ├── json/               # Configuration and user data
+│   │   ├── json/               # JSON file management
 │   │   ├── config/             # Default configuration
 │   │   ├── sequencer/          # Sequencer playback engine
 │   │   ├── midi/               # MIDI utilities
-│   │   ├── audio/              # Audio feedback
-│   │   └── styles/             # Global styles
+│   │   └── audio/              # Audio feedback
 │   │
-│   └── assets/                 # Project assets
-│       ├── images/             # Images (blueprint, overlays, etc.)
-│       └── json/               # Data files (orbits, meteors, fonts)
+│   └── renderer.js             # SDK initialization
 │
 ├── package.json
 └── README.md
@@ -244,20 +373,31 @@ nw_wrld/
 
 ## Configuration
 
-- **`src/shared/json/config.json`** - Edit to customize aspect ratios and background colors available in Dashboard settings
-- **`src/shared/json/userData.json`** - Stores tracks, mappings, and settings (automatically managed by Dashboard)
+Configuration files are stored in your project's `nw_wrld_data/json/` directory:
+
+- **`userData.json`** - Tracks, mappings, and settings (automatically managed)
+- **`appState.json`** - Current app state and workspace path (automatically managed)
+- **`config.json`** - App configuration, aspect ratios, background colors (automatically managed)
+- **`recordingData.json`** - Recording data (automatically managed)
+
+These files are managed by the Dashboard and typically don't require manual editing.
 
 ---
 
 ## Troubleshooting
 
-| Issue                 | Solution                                                  |
-| --------------------- | --------------------------------------------------------- |
-| Pattern not playing   | Check that methods are assigned to channels               |
-| Module doesn't appear | Check `export default`, verify `static name`, restart app |
-| Module hidden         | Trigger `show()` method or set `autoLoad: true`           |
-| No MIDI detected      | Enable IAC Driver/loopMIDI and verify DAW MIDI output     |
-| Method not triggering | Verify mapping, check method name match, check console    |
+| Issue                      | Solution                                                     |
+| -------------------------- | ------------------------------------------------------------ |
+| Project folder missing     | App will prompt to reselect - choose or create a new project |
+| Module doesn't appear      | Check `export default`, verify `static name`, save file      |
+| Module won't load          | Check console for syntax errors, verify SDK usage            |
+| Module hidden              | Trigger `show()` method or set `executeOnLoad: true`         |
+| Asset won't load           | Verify path is relative to `assets/` folder                  |
+| Pattern not playing        | Check that methods are assigned to channels                  |
+| No MIDI detected           | Enable IAC Driver/loopMIDI and verify DAW MIDI output        |
+| Method not triggering      | Verify mapping, check method name match, check console       |
+| Hot reload not working     | Check file is saved in project's `modules/` folder           |
+| App won't start (dev mode) | Close other dev servers (port 9000), run `npm install`       |
 
 ---
 
@@ -270,11 +410,31 @@ nw_wrld/
 
 ---
 
-## Building
+## Building for Distribution
+
+### Build the Renderer (Production Bundle)
 
 ```bash
 npm run build
 ```
+
+### Build macOS DMG
+
+```bash
+npm run dist:mac
+```
+
+This creates a distributable DMG in the `release/` directory.
+
+### Automated Releases
+
+The project uses GitHub Actions to automatically build and release DMGs:
+
+1. Tag a new version: `git tag v1.0.0`
+2. Push the tag: `git push origin v1.0.0`
+3. GitHub Actions builds the DMG and creates a release automatically
+
+See `.github/workflows/release-mac.yml` for the CI configuration.
 
 ---
 

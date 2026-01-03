@@ -108,5 +108,3 @@ class GridOverlay extends ModuleBase {
 }
 
 export default GridOverlay;
-
-

@@ -59,5 +59,3 @@ class Image extends ModuleBase {
 }
 
 export default Image;
-
-

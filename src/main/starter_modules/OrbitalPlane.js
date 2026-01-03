@@ -90,5 +90,3 @@ class OrbitalPlane extends ModuleBase {
 }
 
 export default OrbitalPlane;
-
-

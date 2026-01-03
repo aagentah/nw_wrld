@@ -4,7 +4,9 @@ const THREE = globalThis.THREE;
 class SpinningCube extends BaseThreeJsModule {
   static name = "SpinningCube";
   static category = "3D";
-  static methods = [...((BaseThreeJsModule && BaseThreeJsModule.methods) || [])];
+  static methods = [
+    ...((BaseThreeJsModule && BaseThreeJsModule.methods) || []),
+  ];
 
   constructor(container) {
     super(container);
@@ -31,5 +33,3 @@ class SpinningCube extends BaseThreeJsModule {
 }
 
 export default SpinningCube;
-
-

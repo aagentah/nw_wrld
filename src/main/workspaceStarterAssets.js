@@ -37,5 +37,3 @@ function ensureWorkspaceStarterAssets(workspacePath) {
 }
 
 module.exports = { ensureWorkspaceStarterAssets };
-
-

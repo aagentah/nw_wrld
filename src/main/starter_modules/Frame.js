@@ -251,5 +251,3 @@ class Frame extends ModuleBase {
 }
 
 export default Frame;
-
-
