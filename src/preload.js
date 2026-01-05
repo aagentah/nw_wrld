@@ -28,6 +28,16 @@ const nwWrldBridge = {
     isRequired: () => ipcRenderer.sendSync("bridge:project:isRequired"),
     isDirAvailable: () => ipcRenderer.sendSync("bridge:project:isDirAvailable"),
   },
+  sandbox: {
+    registerToken: (token) =>
+      ipcRenderer.sendSync("bridge:sandbox:registerToken", token),
+    unregisterToken: (token) =>
+      ipcRenderer.sendSync("bridge:sandbox:unregisterToken", token),
+    ensure: () => ipcRenderer.invoke("sandbox:ensure"),
+    request: (token, type, props) =>
+      ipcRenderer.invoke("sandbox:request", { token, type, props }),
+    destroy: () => ipcRenderer.invoke("sandbox:destroy"),
+  },
   workspace: {
     listModuleFiles: () =>
       ipcRenderer.invoke("bridge:workspace:listModuleFiles"),

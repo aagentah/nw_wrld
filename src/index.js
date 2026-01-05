@@ -1,6 +1,7 @@
 const {
   app,
   BrowserWindow,
+  BrowserView,
   ipcMain,
   protocol,
   screen,
@@ -35,6 +36,15 @@ protocol.registerSchemesAsPrivileged([
       corsEnabled: true,
     },
   },
+  {
+    scheme: "nw-assets",
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      corsEnabled: true,
+    },
+  },
 ]);
 
 if (process.platform === "darwin") {
@@ -53,6 +63,13 @@ let currentWorkspacePath = null;
 let currentProjectDir = null;
 let didRegisterAppLifecycleHandlers = false;
 const webContentsToProjectDir = new Map();
+const sandboxTokenToProjectDir = new Map();
+const sandboxOwnerWebContentsIdToTokens = new Map(); // ownerWebContentsId -> Set<token>
+const sandboxOwnerCleanupHooked = new Set(); // ownerWebContentsId
+let sandboxView = null;
+let sandboxViewWebContentsId = null;
+let activeSandboxToken = null;
+const pendingSandboxRequests = new Map(); // requestId -> { resolve, timeout }
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -207,6 +224,78 @@ const getProjectDirForEvent = (event) => {
   return currentProjectDir || null;
 };
 
+const registerSandboxToken = (event, token, projectDir) => {
+  const safeToken = String(token || "").trim();
+  if (!safeToken) return { ok: false, reason: "INVALID_TOKEN" };
+  const ownerWebContentsId =
+    typeof event?.sender?.id === "number" ? event.sender.id : null;
+  if (ownerWebContentsId == null)
+    return { ok: false, reason: "INVALID_SENDER" };
+
+  sandboxTokenToProjectDir.set(safeToken, {
+    projectDir,
+    ownerWebContentsId,
+    createdAt: Date.now(),
+  });
+
+  if (!sandboxOwnerWebContentsIdToTokens.has(ownerWebContentsId)) {
+    sandboxOwnerWebContentsIdToTokens.set(ownerWebContentsId, new Set());
+  }
+  sandboxOwnerWebContentsIdToTokens.get(ownerWebContentsId).add(safeToken);
+
+  if (!sandboxOwnerCleanupHooked.has(ownerWebContentsId)) {
+    sandboxOwnerCleanupHooked.add(ownerWebContentsId);
+    try {
+      event.sender.once("destroyed", () => {
+        const tokens =
+          sandboxOwnerWebContentsIdToTokens.get(ownerWebContentsId);
+        if (tokens && tokens.size) {
+          for (const t of tokens) {
+            try {
+              sandboxTokenToProjectDir.delete(t);
+            } catch {}
+          }
+        }
+        try {
+          sandboxOwnerWebContentsIdToTokens.delete(ownerWebContentsId);
+        } catch {}
+        try {
+          sandboxOwnerCleanupHooked.delete(ownerWebContentsId);
+        } catch {}
+      });
+    } catch {}
+  }
+
+  return { ok: true };
+};
+
+const unregisterSandboxToken = (token) => {
+  const safeToken = String(token || "").trim();
+  if (!safeToken) return false;
+  const entry = sandboxTokenToProjectDir.get(safeToken) || null;
+  const ownerWebContentsId =
+    entry && typeof entry.ownerWebContentsId === "number"
+      ? entry.ownerWebContentsId
+      : null;
+  try {
+    sandboxTokenToProjectDir.delete(safeToken);
+  } catch {}
+  if (typeof ownerWebContentsId === "number") {
+    const tokens = sandboxOwnerWebContentsIdToTokens.get(ownerWebContentsId);
+    if (tokens) {
+      try {
+        tokens.delete(safeToken);
+      } catch {}
+      if (tokens.size === 0) {
+        try {
+          sandboxOwnerWebContentsIdToTokens.delete(ownerWebContentsId);
+        } catch {}
+      }
+    }
+  }
+  return true;
+};
+
 const getFallbackJsonDirForMain = () => path.join(__dirname, "shared", "json");
 
 const getJsonStatusForProject = (projectDir) => {
@@ -258,6 +347,19 @@ ipcMain.on("bridge:project:isDirAvailable", (event) => {
   event.returnValue = Boolean(projectDir && isExistingDirectory(projectDir));
 });
 
+ipcMain.on("bridge:sandbox:registerToken", (event, token) => {
+  const projectDir = getProjectDirForEvent(event);
+  if (!projectDir || !isExistingDirectory(projectDir)) {
+    event.returnValue = { ok: false, reason: "PROJECT_DIR_MISSING" };
+    return;
+  }
+  event.returnValue = registerSandboxToken(event, token, projectDir);
+});
+
+ipcMain.on("bridge:sandbox:unregisterToken", (event, token) => {
+  event.returnValue = unregisterSandboxToken(token);
+});
+
 ipcMain.handle("bridge:workspace:listModuleFiles", async (event) => {
   const projectDir = getProjectDirForEvent(event);
   if (!projectDir || !isExistingDirectory(projectDir)) return [];
@@ -271,6 +373,7 @@ ipcMain.handle("bridge:workspace:listModuleFiles", async (event) => {
 });
 
 const MODULE_METADATA_MAX_BYTES = 16 * 1024;
+const SANDBOX_ASSET_TEXT_MAX_BYTES = 2 * 1024 * 1024;
 
 const readFileHeadUtf8 = async (filePath, maxBytes) => {
   let fh;
@@ -287,6 +390,328 @@ const readFileHeadUtf8 = async (filePath, maxBytes) => {
     } catch {}
   }
 };
+
+const readFileUtf8WithLimit = async (filePath, maxBytes) => {
+  try {
+    const stat = await fs.promises.stat(filePath);
+    const limit = Math.max(0, Number(maxBytes) || 0);
+    if (limit && stat.size > limit) return null;
+    return await fs.promises.readFile(filePath, "utf-8");
+  } catch {
+    return null;
+  }
+};
+
+const updateSandboxViewBounds = () => {
+  if (!sandboxView || !projector1Window || projector1Window.isDestroyed()) {
+    return;
+  }
+  try {
+    const [width, height] = projector1Window.getContentSize();
+    sandboxView.setBounds({ x: 0, y: 0, width, height });
+  } catch {}
+};
+
+const destroySandboxView = () => {
+  if (!sandboxView) return;
+  try {
+    projector1Window?.setBrowserView?.(null);
+  } catch {}
+  try {
+    sandboxView?.webContents?.destroy?.();
+  } catch {}
+  sandboxView = null;
+  sandboxViewWebContentsId = null;
+};
+
+const ensureSandboxView = (projectDir) => {
+  if (!projector1Window || projector1Window.isDestroyed()) return null;
+  if (
+    sandboxView &&
+    sandboxView.webContents &&
+    !sandboxView.webContents.isDestroyed()
+  ) {
+    try {
+      projector1Window.setBrowserView(sandboxView);
+      updateSandboxViewBounds();
+    } catch {}
+    return sandboxView;
+  }
+
+  try {
+    destroySandboxView();
+  } catch {}
+
+  sandboxView = new BrowserView({
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: true,
+      preload: path.join(__dirname, "sandboxPreload.js"),
+      enableRemoteModule: false,
+      backgroundThrottling: false,
+      webgl: true,
+      enableHardwareAcceleration: true,
+      additionalArguments: [
+        "--nwWrldRequireProject=1",
+        projectDir && typeof projectDir === "string"
+          ? `--nwWrldProjectDir=${projectDir}`
+          : null,
+      ].filter(Boolean),
+    },
+  });
+
+  try {
+    const wc = sandboxView.webContents;
+    sandboxViewWebContentsId = typeof wc?.id === "number" ? wc.id : null;
+    wc.on("render-process-gone", () => {
+      try {
+        if (activeSandboxToken) {
+          try {
+            unregisterSandboxToken(activeSandboxToken);
+          } catch {}
+        }
+        sandboxViewWebContentsId = null;
+        activeSandboxToken = null;
+        destroySandboxView();
+      } catch {}
+    });
+    wc.on("unresponsive", () => {
+      try {
+        if (activeSandboxToken) {
+          try {
+            unregisterSandboxToken(activeSandboxToken);
+          } catch {}
+        }
+        sandboxViewWebContentsId = null;
+        activeSandboxToken = null;
+        destroySandboxView();
+      } catch {}
+    });
+  } catch {}
+
+  try {
+    projector1Window.setBrowserView(sandboxView);
+    updateSandboxViewBounds();
+  } catch {}
+
+  return sandboxView;
+};
+
+const isProjectorEvent = (event) => {
+  try {
+    const senderId = event?.sender?.id;
+    return (
+      typeof senderId === "number" &&
+      projector1Window &&
+      !projector1Window.isDestroyed() &&
+      projector1Window.webContents &&
+      !projector1Window.webContents.isDestroyed() &&
+      senderId === projector1Window.webContents.id
+    );
+  } catch {
+    return false;
+  }
+};
+
+const sandboxRequestAllowedTypes = new Set([
+  "initTrack",
+  "invokeOnInstance",
+  "introspectModule",
+  "destroyTrack",
+]);
+
+const sendToSandbox = (payload) => {
+  if (
+    !sandboxView ||
+    !sandboxView.webContents ||
+    sandboxView.webContents.isDestroyed()
+  ) {
+    return false;
+  }
+  try {
+    sandboxView.webContents.send("sandbox:fromMain", payload);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const destroySandboxForProjector = (ownerWebContentsId) => {
+  if (activeSandboxToken) {
+    try {
+      unregisterSandboxToken(activeSandboxToken);
+    } catch {}
+    activeSandboxToken = null;
+  }
+
+  if (typeof ownerWebContentsId === "number") {
+    const tokens = sandboxOwnerWebContentsIdToTokens.get(ownerWebContentsId);
+    if (tokens && tokens.size) {
+      for (const t of tokens) {
+        try {
+          unregisterSandboxToken(t);
+        } catch {}
+      }
+    }
+  }
+
+  for (const [requestId, entry] of pendingSandboxRequests.entries()) {
+    try {
+      clearTimeout(entry.timeout);
+    } catch {}
+    try {
+      entry.resolve({ ok: false, error: "SANDBOX_DESTROYED" });
+    } catch {}
+    pendingSandboxRequests.delete(requestId);
+  }
+
+  try {
+    destroySandboxView();
+  } catch {}
+};
+
+ipcMain.handle("sandbox:ensure", async (event) => {
+  if (!isProjectorEvent(event)) return { ok: false, reason: "FORBIDDEN" };
+  const projectDir = getProjectDirForEvent(event);
+  if (!projectDir || !isExistingDirectory(projectDir)) {
+    return { ok: false, reason: "PROJECT_DIR_MISSING" };
+  }
+
+  const view = ensureSandboxView(projectDir);
+  if (!view || !view.webContents || view.webContents.isDestroyed()) {
+    return { ok: false, reason: "SANDBOX_VIEW_UNAVAILABLE" };
+  }
+
+  if (activeSandboxToken) {
+    const entry = sandboxTokenToProjectDir.get(activeSandboxToken) || null;
+    if (entry?.projectDir === projectDir) {
+      return { ok: true, token: activeSandboxToken };
+    }
+    try {
+      unregisterSandboxToken(activeSandboxToken);
+    } catch {}
+    activeSandboxToken = null;
+  }
+
+  const token = `nw_${Math.random().toString(16).slice(2)}_${Date.now()}`;
+  const reg = registerSandboxToken(event, token, projectDir);
+  if (!reg || reg.ok !== true) {
+    return { ok: false, reason: reg?.reason || "TOKEN_REGISTER_FAILED" };
+  }
+
+  const url = `nw-sandbox://app/moduleSandbox.html#token=${encodeURIComponent(
+    token
+  )}`;
+  try {
+    await view.webContents.loadURL(url);
+  } catch {
+    unregisterSandboxToken(token);
+    return { ok: false, reason: "SANDBOX_LOAD_FAILED" };
+  }
+
+  activeSandboxToken = token;
+  return { ok: true, token };
+});
+
+ipcMain.handle("sandbox:destroy", async (event) => {
+  if (!isProjectorEvent(event)) return { ok: false, reason: "FORBIDDEN" };
+  const ownerId =
+    typeof event?.sender?.id === "number" ? event.sender.id : null;
+  destroySandboxForProjector(ownerId);
+  return { ok: true };
+});
+
+ipcMain.handle("sandbox:request", async (event, payload) => {
+  if (!isProjectorEvent(event)) return { ok: false, error: "FORBIDDEN" };
+  const ownerId =
+    typeof event?.sender?.id === "number" ? event.sender.id : null;
+  const token = String(payload?.token || "").trim();
+  const type = String(payload?.type || "").trim();
+  const props = payload?.props || {};
+  if (!token) return { ok: false, error: "INVALID_TOKEN" };
+  if (!type || !sandboxRequestAllowedTypes.has(type)) {
+    return { ok: false, error: "INVALID_TYPE" };
+  }
+  const entry = sandboxTokenToProjectDir.get(token) || null;
+  if (!entry || entry.ownerWebContentsId !== ownerId) {
+    return { ok: false, error: "TOKEN_NOT_OWNED" };
+  }
+
+  const requestId = `${Date.now()}:${Math.random().toString(16).slice(2)}`;
+  const sent = sendToSandbox({
+    __nwWrldSandbox: true,
+    token,
+    type,
+    requestId,
+    props,
+  });
+  if (!sent) return { ok: false, error: "SANDBOX_UNAVAILABLE" };
+
+  return await new Promise((resolve) => {
+    const timeout = setTimeout(() => {
+      if (!pendingSandboxRequests.has(requestId)) return;
+      pendingSandboxRequests.delete(requestId);
+      resolve({ ok: false, error: "TIMEOUT" });
+    }, 8000);
+    pendingSandboxRequests.set(requestId, { resolve, timeout, token });
+  });
+});
+
+ipcMain.on("sandbox:toMain", async (event, payload) => {
+  const senderId =
+    typeof event?.sender?.id === "number" ? event.sender.id : null;
+  if (!senderId || senderId !== sandboxViewWebContentsId) return;
+  const data = payload;
+  if (!data || typeof data !== "object") return;
+
+  const token = String(data.token || "").trim();
+  const requestId = String(data.requestId || "").trim();
+  if (!token || !requestId) return;
+
+  if (data.__nwWrldSandboxResult) {
+    const pending = pendingSandboxRequests.get(requestId);
+    if (!pending) return;
+    if (pending.token !== token) return;
+    pendingSandboxRequests.delete(requestId);
+    try {
+      clearTimeout(pending.timeout);
+    } catch {}
+    try {
+      pending.resolve(data.result);
+    } catch {}
+    return;
+  }
+
+  if (data.__nwWrldSandbox && data.type === "sdk:readAssetText") {
+    if (!activeSandboxToken || token !== activeSandboxToken) {
+      return;
+    }
+    const entry = sandboxTokenToProjectDir.get(token) || null;
+    const projectDir = entry?.projectDir || null;
+    const relPath = String(data.props?.relPath || "");
+    let result = { ok: false, text: null };
+    if (projectDir && isExistingDirectory(projectDir)) {
+      const assetsDir = path.join(projectDir, "assets");
+      const fullPath = resolveWithinDir(assetsDir, relPath);
+      if (fullPath) {
+        const text = await readFileUtf8WithLimit(
+          fullPath,
+          SANDBOX_ASSET_TEXT_MAX_BYTES
+        );
+        if (typeof text === "string") {
+          result = { ok: true, text };
+        }
+      }
+    }
+    sendToSandbox({
+      __nwWrldSandboxResult: true,
+      token,
+      requestId,
+      result,
+    });
+  }
+});
 
 ipcMain.handle("bridge:workspace:listModuleSummaries", async (event) => {
   const projectDir = getProjectDirForEvent(event);
@@ -1129,6 +1554,14 @@ function createWindow(projectDir) {
   projector1Window.loadFile(
     path.join(__dirname, "projector", "views", "projector.html")
   );
+  projector1Window.on("resize", () => {
+    updateSandboxViewBounds();
+  });
+  projector1Window.on("closed", () => {
+    try {
+      destroySandboxView();
+    } catch {}
+  });
 
   // Create Dashboard Window with appropriate optimizations
   dashboardWindow = new BrowserWindow({
@@ -1244,6 +1677,48 @@ app.whenReady().then(() => {
         const filePath = allowed.get(pathname);
         if (!filePath) return callback({ error: -6 }); // net::ERR_FILE_NOT_FOUND
         return callback({ path: filePath });
+      } catch {
+        return callback({ error: -2 }); // net::FAILED
+      }
+    });
+  } catch {}
+
+  try {
+    protocol.registerFileProtocol("nw-assets", (request, callback) => {
+      try {
+        const u = new URL(request.url);
+        const pathname = u.pathname || "/";
+        const raw = pathname.startsWith("/") ? pathname.slice(1) : pathname;
+        const parts = raw.split("/").filter(Boolean);
+        const token = parts.length ? decodeURIComponent(parts[0]) : null;
+        const relPath =
+          parts.length > 1
+            ? parts
+                .slice(1)
+                .map((p) => decodeURIComponent(p))
+                .join("/")
+            : "";
+
+        if (!token || !sandboxTokenToProjectDir.has(token)) {
+          return callback({ error: -6 }); // net::ERR_FILE_NOT_FOUND
+        }
+
+        if (!relPath) {
+          return callback({ error: -6 }); // net::ERR_FILE_NOT_FOUND
+        }
+
+        const entry = sandboxTokenToProjectDir.get(token) || null;
+        const projectDir = entry?.projectDir || null;
+        if (!projectDir || !isExistingDirectory(projectDir)) {
+          return callback({ error: -6 }); // net::ERR_FILE_NOT_FOUND
+        }
+
+        const assetsDir = path.join(projectDir, "assets");
+        const fullPath = resolveWithinDir(assetsDir, relPath);
+        if (!fullPath) {
+          return callback({ error: -6 }); // net::ERR_FILE_NOT_FOUND
+        }
+        return callback({ path: fullPath });
       } catch {
         return callback({ error: -2 }); // net::FAILED
       }

@@ -159,9 +159,9 @@ const instancesById = new Map(); // instanceId -> { moduleType, instances: [] }
 let rpcSeq = 0;
 const pending = new Map();
 
-const postToParent = (payload) => {
+const postToHost = (payload) => {
   try {
-    window.parent.postMessage(payload, "*");
+    globalThis.nwSandboxIpc?.send?.(payload);
   } catch {}
 };
 
@@ -169,7 +169,7 @@ const rpcRequest = (type, props) =>
   new Promise((resolve, reject) => {
     const requestId = `${Date.now()}:${++rpcSeq}`;
     pending.set(requestId, { resolve, reject });
-    postToParent({
+    postToHost({
       __nwWrldSandbox: true,
       token: TOKEN,
       type,
@@ -288,8 +288,7 @@ const destroyTrack = () => {
   trackRoot = null;
 };
 
-window.addEventListener("message", async (event) => {
-  const data = event?.data;
+globalThis.nwSandboxIpc?.on?.(async (data) => {
   if (!data || typeof data !== "object") return;
 
   if (data.__nwWrldSandboxResult && data.token === TOKEN) {
@@ -308,7 +307,7 @@ window.addEventListener("message", async (event) => {
   const props = data.props || {};
 
   const respond = (result) => {
-    postToParent({
+    postToHost({
       __nwWrldSandboxResult: true,
       token: TOKEN,
       type,
@@ -454,4 +453,4 @@ window.addEventListener("message", async (event) => {
   }
 });
 
-postToParent({ __nwWrldSandboxReady: true, token: TOKEN });
+postToHost({ __nwWrldSandboxReady: true, token: TOKEN });

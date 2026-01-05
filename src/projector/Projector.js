@@ -21,132 +21,43 @@ const getBridge = () => globalThis.nwWrldBridge;
 
 const getMessaging = () => getBridge()?.messaging;
 
-const createSandboxToken = () =>
-  `nw_${Math.random().toString(16).slice(2)}_${Date.now()}`;
-
-const getSandboxPageUrl = () => {
-  try {
-    return "nw-sandbox://app/moduleSandbox.html";
-  } catch {
-    return null;
-  }
-};
-
 class TrackSandboxHost {
   constructor(modulesContainer) {
     this.modulesContainer = modulesContainer;
-    this.iframe = null;
-    this.token = createSandboxToken();
-    this.pending = new Map();
-    this.onMessage = this.onMessage.bind(this);
+    this.token = null;
     this.disposed = false;
   }
 
-  onMessage(event) {
-    if (this.disposed) return;
-    if (!this.iframe || event?.source !== this.iframe.contentWindow) return;
-    const data = event?.data;
-    if (!data || typeof data !== "object") return;
-    if (data.token !== this.token) return;
-
-    if (data.__nwWrldSandbox && data.type === "sdk:readAssetText") {
-      const requestId = data.requestId;
-      const relPath = data.props?.relPath;
-      const bridge = getBridge();
-      const fn = bridge?.workspace?.readAssetText;
-      const respond = (result) => {
-        try {
-          this.iframe.contentWindow.postMessage(
-            {
-              __nwWrldSandboxResult: true,
-              token: this.token,
-              requestId,
-              result,
-            },
-            "*"
-          );
-        } catch {}
-      };
-      if (typeof fn !== "function") {
-        respond({ ok: false, text: null });
-        return;
-      }
-      Promise.resolve()
-        .then(() => fn(relPath))
-        .then((text) => respond({ ok: true, text }))
-        .catch(() => respond({ ok: false, text: null }));
-      return;
+  async ensureSandbox() {
+    if (this.disposed) {
+      return { ok: false, reason: "DISPOSED" };
     }
-
-    if (!data.__nwWrldSandboxResult) return;
-    const requestId = data.requestId;
-    const pending = this.pending.get(requestId);
-    if (!pending) return;
-    this.pending.delete(requestId);
-    pending.resolve(data.result);
-  }
-
-  request(type, props) {
-    if (!this.iframe?.contentWindow) {
-      return Promise.resolve({ ok: false, error: "NO_IFRAME" });
+    const bridge = getBridge();
+    const ensure = bridge?.sandbox?.ensure;
+    if (typeof ensure !== "function") {
+      throw new Error(`[Projector] Sandbox bridge is unavailable.`);
     }
-    const requestId = `${Date.now()}:${Math.random().toString(16).slice(2)}`;
-    return new Promise((resolve) => {
-      this.pending.set(requestId, { resolve });
-      try {
-        this.iframe.contentWindow.postMessage(
-          {
-            __nwWrldSandbox: true,
-            token: this.token,
-            type,
-            requestId,
-            props: props || {},
-          },
-          "*"
-        );
-      } catch {
-        this.pending.delete(requestId);
-        resolve({ ok: false, error: "POSTMESSAGE_FAILED" });
-        return;
-      }
-      setTimeout(() => {
-        if (!this.pending.has(requestId)) return;
-        this.pending.delete(requestId);
-        resolve({ ok: false, error: "TIMEOUT" });
-      }, 8000);
-    });
+    const res = await ensure();
+    const token = String(res?.token || "").trim();
+    if (!res || res.ok !== true || !token) {
+      throw new Error(res?.reason || "SANDBOX_ENSURE_FAILED");
+    }
+    this.token = token;
+    return { ok: true, token };
   }
 
-  async ensureIframe() {
-    if (this.iframe && !this.iframe.isConnected) this.iframe = null;
-    if (this.iframe) return;
-
-    const pageUrl = getSandboxPageUrl();
-    if (!pageUrl) throw new Error(`[Projector] Sandbox page URL missing.`);
-
-    this.iframe = document.createElement("iframe");
-    this.iframe.setAttribute("sandbox", "allow-scripts");
-    this.iframe.style.cssText =
-      "position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:transparent;";
-    this.iframe.src = `${pageUrl}#token=${encodeURIComponent(this.token)}`;
-
-    try {
-      this.modulesContainer.textContent = "";
-      this.modulesContainer.appendChild(this.iframe);
-    } catch {}
-
-    await new Promise((resolve) => {
-      const done = () => resolve();
-      this.iframe.addEventListener("load", done, { once: true });
-      setTimeout(done, 3000);
-    });
-
-    window.addEventListener("message", this.onMessage);
+  async request(type, props) {
+    await this.ensureSandbox();
+    const bridge = getBridge();
+    const req = bridge?.sandbox?.request;
+    if (typeof req !== "function") {
+      return { ok: false, error: "SANDBOX_BRIDGE_UNAVAILABLE" };
+    }
+    return await req(this.token, type, props || {});
   }
 
-  async initTrack({ track, moduleSources, assetsBaseUrl }) {
-    await this.ensureIframe();
-    return await this.request("initTrack", {
+  initTrack({ track, moduleSources, assetsBaseUrl }) {
+    return this.request("initTrack", {
       track,
       moduleSources,
       assetsBaseUrl,
@@ -169,21 +80,12 @@ class TrackSandboxHost {
     return this.request("destroyTrack", {});
   }
 
-  destroy() {
+  async destroy() {
     this.disposed = true;
     try {
-      window.removeEventListener("message", this.onMessage);
+      await getBridge()?.sandbox?.destroy?.();
     } catch {}
-    try {
-      this.destroyTrack().catch(() => {});
-    } catch {}
-    try {
-      if (this.iframe && this.iframe.parentNode) {
-        this.iframe.parentNode.removeChild(this.iframe);
-      }
-    } catch {}
-    this.iframe = null;
-    this.pending.clear();
+    this.token = null;
   }
 }
 
@@ -198,23 +100,10 @@ const Projector = {
   trackModuleSources: null,
   restoreTrackNameAfterPreview: null,
   workspacePath: null,
-  getAssetsBaseUrl() {
-    if (this.assetsBaseUrl) return this.assetsBaseUrl;
-    const bridge = getBridge();
-    if (
-      !bridge ||
-      !bridge.workspace ||
-      typeof bridge.workspace.assetUrl !== "function"
-    ) {
-      return null;
-    }
-    try {
-      const url = bridge.workspace.assetUrl(".");
-      this.assetsBaseUrl = typeof url === "string" ? url : null;
-    } catch {
-      this.assetsBaseUrl = null;
-    }
-    return this.assetsBaseUrl;
+  getAssetsBaseUrlForSandboxToken(token) {
+    const safe = String(token || "").trim();
+    if (!safe) return null;
+    return `nw-assets://app/${encodeURIComponent(safe)}/`;
   },
   async loadWorkspaceModuleSource(moduleType) {
     if (!moduleType) return null;
@@ -564,27 +453,13 @@ const Projector = {
     const result = await (async () => {
       try {
         const src = await this.loadWorkspaceModuleSource(safeModuleId);
-        const assetsBaseUrl = this.getAssetsBaseUrl();
-        if (!assetsBaseUrl) {
-          throw new Error("ASSETS_BASE_URL_UNAVAILABLE");
+        if (!this.trackSandboxHost) {
+          this.trackSandboxHost = new TrackSandboxHost(null);
         }
-
-        const temp = document.createElement("div");
-        temp.style.cssText =
-          "position:absolute;left:-99999px;top:-99999px;width:1px;height:1px;overflow:hidden;";
-        document.body.appendChild(temp);
-
-        const host = new TrackSandboxHost(temp);
-        let initRes;
-        try {
-          await host.ensureIframe();
-          initRes = await host.introspectModule(src.moduleId, src.text);
-        } finally {
-          host.destroy();
-          try {
-            document.body.removeChild(temp);
-          } catch {}
-        }
+        const initRes = await this.trackSandboxHost.introspectModule(
+          src.moduleId,
+          src.text
+        );
 
         const displayName = initRes?.name || safeModuleId;
         return {
@@ -929,11 +804,6 @@ const Projector = {
       this.activeTrack = track;
       this.activeChannelHandlers = this.buildChannelHandlerMap(track);
 
-      const assetsBaseUrl = this.getAssetsBaseUrl();
-      if (!assetsBaseUrl) {
-        throw new Error("ASSETS_BASE_URL_UNAVAILABLE");
-      }
-
       const moduleSources = {};
       const seenTypes = new Set();
       for (const m of track.modules) {
@@ -947,6 +817,14 @@ const Projector = {
 
       if (!this.trackSandboxHost) {
         this.trackSandboxHost = new TrackSandboxHost(modulesContainer);
+      }
+
+      await this.trackSandboxHost.ensureSandbox();
+      const assetsBaseUrl = this.getAssetsBaseUrlForSandboxToken(
+        this.trackSandboxHost.token
+      );
+      if (!assetsBaseUrl) {
+        throw new Error("ASSETS_BASE_URL_UNAVAILABLE");
       }
 
       logger.log("⏳ [TRACK] Waiting for sandbox track init...");
@@ -1294,8 +1172,6 @@ const Projector = {
       logger.log(`🎨 [PREVIEW] Setting preview module name: ${moduleName}`);
       this.previewModuleName = moduleName;
       const previewKey = `preview_${moduleName}`;
-      const assetsBaseUrl = this.getAssetsBaseUrl();
-      if (!assetsBaseUrl) throw new Error("ASSETS_BASE_URL_UNAVAILABLE");
 
       const src = await this.loadWorkspaceModuleSource(moduleName);
       const moduleSources = { [moduleName]: { text: src?.text || "" } };
@@ -1311,6 +1187,12 @@ const Projector = {
       } catch {}
       this.trackSandboxHost = new TrackSandboxHost(modulesContainer);
       this.trackModuleSources = moduleSources;
+
+      await this.trackSandboxHost.ensureSandbox();
+      const assetsBaseUrl = this.getAssetsBaseUrlForSandboxToken(
+        this.trackSandboxHost.token
+      );
+      if (!assetsBaseUrl) throw new Error("ASSETS_BASE_URL_UNAVAILABLE");
 
       const track = {
         name: `preview:${moduleName}`,
