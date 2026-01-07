@@ -61,6 +61,8 @@ const nwWrldBridge = {
       ipcRenderer.send("bridge:workspace:showModuleInFolder", moduleName),
     assetUrl: (relPath) =>
       ipcRenderer.sendSync("bridge:workspace:assetUrl", relPath),
+    listAssets: (relDir) =>
+      ipcRenderer.invoke("bridge:workspace:listAssets", relDir),
     readAssetText: (relPath) =>
       ipcRenderer.invoke("bridge:workspace:readAssetText", relPath),
   },

@@ -13,7 +13,10 @@ class Image extends ModuleBase {
         {
           name: "path",
           defaultVal: "images/blueprint.png",
-          type: "text",
+          type: "assetFile",
+          assetBaseDir: "images",
+          assetExtensions: [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".svg"],
+          allowCustom: true,
         },
       ],
     },

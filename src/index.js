@@ -949,6 +949,35 @@ ipcMain.on("bridge:workspace:assetUrl", (event, relPath) => {
   }
 });
 
+ipcMain.handle("bridge:workspace:listAssets", async (event, relDir) => {
+  const projectDir = getProjectDirForEvent(event);
+  if (!projectDir || !isExistingDirectory(projectDir)) {
+    return { ok: false, files: [], dirs: [] };
+  }
+  const assetsDir = path.join(projectDir, "assets");
+  const fullPath = resolveWithinDir(assetsDir, String(relDir || ""));
+  if (!fullPath) return { ok: false, files: [], dirs: [] };
+
+  try {
+    const stat = await fs.promises.stat(fullPath);
+    if (!stat || !stat.isDirectory()) return { ok: false, files: [], dirs: [] };
+    const dirents = await fs.promises.readdir(fullPath, {
+      withFileTypes: true,
+    });
+    const files = dirents
+      .filter((d) => d && d.isFile && d.isFile())
+      .map((d) => String(d.name || ""))
+      .filter(Boolean);
+    const dirs = dirents
+      .filter((d) => d && d.isDirectory && d.isDirectory())
+      .map((d) => String(d.name || ""))
+      .filter(Boolean);
+    return { ok: true, files, dirs };
+  } catch {
+    return { ok: false, files: [], dirs: [] };
+  }
+});
+
 ipcMain.handle("bridge:workspace:readAssetText", async (event, relPath) => {
   const projectDir = getProjectDirForEvent(event);
   if (!projectDir || !isExistingDirectory(projectDir)) return null;

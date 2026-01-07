@@ -510,12 +510,13 @@ const Dashboard = () => {
     if (!moduleId) return;
 
     if (payload.ok) {
+      const incomingMethods = Array.isArray(payload.methods) ? payload.methods : [];
       setPredefinedModules((prev) =>
         (prev || []).map((m) =>
           m && m.id === moduleId
             ? {
                 ...m,
-                methods: Array.isArray(payload.methods) ? payload.methods : [],
+                methods: incomingMethods,
                 status: "ready",
               }
             : m
@@ -524,6 +525,61 @@ const Dashboard = () => {
       setWorkspaceModuleLoadFailures((prev) =>
         (prev || []).filter((id) => id !== moduleId)
       );
+
+      const executeOnLoad = incomingMethods
+        .filter((m) => m && m.executeOnLoad)
+        .filter((m) => m.name !== "matrix" && m.name !== "show");
+
+      if (executeOnLoad.length) {
+        updateActiveSet(setUserData, activeSetId, (activeSet) => {
+          const tracks = Array.isArray(activeSet?.tracks) ? activeSet.tracks : [];
+          for (const track of tracks) {
+            const modules = Array.isArray(track?.modules) ? track.modules : [];
+            const modulesData = track?.modulesData || null;
+            if (!modulesData) continue;
+
+            for (const inst of modules) {
+              const instId = inst?.id ? String(inst.id) : "";
+              const type = inst?.type ? String(inst.type) : "";
+              if (!instId || !type) continue;
+              if (type !== moduleId) continue;
+
+              const data = modulesData[instId];
+              const ctor = Array.isArray(data?.constructor) ? data.constructor : null;
+              if (!ctor) continue;
+
+              const names = ctor
+                .map((m) => (m?.name ? String(m.name) : ""))
+                .filter(Boolean);
+              if (names.length > 2) continue;
+              if (names.some((n) => n !== "matrix" && n !== "show")) continue;
+
+              const existingSet = new Set(names);
+              const missing = executeOnLoad.filter((m) => !existingSet.has(m.name));
+              if (!missing.length) continue;
+
+              const matrix = ctor.find((m) => m?.name === "matrix") || null;
+              const show = ctor.find((m) => m?.name === "show") || null;
+
+              const filled = missing.map((method) => ({
+                name: method.name,
+                options: Array.isArray(method?.options)
+                  ? method.options.map((opt) => ({
+                      name: opt?.name,
+                      value: opt?.defaultVal,
+                    }))
+                  : [],
+              }));
+
+              const nextCtor = [];
+              if (matrix) nextCtor.push(matrix);
+              nextCtor.push(...filled);
+              if (show) nextCtor.push(show);
+              data.constructor = nextCtor;
+            }
+          }
+        });
+      }
     } else {
       setWorkspaceModuleLoadFailures((prev) => {
         const list = Array.isArray(prev) ? prev : [];

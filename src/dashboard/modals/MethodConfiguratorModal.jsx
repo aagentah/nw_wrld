@@ -588,6 +588,16 @@ export const MethodConfiguratorModal = ({
   }, [methodConfigs, module]);
 
   const methodsByLayer = useMemo(() => {
+    if (!methodLayers.length) {
+      return [
+        {
+          name: "Configured",
+          methods: methodConfigs.map((m) => m.name),
+          configuredMethods: methodConfigs,
+          availableMethods: [],
+        },
+      ];
+    }
     const layersWithMethods = methodLayers.map((layer) => {
       const layerMethods = methodConfigs.filter((method) =>
         layer.methods.includes(method.name)

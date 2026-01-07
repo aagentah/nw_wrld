@@ -14,6 +14,7 @@ import {
   Checkbox,
 } from "./FormInputs.js";
 import { MatrixGrid } from "../shared/MatrixGrid.jsx";
+import { AssetOptionInput } from "./AssetOptionInput.jsx";
 
 const DraftNumberInput = React.memo(
   ({ value, min, max, fallback, onCommit }) => {
@@ -174,6 +175,18 @@ export const MethodBlock = React.memo(
                 </option>
               ))}
             </Select>
+          );
+        } else if (option.type === "assetFile" || option.type === "assetDir") {
+          const kind = option.type === "assetDir" ? "dir" : "file";
+          return (
+            <AssetOptionInput
+              kind={kind}
+              baseDir={option.assetBaseDir}
+              extensions={option.assetExtensions}
+              allowCustom={option.allowCustom !== false}
+              value={currentOption.value}
+              onChange={(next) => handleOptionChange(option.name, next)}
+            />
           );
         } else if (option.type === "text") {
           return (
@@ -406,6 +419,18 @@ export const MethodBlock = React.memo(
                 </option>
               ))}
             </Select>
+          );
+        } else if (option.type === "assetFile" || option.type === "assetDir") {
+          const kind = option.type === "assetDir" ? "dir" : "file";
+          return (
+            <AssetOptionInput
+              kind={kind}
+              baseDir={option.assetBaseDir}
+              extensions={option.assetExtensions}
+              allowCustom={option.allowCustom !== false}
+              value={currentOption.value}
+              onChange={(next) => handleOptionChange(option.name, next)}
+            />
           );
         } else if (option.type === "text") {
           return (

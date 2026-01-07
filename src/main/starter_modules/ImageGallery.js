@@ -40,8 +40,10 @@ class ImageGallery extends ModuleBase {
       options: [
         {
           name: "directory",
-          defaultVal: "images/yourFolder",
-          type: "text",
+          defaultVal: "images",
+          type: "assetDir",
+          assetBaseDir: "images",
+          allowCustom: true,
         },
         {
           name: "fit",
