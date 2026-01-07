@@ -4,6 +4,11 @@ import * as THREE from "three";
 import p5 from "p5";
 import * as d3 from "d3";
 import { Noise } from "noisejs";
+import { OBJLoader } from "three/addons/loaders/OBJLoader.js";
+import { PLYLoader } from "three/addons/loaders/PLYLoader.js";
+import { PCDLoader } from "three/addons/loaders/PCDLoader.js";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { STLLoader } from "three/addons/loaders/STLLoader.js";
 import docblock from "../shared/nwWrldDocblock.js";
 import {
   buildMethodOptions,
@@ -17,6 +22,11 @@ if (!globalThis.THREE) globalThis.THREE = THREE;
 if (!globalThis.p5) globalThis.p5 = p5;
 if (!globalThis.d3) globalThis.d3 = d3;
 if (!globalThis.Noise) globalThis.Noise = Noise;
+if (!globalThis.OBJLoader) globalThis.OBJLoader = OBJLoader;
+if (!globalThis.PLYLoader) globalThis.PLYLoader = PLYLoader;
+if (!globalThis.PCDLoader) globalThis.PCDLoader = PCDLoader;
+if (!globalThis.GLTFLoader) globalThis.GLTFLoader = GLTFLoader;
+if (!globalThis.STLLoader) globalThis.STLLoader = STLLoader;
 
 const getTokenFromLocation = () => {
   try {
@@ -43,11 +53,17 @@ const WORKSPACE_MODULE_ALLOWED_IMPORTS = new Set([
   "p5",
   "d3",
   "Noise",
+  "OBJLoader",
+  "PLYLoader",
+  "PCDLoader",
+  "GLTFLoader",
+  "STLLoader",
 ]);
 
 const safeAssetRelPath = (relPath) => {
   const raw = String(relPath ?? "").trim();
   if (!raw) return null;
+  if (raw.includes(":")) return null;
   if (raw.startsWith("/") || raw.startsWith("\\")) return null;
   if (/^[A-Za-z]:[\\/]/.test(raw)) return null;
   if (raw.includes("\\")) return null;

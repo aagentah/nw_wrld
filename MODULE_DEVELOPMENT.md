@@ -66,6 +66,7 @@ Allowed `@nwWrld imports`:
 
 - **SDK**: `ModuleBase`, `BaseThreeJsModule`, `assetUrl`, `readText`, `loadJson`
 - **Global libs**: `THREE`, `p5`, `d3`, `Noise`
+- **THREE.js Loaders**: `OBJLoader`, `PLYLoader`, `PCDLoader`, `GLTFLoader`, `STLLoader`
 
 ```javascript
 /*
@@ -559,6 +560,8 @@ MyProject/
 └── assets/
     ├── images/          # Images (PNG, JPG, GIF, etc.)
     │   └── blueprint.png
+    ├── models/          # 3D models (OBJ, PLY, PCD, GLTF/GLB, STL)
+    │   └── cube.obj
     └── json/            # JSON data files
         └── meteor.json
 ```
@@ -719,6 +722,7 @@ readText("data/text.txt");
 assetUrl("/images/photo.png"); // Don't start with /
 assetUrl("../other/file.png"); // Can't escape assets folder
 assetUrl("/etc/passwd"); // Path safety: constrained to assets/
+assetUrl("http://example.com/file.obj"); // No external URLs
 ```
 
 ### Starter Assets
@@ -727,6 +731,11 @@ New projects include two starter assets:
 
 - `assets/images/blueprint.png` - Example image (used by Image module)
 - `assets/json/meteor.json` - Example dataset (used by AsteroidGraph module)
+- `assets/models/cube.obj` - Example OBJ model (used by ModelLoader)
+- `assets/models/tetra.stl` - Example STL model (used by ModelLoader)
+- `assets/models/triangle.ply` - Example PLY model (used by ModelLoader)
+- `assets/models/points.pcd` - Example PCD point cloud (used by ModelLoader)
+- `assets/models/triangle.gltf` - Example glTF model (used by ModelLoader)
 
 Study the **Image** and **AsteroidGraph** starter modules to see asset loading patterns in action.
 
@@ -839,6 +848,41 @@ export default My3DModule;
 ```
 
 See the **SpinningCube**, **CubeCube**, and **OrbitalPlane** starter modules for complete Three.js examples.
+
+### Loading 3D Models
+
+Use `assetUrl()` to safely reference models from your project’s `assets/` folder, then load them with the THREE.js loader classes.
+
+```javascript
+/*
+@nwWrld name: MyModelLoader
+@nwWrld category: 3D
+@nwWrld imports: BaseThreeJsModule, THREE, assetUrl, OBJLoader, GLTFLoader
+*/
+
+class MyModelLoader extends BaseThreeJsModule {
+  loadModel({ modelPath = "models/cube.obj" } = {}) {
+    const url = assetUrl(modelPath);
+    if (!url) return;
+
+    const ext = String(modelPath).split(".").pop().toLowerCase();
+    const loader =
+      ext === "obj"
+        ? new OBJLoader()
+        : ext === "glb" || ext === "gltf"
+        ? new GLTFLoader()
+        : null;
+    if (!loader) return;
+
+    loader.load(url, (result) => {
+      const root = result?.scene || result;
+      this.setModel(root);
+    });
+  }
+}
+
+export default MyModelLoader;
+```
 
 ### D3.js (Data Visualization)
 
