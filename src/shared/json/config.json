@@ -9,21 +9,27 @@
   },
   "aspectRatios": [
     {
+      "id": "default",
+      "label": "Default",
+      "width": "100vw",
+      "height": "100vh"
+    },
+    {
+      "id": "16-9",
+      "label": "16:9 (landscape)",
+      "width": "100vw",
+      "height": "100vh"
+    },
+    {
       "id": "9-16",
-      "label": "9:16",
+      "label": "9:16 (portrait)",
       "width": "56.25vh",
       "height": "100vh"
     },
     {
       "id": "4-5",
-      "label": "4:5",
+      "label": "4:5 (portrait)",
       "width": "80vh",
-      "height": "100vh"
-    },
-    {
-      "id": "landscape",
-      "label": "Landscape",
-      "width": "100vw",
       "height": "100vh"
     }
   ],

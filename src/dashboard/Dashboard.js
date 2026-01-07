@@ -7,24 +7,9 @@ import React, {
   useRef,
 } from "react";
 import { createRoot } from "react-dom/client";
-import { atom, useAtom } from "jotai";
-import {
-  FaBars,
-  FaCog,
-  FaCode,
-  FaMusic,
-  FaPlus,
-  FaPlay,
-  FaStop,
-  FaTrash,
-  FaEdit,
-} from "react-icons/fa";
+import { useAtom } from "jotai";
 import { produce } from "immer";
 import * as Tone from "tone";
-import {
-  noteNameToNumber,
-  resolveChannelTrigger,
-} from "../shared/midi/midiUtils.js";
 import { loadSettings } from "../shared/json/configUtils.js";
 import {
   loadRecordingData,
@@ -45,9 +30,7 @@ import MidiPlayback from "../shared/midi/midiPlayback.js";
 import SequencerPlayback from "../shared/sequencer/SequencerPlayback.js";
 import SequencerAudio from "../shared/audio/sequencerAudio.js";
 import { getActiveSetTracks } from "../shared/utils/setUtils.js";
-import { Checkbox } from "./components/FormInputs.js";
 import { Button } from "./components/Button.js";
-import { HelpIcon } from "./components/HelpIcon.js";
 import { ModalHeader } from "./components/ModalHeader.js";
 import { ModalFooter } from "./components/ModalFooter.js";
 import { ModuleEditorModal } from "./components/ModuleEditorModal.js";
@@ -90,194 +73,16 @@ import { SelectSetModal } from "./modals/SelectSetModal.jsx";
 import { SelectTrackModal } from "./modals/SelectTrackModal.jsx";
 import { MethodConfiguratorModal } from "./modals/MethodConfiguratorModal.jsx";
 import { TrackItem } from "./components/track/TrackItem.jsx";
+import { DashboardHeader } from "./components/DashboardHeader.jsx";
+import { DashboardFooter } from "./components/DashboardFooter.jsx";
+import { useWorkspaceModules } from "./core/hooks/useWorkspaceModules.js";
+import { useInputEvents } from "./core/hooks/useInputEvents.js";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import { getProjectDir } from "../shared/utils/projectDir.js";
 
 // =========================
 // Components
 // =========================
-
-const DashboardHeader = ({
-  onSets,
-  onTracks,
-  onModules,
-  onSettings,
-  onDebugOverlay,
-}) => {
-  return (
-    <div className="fixed top-0 left-0 right-0 z-50 bg-[#101010] border-b border-neutral-800 px-6 py-4">
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-6">
-          <Button onClick={onSets} icon={<FaBars />}>
-            SETS
-          </Button>
-          <Button onClick={onTracks} icon={<FaMusic />}>
-            TRACKS
-          </Button>
-          <Button onClick={onModules} icon={<FaCode />}>
-            MODULES
-          </Button>
-          <Button onClick={onSettings} icon={<FaCog />}>
-            SETTINGS
-          </Button>
-          <Button onClick={onDebugOverlay} icon={<FaCode />}>
-            DEBUG
-          </Button>
-        </div>
-        <div className="flex items-center gap-6">
-          <div className="opacity-50 text-[11px] text-neutral-300">nw_wrld</div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const DashboardFooter = ({
-  track,
-  isPlaying,
-  onPlayPause,
-  onStop,
-  inputStatus,
-  inputConfig,
-  onSettingsClick,
-  config,
-  isMuted,
-  onMuteChange,
-  isProjectorReady,
-}) => {
-  const [recordingData] = useAtom(recordingDataAtom);
-
-  const getStatusColor = () => {
-    switch (inputStatus.status) {
-      case "connected":
-        return "text-green-500";
-      case "connecting":
-        return "text-yellow-500";
-      case "error":
-        return "text-red-500";
-      default:
-        return "text-neutral-500";
-    }
-  };
-
-  const getStatusIcon = () => {
-    switch (inputStatus.status) {
-      case "connected":
-        return "●";
-      case "connecting":
-        return "◐";
-      case "error":
-        return "✕";
-      default:
-        return "○";
-    }
-  };
-
-  const getStatusText = () => {
-    if (inputStatus?.message && inputStatus.message !== "") {
-      return inputStatus.message;
-    }
-
-    if (inputStatus?.config?.input) {
-      const activeInput = inputStatus.config.input;
-      if (activeInput.type === "osc") {
-        return `Listening on Port ${activeInput.port || 8000}`;
-      } else if (activeInput.type === "midi") {
-        return `MIDI: ${activeInput.deviceName || "Not configured"}`;
-      }
-    }
-
-    if (inputConfig?.type === "osc") {
-      return `Listening on Port ${inputConfig.port || 8000}`;
-    } else if (inputConfig?.type === "midi") {
-      return `MIDI: ${inputConfig.deviceName || "Not configured"}`;
-    }
-
-    return "No input";
-  };
-
-  if (!track) {
-    return (
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#101010] border-t border-neutral-800 px-6 py-4">
-        <div className="w-full flex justify-start gap-4 items-center">
-          <div className="text-neutral-300/30 text-[11px]">
-            No track selected
-          </div>
-          {!config?.sequencerMode && (
-            <button
-              onClick={onSettingsClick}
-              className={`text-[10px] font-mono flex items-center gap-2 cursor-pointer hover:opacity-70 transition-opacity ${getStatusColor()}`}
-              title={`${inputStatus.status}: ${getStatusText()}`}
-            >
-              <span>{getStatusIcon()}</span>
-              <span>{getStatusText()}</span>
-            </button>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#101010]">
-      <div className="border-t border-neutral-800 py-4 px-6">
-        <div className="flex justify-start items-start">
-          <div className="text-[10px] text-neutral-600 font-mono leading-tight">
-            <span>
-              nw_wrld is developed & maintained by{" "}
-              <a
-                target="_blank"
-                rel="noopener noreferrer"
-                href="https://daniel.aagentah.tech/"
-                className="underline"
-              >
-                Daniel Aagentah
-              </a>{" "}
-              [Open-sourced under GPL-3.0 license.]
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <div className="border-t border-neutral-800 py-4 px-6">
-        <div className="w-full flex justify-start gap-4 items-center">
-          {config?.sequencerMode ? (
-            <>
-              <Button
-                onClick={isPlaying ? onStop : onPlayPause}
-                className={isPlaying ? "decoration-neutral-300" : ""}
-                title={isPlaying ? "Stop playback" : "Play sequencer"}
-                icon={isPlaying ? <FaStop /> : <FaPlay />}
-                disabled={!isProjectorReady && !isPlaying}
-                as="button"
-              >
-                <span className="relative inline-block">
-                  {isPlaying ? "STOP" : "PLAY"}
-                </span>
-              </Button>
-              <label className="flex items-center gap-2 cursor-pointer text-[11px] text-neutral-300 font-mono">
-                <Checkbox
-                  checked={isMuted}
-                  onChange={(e) => onMuteChange(e.target.checked)}
-                />
-                <span>Mute</span>
-              </label>
-            </>
-          ) : (
-            <button
-              onClick={onSettingsClick}
-              className={`text-[10px] font-mono flex items-center gap-2 cursor-pointer hover:opacity-70 transition-opacity ${getStatusColor()}`}
-              title={`${inputStatus.status}: ${getStatusText()}`}
-            >
-              <span>{getStatusIcon()}</span>
-              <span>{getStatusText()}</span>
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
 
 const Dashboard = () => {
   const [userData, setUserData] = useAtom(userDataAtom);
@@ -314,7 +119,7 @@ const Dashboard = () => {
 
   const activeTrackIdRef = useRef(activeTrackId);
   const activeSetIdRef = useRef(activeSetId);
-  const workspacePathRef = useRef(workspacePath);
+  const workspacePathRef = useRef(null);
   useEffect(() => {
     activeTrackIdRef.current = activeTrackId;
     activeSetIdRef.current = activeSetId;
@@ -327,16 +132,7 @@ const Dashboard = () => {
   useEffect(() => {
     recordingStateRef.current = recordingState;
   }, [recordingState]);
-
-  // Memoized trigger maps to avoid recomputing on every input event
   const triggerMapsRef = useRef({ trackTriggersMap: {}, channelMappings: {} });
-  useEffect(() => {
-    const tracks = getActiveSetTracks(userData, activeSetId);
-    const globalMappings = userData?.config || {};
-    const inputType = globalMappings.input?.type || "midi";
-    const { buildMidiConfig } = require("../shared/midi/midiUtils.js");
-    triggerMapsRef.current = buildMidiConfig(tracks, globalMappings, inputType);
-  }, [userData?.sets, userData?.config?.input, activeSetId]);
 
   // Track pending save timeouts for cancellation
   const userDataSaveTimeoutRef = useRef(null);
@@ -417,7 +213,7 @@ const Dashboard = () => {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, []);
 
-  const [aspectRatio, setAspectRatio] = useState("landscape");
+  const [aspectRatio, setAspectRatio] = useState("default");
   const [bgColor, setBgColor] = useState("grey");
   const [inputConfig, setInputConfig] = useState({
     type: "midi",
@@ -476,6 +272,26 @@ const Dashboard = () => {
   useEffect(() => {
     sequencerMutedRef.current = isSequencerMuted;
   }, [isSequencerMuted]);
+
+  useInputEvents({
+    userData,
+    activeSetId,
+    userDataRef,
+    activeTrackIdRef,
+    activeSetIdRef,
+    recordingStateRef,
+    triggerMapsRef,
+    setActiveTrackId,
+    setRecordingData,
+    setRecordingState,
+    flashChannel,
+    setFlashingConstructors,
+    setInputStatus,
+    setDebugLogs,
+    sendToProjector,
+    isDebugOverlayOpen,
+    setIsProjectorReady,
+  });
 
   // Module editor handlers
   const handleCreateNewModule = () => {
@@ -595,14 +411,13 @@ const Dashboard = () => {
     });
   }, [invokeIPC]);
 
-  useIPCListener("input-status", (event, statusPayload) => {
-    setInputStatus(statusPayload.data);
-  });
-
   // Initialize settings when userData loads (but don't overwrite user changes from settings modal)
   useEffect(() => {
     if (userData.config) {
-      setAspectRatio(userData.config.aspectRatio || "landscape");
+      const storedAspect = userData.config.aspectRatio;
+      setAspectRatio(
+        !storedAspect || storedAspect === "landscape" ? "default" : storedAspect
+      );
       setBgColor(userData.config.bgColor || "grey");
     }
   }, [userData]);
@@ -614,10 +429,30 @@ const Dashboard = () => {
   }, [aspectRatio]);
 
   useEffect(() => {
+    sendToProjector("toggleAspectRatioStyle", { name: aspectRatio });
+  }, [aspectRatio, sendToProjector]);
+
+  const didInitAspectRefreshRef = useRef(false);
+  useEffect(() => {
+    if (!didInitAspectRefreshRef.current) {
+      didInitAspectRefreshRef.current = true;
+      return;
+    }
+    const t = setTimeout(() => {
+      sendToProjector("refresh-projector", {});
+    }, 200);
+    return () => clearTimeout(t);
+  }, [aspectRatio, sendToProjector]);
+
+  useEffect(() => {
     updateUserData(setUserData, (draft) => {
       draft.config.bgColor = bgColor;
     });
   }, [bgColor]);
+
+  useEffect(() => {
+    sendToProjector("setBg", { value: bgColor });
+  }, [bgColor, sendToProjector]);
 
   useEffect(() => {
     if (isInitialMount.current) {
@@ -667,288 +502,6 @@ const Dashboard = () => {
       });
     }
   }, [userData?.config?.sequencerMode, inputConfig, invokeIPC]);
-
-  useIPCListener("from-projector", (event, data) => {
-    if (data.type === "debug-log") {
-      const rawLog =
-        typeof data.log === "string"
-          ? data.log
-          : typeof data.props?.log === "string"
-          ? data.props.log
-          : "";
-      const logEntries = rawLog.split("\n\n").filter((entry) => entry.trim());
-      setDebugLogs((prev) => {
-        const newLogs = [...prev, ...logEntries];
-        return newLogs.slice(-200);
-      });
-    }
-  });
-
-  useEffect(() => {
-    sendToProjector("debug-overlay-visibility", {
-      isOpen: isDebugOverlayOpen,
-    });
-  }, [isDebugOverlayOpen, sendToProjector]);
-
-  const addDebugLog = useCallback((log) => {
-    setDebugLogs((prev) => {
-      const newLogs = [...prev, log];
-      return newLogs.slice(-200);
-    });
-  }, []);
-
-  const formatDebugLog = useCallback((eventData) => {
-    const {
-      timestamp,
-      type,
-      source,
-      data,
-      trackName,
-      moduleInfo,
-      methodInfo,
-      props,
-    } = eventData;
-    const timeStr = timestamp.toFixed(5);
-    const sourceLabel =
-      source === "midi" ? "MIDI" : source === "osc" ? "OSC" : "Input";
-    const eventTypeLabel =
-      type === "track-selection" ? "Track Selection" : "Channel Trigger";
-
-    let log = `[${timeStr}] ${sourceLabel} ${eventTypeLabel}\n`;
-
-    if (source === "midi") {
-      if (type === "track-selection") {
-        log += `  Note: ${data.note}\n`;
-        log += `  Channel: ${data.channel || 1}\n`;
-      } else {
-        log += `  Note: ${data.note}\n`;
-        log += `  Channel: ${data.channel}\n`;
-      }
-    } else if (source === "osc") {
-      if (data.address) {
-        log += `  Address: ${data.address}\n`;
-      }
-      if (data.identifier) {
-        log += `  Identifier: ${data.identifier}\n`;
-      }
-      if (data.channelName) {
-        log += `  Channel: ${data.channelName}\n`;
-      }
-      if (data.value !== undefined) {
-        log += `  Value: ${data.value}\n`;
-      }
-    }
-
-    if (trackName) {
-      log += `  Track: ${trackName}\n`;
-    }
-    if (moduleInfo) {
-      log += `  Module: ${moduleInfo.instanceId} (${moduleInfo.type})\n`;
-    }
-    if (methodInfo) {
-      log += `  Method: ${methodInfo.name}\n`;
-    }
-    if (props && Object.keys(props).length > 0) {
-      log += `  Props: ${JSON.stringify(props, null, 2)}\n`;
-    }
-    return log;
-  }, []);
-
-  // Initialize Input Event Listener for visual feedback
-  const handleInputEvent = useCallback(
-    (event, payload) => {
-      const { type, data } = payload;
-      const timestamp = data.timestamp || performance.now() / 1000;
-
-      const tracks = getActiveSetTracks(
-        userDataRef.current || {},
-        activeSetIdRef.current
-      );
-      let trackName = null;
-      let moduleInfo = null;
-      let methodInfo = null;
-      let props = null;
-
-      switch (type) {
-        case "track-selection": {
-          let resolvedTrackName = null;
-
-          if (data.source === "midi") {
-            resolvedTrackName =
-              triggerMapsRef.current.trackTriggersMap[data.note];
-          } else if (data.source === "osc") {
-            resolvedTrackName =
-              triggerMapsRef.current.trackTriggersMap[data.identifier];
-          }
-
-          if (resolvedTrackName) {
-            const targetTrack = tracks.find(
-              (t) => t.name === resolvedTrackName
-            );
-            if (targetTrack) {
-              trackName = targetTrack.name;
-              setActiveTrackId(targetTrack.id);
-
-              const wasRecording = recordingStateRef.current[targetTrack.id];
-              if (wasRecording) {
-                setRecordingData((prev) =>
-                  setRecordingForTrack(prev, targetTrack.id, { channels: [] })
-                );
-              }
-
-              setRecordingState((prev) => ({
-                ...prev,
-                [targetTrack.id]: {
-                  startTime: Date.now(),
-                  isRecording: true,
-                },
-              }));
-
-              if (Array.isArray(targetTrack.modules)) {
-                const keys = targetTrack.modules.map(
-                  (moduleInstance) => `${targetTrack.id}:${moduleInstance.id}`
-                );
-                setFlashingConstructors((prev) => {
-                  const next = new Set(prev);
-                  keys.forEach((k) => next.add(k));
-                  return next;
-                });
-                setTimeout(() => {
-                  setFlashingConstructors((prev) => {
-                    const next = new Set(prev);
-                    keys.forEach((k) => next.delete(k));
-                    return next;
-                  });
-                }, 100);
-              }
-            }
-          }
-          break;
-        }
-
-        case "method-trigger":
-          const currentActiveTrackId = activeTrackIdRef.current;
-          const activeTrack = tracks.find((t) => t.id === currentActiveTrackId);
-
-          if (activeTrack && activeTrack.channelMappings) {
-            let channelsToFlash = [];
-            const globalMappings = userDataRef.current?.config || {};
-            const currentInputType = globalMappings.input?.type || "midi";
-
-            if (data.source === "midi") {
-              const trigger = data.note;
-              Object.entries(activeTrack.channelMappings).forEach(
-                ([channelNumber, slotNumber]) => {
-                  const resolvedTrigger = resolveChannelTrigger(
-                    slotNumber,
-                    currentInputType,
-                    globalMappings
-                  );
-                  const triggerNum = noteNameToNumber(resolvedTrigger);
-                  if (triggerNum === trigger) {
-                    channelsToFlash.push(channelNumber);
-                  }
-                }
-              );
-            } else if (data.source === "osc" && data.channelName) {
-              Object.entries(activeTrack.channelMappings).forEach(
-                ([channelNumber, slotNumber]) => {
-                  const resolvedTrigger = resolveChannelTrigger(
-                    slotNumber,
-                    currentInputType,
-                    globalMappings
-                  );
-                  if (resolvedTrigger === data.channelName) {
-                    channelsToFlash.push(channelNumber);
-                  }
-                }
-              );
-            }
-
-            channelsToFlash.forEach((channel) => {
-              flashChannel(channel, 100);
-            });
-
-            if (currentActiveTrackId && channelsToFlash.length > 0) {
-              const recordingStateForTrack =
-                recordingStateRef.current[currentActiveTrackId];
-              if (recordingStateForTrack?.isRecording) {
-                const currentTime = Date.now();
-                const relativeTime =
-                  (currentTime - recordingStateForTrack.startTime) / 1000;
-
-                channelsToFlash.forEach((channelNumber) => {
-                  const channelName = `ch${channelNumber}`;
-                  setRecordingData((prev) => {
-                    const recording = getRecordingForTrack(
-                      prev,
-                      currentActiveTrackId
-                    );
-                    const newRecording = { ...recording };
-
-                    if (!newRecording.channels) {
-                      newRecording.channels = [];
-                    }
-
-                    const channelIndex = newRecording.channels.findIndex(
-                      (ch) => ch.name === channelName
-                    );
-
-                    if (channelIndex === -1) {
-                      newRecording.channels.push({
-                        name: channelName,
-                        sequences: [{ time: relativeTime, duration: 0.1 }],
-                      });
-                    } else {
-                      newRecording.channels[channelIndex].sequences.push({
-                        time: relativeTime,
-                        duration: 0.1,
-                      });
-                    }
-
-                    return setRecordingForTrack(
-                      prev,
-                      currentActiveTrackId,
-                      newRecording
-                    );
-                  });
-                });
-              }
-            }
-          }
-          break;
-      }
-
-      const log = formatDebugLog({
-        timestamp,
-        type,
-        source: data.source,
-        data,
-        trackName,
-        moduleInfo,
-        methodInfo,
-        props,
-      });
-      addDebugLog(log);
-    },
-    [
-      flashChannel,
-      formatDebugLog,
-      addDebugLog,
-      setActiveTrackId,
-      setRecordingData,
-      setRecordingState,
-      setFlashingConstructors,
-    ]
-  );
-
-  useIPCListener("input-event", handleInputEvent);
-
-  useIPCListener("from-projector", (event, data) => {
-    if (data.type === "projector-ready") {
-      setIsProjectorReady(true);
-    }
-  });
 
   useIPCListener("from-projector", (event, data) => {
     if (data.type !== "module-introspect-result") return;
@@ -1006,197 +559,21 @@ const Dashboard = () => {
     );
     setFooterPlaybackState({});
   }, []);
-
-  const loadModules = useCallback(async () => {
-    const runId = ++loadModulesRunIdRef.current;
-    const isStale = () => runId !== loadModulesRunIdRef.current;
-    try {
-      if (isWorkspaceModalOpen) return;
-      const projectDirArg = getProjectDir();
-      if (!projectDirArg) return;
-      if (!workspacePath) return;
-      let summaries = [];
-      try {
-        const bridge = globalThis.nwWrldBridge;
-        if (
-          bridge &&
-          bridge.workspace &&
-          typeof bridge.workspace.listModuleSummaries === "function"
-        ) {
-          summaries = await bridge.workspace.listModuleSummaries();
-        } else {
-          summaries = [];
-        }
-      } catch {
-        summaries = [];
-      }
-      const safeSummaries = Array.isArray(summaries) ? summaries : [];
-      const allModuleIds = safeSummaries
-        .map((s) => (s?.id ? String(s.id) : ""))
-        .filter(Boolean);
-      const listable = safeSummaries.filter((s) => Boolean(s?.hasMetadata));
-      if (isStale()) return;
-      setWorkspaceModuleFiles(allModuleIds);
-
-      const validModules = listable
-        .map((s) => {
-          const moduleId = s?.id ? String(s.id) : "";
-          const name = s?.name ? String(s.name) : "";
-          const category = s?.category ? String(s.category) : "";
-          if (!moduleId || !name || !category) return null;
-          if (!/^[A-Za-z][A-Za-z0-9]*$/.test(moduleId)) return null;
-          return {
-            id: moduleId,
-            name,
-            category,
-            methods: [],
-            status: "uninspected",
-          };
-        })
-        .filter(Boolean);
-      if (isStale()) return;
-      setPredefinedModules(validModules);
-      setWorkspaceModuleLoadFailures([]);
-      setIsProjectorReady(false);
-      if (isStale()) return;
-      sendToProjector("refresh-projector", {});
-      return;
-    } catch (error) {
-      console.error("❌ [Dashboard] Error loading modules:", error);
-      alert("Failed to load modules from project folder.");
-    }
-  }, [isWorkspaceModalOpen, sendToProjector, workspacePath]);
-
-  useEffect(() => {
-    loadModules();
-  }, [loadModules]);
-
-  // One-time, safe migration: if a track references a module by display name
-  // but the actual module file is named differently, rewrite to filename id.
-  useEffect(() => {
-    try {
-      if (!workspacePath) {
-        didMigrateWorkspaceModuleTypesRef.current = false;
-        return;
-      }
-      if (didMigrateWorkspaceModuleTypesRef.current) return;
-      if (!Array.isArray(predefinedModules) || predefinedModules.length === 0)
-        return;
-
-      const workspaceFileSet = new Set(
-        (workspaceModuleFiles || []).filter(Boolean)
-      );
-      if (workspaceFileSet.size === 0) return;
-
-      const displayNameToId = new Map();
-      const dupes = new Set();
-      predefinedModules.forEach((m) => {
-        const displayName = m?.name ? String(m.name) : "";
-        const id = m?.id ? String(m.id) : "";
-        if (!displayName || !id) return;
-        if (displayNameToId.has(displayName)) {
-          dupes.add(displayName);
-          return;
-        }
-        displayNameToId.set(displayName, id);
-      });
-      dupes.forEach((d) => displayNameToId.delete(d));
-
-      if (displayNameToId.size === 0) {
-        didMigrateWorkspaceModuleTypesRef.current = true;
-        return;
-      }
-
-      let needsChange = false;
-      const sets = userData?.sets;
-      if (Array.isArray(sets)) {
-        for (const set of sets) {
-          const tracks = set?.tracks;
-          if (!Array.isArray(tracks)) continue;
-          for (const track of tracks) {
-            const mods = track?.modules;
-            if (!Array.isArray(mods)) continue;
-            for (const inst of mods) {
-              const t = inst?.type;
-              if (!t || typeof t !== "string") continue;
-              if (workspaceFileSet.has(t)) continue;
-              const mapped = displayNameToId.get(t);
-              if (mapped && workspaceFileSet.has(mapped)) {
-                needsChange = true;
-                break;
-              }
-            }
-            if (needsChange) break;
-          }
-          if (needsChange) break;
-        }
-      }
-      if (!needsChange) {
-        didMigrateWorkspaceModuleTypesRef.current = true;
-        return;
-      }
-
-      updateUserData(setUserData, (draft) => {
-        if (!Array.isArray(draft?.sets)) return;
-        draft.sets.forEach((set) => {
-          if (!Array.isArray(set?.tracks)) return;
-          set.tracks.forEach((track) => {
-            if (!Array.isArray(track?.modules)) return;
-            track.modules.forEach((inst) => {
-              const t = inst?.type;
-              if (!t || typeof t !== "string") return;
-              if (workspaceFileSet.has(t)) return;
-              const mapped = displayNameToId.get(t);
-              if (mapped && workspaceFileSet.has(mapped)) {
-                inst.type = mapped;
-              }
-            });
-          });
-        });
-      });
-
-      didMigrateWorkspaceModuleTypesRef.current = true;
-    } catch (e) {
-      didMigrateWorkspaceModuleTypesRef.current = true;
-      console.warn("[Dashboard] Workspace module type migration skipped:", e);
-    }
-  }, [
+  useWorkspaceModules({
     workspacePath,
-    predefinedModules,
-    workspaceModuleFiles,
+    isWorkspaceModalOpen,
+    sendToProjector,
     userData,
     setUserData,
-  ]);
-
-  useIPCListener(
-    "workspace:modulesChanged",
-    () => {
-      if (workspacePath) {
-        loadModules();
-        return;
-      }
-      loadModules();
-    },
-    [loadModules]
-  );
-
-  // Accept HMR updates for base helpers so dashboard doesn't full reload
-  useEffect(() => {
-    try {
-      if (module && module.hot) {
-        try {
-          module.hot.accept("../projector/helpers/moduleBase.js", () => {
-            loadModules();
-          });
-        } catch {}
-        try {
-          module.hot.accept("../projector/helpers/threeBase.js", () => {
-            loadModules();
-          });
-        } catch {}
-      }
-    } catch (e) {}
-  }, [loadModules]);
+    predefinedModules,
+    workspaceModuleFiles,
+    setPredefinedModules,
+    setWorkspaceModuleFiles,
+    setWorkspaceModuleLoadFailures,
+    setIsProjectorReady,
+    didMigrateWorkspaceModuleTypesRef,
+    loadModulesRunIdRef,
+  });
 
   const isInitialMount = useRef(true);
   const userDataLoadedSuccessfully = useRef(false);
@@ -1302,6 +679,22 @@ const Dashboard = () => {
 
   const updateConfig = useCallback(
     (updates) => {
+      const wasSequencerMode = userData.config?.sequencerMode;
+      const willBeSequencerMode = updates.hasOwnProperty("sequencerMode")
+        ? updates.sequencerMode
+        : wasSequencerMode;
+
+      if (wasSequencerMode && !willBeSequencerMode && isSequencerPlaying) {
+        if (sequencerEngineRef.current) {
+          sequencerEngineRef.current.stop();
+          if (typeof sequencerEngineRef.current.getRunId === "function") {
+            sequencerRunIdRef.current = sequencerEngineRef.current.getRunId();
+          }
+          setIsSequencerPlaying(false);
+          setSequencerCurrentStep(0);
+        }
+      }
+
       setUserData(
         produce((draft) => {
           if (!draft.config) {
@@ -1311,7 +704,7 @@ const Dashboard = () => {
         })
       );
     },
-    [setUserData]
+    [setUserData, userData.config, isSequencerPlaying]
   );
 
   const handleSequencerToggle = useCallback(

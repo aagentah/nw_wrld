@@ -1,4 +1,10 @@
-import React, { useMemo, useCallback, useState } from "react";
+import React, {
+  useMemo,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { FaCode, FaDice, FaPlay } from "react-icons/fa";
 import {
   TextInput,
@@ -8,6 +14,94 @@ import {
   Checkbox,
 } from "./FormInputs.js";
 import { MatrixGrid } from "../shared/MatrixGrid.jsx";
+
+const DraftNumberInput = React.memo(
+  ({ value, min, max, fallback, onCommit }) => {
+    const [draft, setDraft] = useState(null);
+    const [isFocused, setIsFocused] = useState(false);
+    const skipCommitRef = useRef(false);
+
+    useEffect(() => {
+      if (!isFocused) setDraft(null);
+    }, [isFocused, value]);
+
+    const displayed = draft !== null ? draft : String(value ?? "");
+
+    const commitIfValid = useCallback(
+      (raw) => {
+        const s = String(raw);
+        const isIntermediate =
+          s === "" ||
+          s === "-" ||
+          s === "." ||
+          s === "-." ||
+          s.endsWith(".") ||
+          /e[+-]?$/i.test(s);
+        if (isIntermediate) return;
+        const n = Number(s);
+        if (!Number.isFinite(n)) return;
+        onCommit(n);
+      },
+      [onCommit]
+    );
+
+    const commitOnBlur = useCallback(() => {
+      if (draft === null) return;
+      const s = String(draft);
+      const isIntermediate =
+        s === "" ||
+        s === "-" ||
+        s === "." ||
+        s === "-." ||
+        s.endsWith(".") ||
+        /e[+-]?$/i.test(s);
+      if (isIntermediate) {
+        onCommit(fallback);
+        return;
+      }
+      const n = Number(s);
+      if (!Number.isFinite(n)) {
+        onCommit(fallback);
+        return;
+      }
+      onCommit(n);
+    }, [draft, fallback, onCommit]);
+
+    return (
+      <NumberInput
+        value={displayed}
+        min={min}
+        max={max}
+        onFocus={() => {
+          skipCommitRef.current = false;
+          setIsFocused(true);
+          setDraft(String(value ?? ""));
+        }}
+        onChange={(e) => {
+          const next = e.target.value;
+          setDraft(next);
+          commitIfValid(next);
+        }}
+        onBlur={() => {
+          setIsFocused(false);
+          if (skipCommitRef.current) {
+            skipCommitRef.current = false;
+            return;
+          }
+          commitOnBlur();
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") e.currentTarget.blur();
+          if (e.key === "Escape") {
+            skipCommitRef.current = true;
+            setDraft(null);
+            e.currentTarget.blur();
+          }
+        }}
+      />
+    );
+  }
+);
 
 export const MethodBlock = React.memo(
   ({
@@ -25,12 +119,6 @@ export const MethodBlock = React.memo(
     onAddMissingOption = null,
   }) => {
     const [isFlashing, setIsFlashing] = useState(false);
-
-    const coerceNumberInput = useCallback((raw, fallback) => {
-      if (raw === "" || raw === null || raw === undefined) return fallback;
-      const n = Number(raw);
-      return Number.isFinite(n) ? n : fallback;
-    }, []);
 
     const methodOptions = useMemo(
       () => moduleMethods.find((m) => m.name === method.name)?.options || [],
@@ -66,16 +154,12 @@ export const MethodBlock = React.memo(
               ? currentOption.value
               : 0;
           return (
-            <NumberInput
+            <DraftNumberInput
               value={currentOption.value}
               min={option.min}
               max={option.max}
-              onChange={(e) =>
-                handleOptionChange(
-                  option.name,
-                  coerceNumberInput(e.target.value, fallback)
-                )
-              }
+              fallback={fallback}
+              onCommit={(next) => handleOptionChange(option.name, next)}
             />
           );
         } else if (option.type === "select") {
@@ -302,16 +386,12 @@ export const MethodBlock = React.memo(
               ? currentOption.value
               : 0;
           return (
-            <NumberInput
+            <DraftNumberInput
               value={currentOption.value}
               min={option.min}
               max={option.max}
-              onChange={(e) =>
-                handleOptionChange(
-                  option.name,
-                  coerceNumberInput(e.target.value, fallback)
-                )
-              }
+              fallback={fallback}
+              onCommit={(next) => handleOptionChange(option.name, next)}
             />
           );
         } else if (option.type === "select") {

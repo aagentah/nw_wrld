@@ -71,7 +71,7 @@ export const EditTrackModal = ({
     <Modal isOpen={isOpen} onClose={onClose}>
       <ModalHeader title="EDIT TRACK" onClose={onClose} />
 
-      <div className="p-6 flex flex-col gap-4">
+      <div className="px-6 flex flex-col gap-4">
         <div>
           <Label>Track Name</Label>
           <TextInput

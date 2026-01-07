@@ -73,6 +73,7 @@ let sandboxView = null;
 let sandboxViewWebContentsId = null;
 let activeSandboxToken = null;
 let sandboxEnsureInFlight = null;
+let projectorDefaultBounds = null;
 const pendingSandboxRequests = new Map(); // requestId -> { resolve, timeout }
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -1378,8 +1379,72 @@ app.commandLine.appendSwitch("enable-gpu-rasterization");
 app.commandLine.appendSwitch("enable-zero-copy");
 
 // Register IPC handlers ONCE at module level (outside createWindow)
+const getProjectorAspectRatioValue = (aspectRatioId) => {
+  const id = String(aspectRatioId || "").trim();
+  if (!id || id === "default" || id === "landscape") return 0;
+  if (id === "16-9") return 16 / 9;
+  if (id === "9-16") return 9 / 16;
+  if (id === "4-5") return 4 / 5;
+  return 0;
+};
+
+const applyProjectorWindowAspectRatio = (aspectRatioId) => {
+  if (!projector1Window || projector1Window.isDestroyed()) return;
+
+  const id = String(aspectRatioId || "").trim();
+  const ratio = getProjectorAspectRatioValue(aspectRatioId);
+
+  try {
+    projector1Window.setAspectRatio(ratio || 0);
+  } catch {}
+
+  if (!ratio) {
+    if (
+      (id === "default" || id === "landscape" || !id) &&
+      projectorDefaultBounds
+    ) {
+      try {
+        projector1Window.setBounds(projectorDefaultBounds, false);
+      } catch {}
+    }
+    return;
+  }
+
+  try {
+    const bounds = projector1Window.getBounds();
+    const display = screen.getDisplayMatching(bounds);
+    const workArea = display?.workArea || bounds;
+
+    const nextWidth = Math.max(200, Math.round(bounds.height * ratio));
+    const centerX = bounds.x + Math.round(bounds.width / 2);
+    let nextX = centerX - Math.round(nextWidth / 2);
+
+    if (typeof workArea.x === "number" && typeof workArea.width === "number") {
+      nextX = Math.max(
+        workArea.x,
+        Math.min(nextX, workArea.x + workArea.width - nextWidth)
+      );
+    }
+
+    projector1Window.setBounds(
+      {
+        x: nextX,
+        y: bounds.y,
+        width: nextWidth,
+        height: bounds.height,
+      },
+      false
+    );
+  } catch {}
+};
+
 const messageChannels = {
   "dashboard-to-projector": (data) => {
+    try {
+      if (data?.type === "toggleAspectRatioStyle") {
+        applyProjectorWindowAspectRatio(data?.props?.name);
+      }
+    } catch {}
     if (
       projector1Window &&
       !projector1Window.isDestroyed() &&
@@ -1458,6 +1523,16 @@ const ensureWorkspaceScaffold = async (workspacePath) => {
         ].join("\n"),
         "utf-8"
       );
+    } catch {}
+  }
+
+  const moduleDevGuidePath = path.join(workspacePath, "MODULE_DEVELOPMENT.md");
+  if (!fs.existsSync(moduleDevGuidePath)) {
+    try {
+      const sourcePath = path.join(__dirname, "..", "MODULE_DEVELOPMENT.md");
+      if (fs.existsSync(sourcePath)) {
+        fs.copyFileSync(sourcePath, moduleDevGuidePath);
+      }
     } catch {}
   }
 
@@ -1573,6 +1648,15 @@ function createWindow(projectDir) {
     paintWhenInitiallyHidden: true, // Start rendering before window is shown
     frame: false,
   });
+
+  try {
+    projectorDefaultBounds = projector1Window.getBounds();
+  } catch {}
+
+  try {
+    const initialConfig = loadConfig(projectDir);
+    applyProjectorWindowAspectRatio(initialConfig?.config?.aspectRatio);
+  } catch {}
 
   // Show window when ready to prevent white flash
   projector1Window.once("ready-to-show", () => {

@@ -85,7 +85,7 @@ export const NewModuleDialog = ({
     <Modal isOpen={isOpen} onClose={handleClose} size="small">
       <ModalHeader title="CREATE MODULE FROM TEMPLATE" onClose={handleClose} />
 
-      <div className="p-6 flex flex-col gap-4">
+      <div className="px-6 flex flex-col gap-4">
         <p className="text-neutral-500 text-[11px] font-mono">
           Once you create a module, you can edit it in your code editor. The
           module will be saved in{" "}

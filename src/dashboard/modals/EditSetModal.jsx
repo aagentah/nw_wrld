@@ -55,7 +55,7 @@ export const EditSetModal = ({ isOpen, onClose, setId, onAlert }) => {
     <Modal isOpen={isOpen} onClose={onClose}>
       <ModalHeader title="EDIT SET" onClose={onClose} />
 
-      <div className="p-6 flex flex-col gap-4">
+      <div className="px-6 flex flex-col gap-4">
         <div>
           <Label>Set Name</Label>
           <TextInput

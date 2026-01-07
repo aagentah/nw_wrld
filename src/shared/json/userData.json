@@ -92,7 +92,6 @@
           "bpm": 120,
           "channelMappings": {
             "1": 1,
-            "2": 2,
             "3": 3,
             "4": 4
           },
@@ -106,16 +105,20 @@
               "type": "BasicGeometry"
             },
             {
-              "id": "inst_1767789277682_g96akorml",
-              "type": "ScanLines"
-            },
-            {
               "id": "inst_1767789687717_ok1citixc",
               "type": "GridDots"
             },
             {
               "id": "inst_1767789718949_4cgdmcn5x",
               "type": "Text"
+            },
+            {
+              "id": "inst_1767802900192_wvvwecdg9",
+              "type": "GridOverlay"
+            },
+            {
+              "id": "inst_1767802987627_d29ptps5n",
+              "type": "Corners"
             }
           ],
           "modulesData": {
@@ -224,101 +227,6 @@
                           "octahedron",
                           "tetrahedron"
                         ]
-                      }
-                    ]
-                  }
-                ]
-              }
-            },
-            "inst_1767789277682_g96akorml": {
-              "constructor": [
-                {
-                  "name": "matrix",
-                  "options": [
-                    {
-                      "name": "matrix",
-                      "value": {
-                        "rows": 1,
-                        "cols": 1,
-                        "excludedCells": []
-                      }
-                    },
-                    {
-                      "name": "border",
-                      "value": false
-                    }
-                  ]
-                },
-                {
-                  "name": "show",
-                  "options": [
-                    {
-                      "name": "duration",
-                      "value": 0
-                    }
-                  ]
-                },
-                {
-                  "name": "opacity",
-                  "options": [
-                    {
-                      "name": "opacity",
-                      "value": 0.5,
-                      "defaultVal": 1
-                    }
-                  ]
-                }
-              ],
-              "methods": {
-                "1": [
-                  {
-                    "name": "reset",
-                    "options": null
-                  },
-                  {
-                    "name": "scan",
-                    "options": [
-                      {
-                        "name": "duration",
-                        "value": 2000,
-                        "defaultVal": 2000
-                      },
-                      {
-                        "name": "direction",
-                        "value": "vertical",
-                        "defaultVal": "vertical"
-                      }
-                    ]
-                  },
-                  {
-                    "name": "color",
-                    "options": [
-                      {
-                        "name": "color",
-                        "value": "#ffffff",
-                        "defaultVal": "#ffffff"
-                      }
-                    ]
-                  }
-                ],
-                "2": [
-                  {
-                    "name": "reset",
-                    "options": null
-                  }
-                ],
-                "3": [
-                  {
-                    "name": "halt",
-                    "options": null
-                  },
-                  {
-                    "name": "color",
-                    "options": [
-                      {
-                        "name": "color",
-                        "value": "#ff0000",
-                        "defaultVal": "#ffffff"
                       }
                     ]
                   }
@@ -461,6 +369,122 @@
                   }
                 ]
               }
+            },
+            "inst_1767802900192_wvvwecdg9": {
+              "constructor": [
+                {
+                  "name": "matrix",
+                  "options": [
+                    {
+                      "name": "matrix",
+                      "value": {
+                        "rows": 1,
+                        "cols": 1,
+                        "excludedCells": []
+                      }
+                    },
+                    {
+                      "name": "border",
+                      "value": false
+                    }
+                  ]
+                },
+                {
+                  "name": "size",
+                  "options": [
+                    {
+                      "name": "x",
+                      "value": 2
+                    },
+                    {
+                      "name": "y",
+                      "value": 2
+                    }
+                  ]
+                },
+                {
+                  "name": "color",
+                  "options": [
+                    {
+                      "name": "color",
+                      "value": "#ffffff"
+                    }
+                  ]
+                },
+                {
+                  "name": "scale",
+                  "options": [
+                    {
+                      "name": "scale",
+                      "value": 0.8,
+                      "defaultVal": 1
+                    }
+                  ]
+                }
+              ],
+              "methods": {
+                "1": [
+                  {
+                    "name": "show",
+                    "options": [
+                      {
+                        "name": "duration",
+                        "value": 75,
+                        "defaultVal": 0
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            "inst_1767802987627_d29ptps5n": {
+              "constructor": [
+                {
+                  "name": "matrix",
+                  "options": [
+                    {
+                      "name": "matrix",
+                      "value": {
+                        "rows": 1,
+                        "cols": 1,
+                        "excludedCells": []
+                      }
+                    },
+                    {
+                      "name": "border",
+                      "value": false
+                    }
+                  ]
+                },
+                {
+                  "name": "show",
+                  "options": [
+                    {
+                      "name": "duration",
+                      "value": 0
+                    }
+                  ]
+                },
+                {
+                  "name": "color",
+                  "options": [
+                    {
+                      "name": "color",
+                      "value": "#ffffff"
+                    }
+                  ]
+                },
+                {
+                  "name": "size",
+                  "options": [
+                    {
+                      "name": "size",
+                      "value": 20
+                    }
+                  ]
+                }
+              ],
+              "methods": {}
             }
           }
         },

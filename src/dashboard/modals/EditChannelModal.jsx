@@ -97,7 +97,7 @@ export const EditChannelModal = ({
     <Modal isOpen={isOpen} onClose={onClose}>
       <ModalHeader title="EDIT CHANNEL" onClose={onClose} />
 
-      <div className="p-6 flex flex-col gap-4">
+      <div className="px-6 flex flex-col gap-4">
         <div>
           <Label>Current Channel</Label>
           <div className="text-neutral-300 text-[11px] py-2 px-3 bg-neutral-900/50 rounded font-mono">

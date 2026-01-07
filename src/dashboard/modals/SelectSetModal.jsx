@@ -148,7 +148,7 @@ export const SelectSetModal = ({
       <Modal isOpen={isOpen} onClose={onClose} size="small">
         <ModalHeader title="SETS" onClose={onClose} />
 
-        <div className="p-6 flex flex-col gap-4">
+        <div className="px-6 flex flex-col gap-4">
           <div>
             <Label>Select Active Set:</Label>
             <SortableList

@@ -3,9 +3,27 @@ import { loadJsonFile, loadJsonFileSync } from "./jsonFileBase.js";
 const DEFAULT_SETTINGS = {
   aspectRatios: [
     {
-      id: "landscape",
-      label: "Landscape",
+      id: "default",
+      label: "Default",
       width: "100vw",
+      height: "100vh",
+    },
+    {
+      id: "16-9",
+      label: "16:9 (landscape)",
+      width: "100vw",
+      height: "100vh",
+    },
+    {
+      id: "9-16",
+      label: "9:16 (portrait)",
+      width: "56.25vh",
+      height: "100vh",
+    },
+    {
+      id: "4-5",
+      label: "4:5 (portrait)",
+      width: "80vh",
       height: "100vh",
     },
   ],
@@ -21,5 +39,8 @@ export const loadSettings = () =>
   );
 
 export const loadSettingsSync = () =>
-  loadJsonFileSync("config.json", DEFAULT_SETTINGS, "Error loading config.json:");
-
+  loadJsonFileSync(
+    "config.json",
+    DEFAULT_SETTINGS,
+    "Error loading config.json:"
+  );

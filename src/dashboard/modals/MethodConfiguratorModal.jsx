@@ -697,7 +697,9 @@ export const MethodConfiguratorModal = ({
 
                 {layer.configuredMethods.length > 0 ? (
                   <SortableList
-                    items={layer.configuredMethods}
+                    items={layer.configuredMethods.map((method) => ({
+                      id: method.name,
+                    }))}
                     strategy={horizontalListSortingStrategy}
                     onReorder={(oldIndex, newIndex) => {
                       if (!selectedChannel) return;
