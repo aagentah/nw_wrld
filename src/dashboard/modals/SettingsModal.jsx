@@ -29,6 +29,91 @@ const normalizeHexColor = (value) => {
   return hex;
 };
 
+const DraftIntInput = React.memo(({ value, fallback, onCommit, ...props }) => {
+  const [draft, setDraft] = React.useState(null);
+  const [isFocused, setIsFocused] = React.useState(false);
+  const skipCommitRef = React.useRef(false);
+
+  React.useEffect(() => {
+    if (!isFocused) setDraft(null);
+  }, [isFocused, value]);
+
+  const displayed = draft !== null ? draft : String(value ?? "");
+
+  const commitIfValid = React.useCallback(
+    (raw) => {
+      const s = String(raw);
+      const isIntermediate =
+        s === "" ||
+        s === "-" ||
+        s === "." ||
+        s === "-." ||
+        s.endsWith(".") ||
+        /e[+-]?$/i.test(s);
+      if (isIntermediate) return;
+      const n = parseInt(s, 10);
+      if (!Number.isFinite(n)) return;
+      onCommit(n);
+    },
+    [onCommit]
+  );
+
+  const commitOnBlur = React.useCallback(() => {
+    if (draft === null) return;
+    const s = String(draft);
+    const isIntermediate =
+      s === "" ||
+      s === "-" ||
+      s === "." ||
+      s === "-." ||
+      s.endsWith(".") ||
+      /e[+-]?$/i.test(s);
+    if (isIntermediate) {
+      onCommit(fallback);
+      return;
+    }
+    const n = parseInt(s, 10);
+    if (!Number.isFinite(n)) {
+      onCommit(fallback);
+      return;
+    }
+    onCommit(n);
+  }, [draft, fallback, onCommit]);
+
+  return (
+    <NumberInput
+      {...props}
+      value={displayed}
+      onFocus={() => {
+        skipCommitRef.current = false;
+        setIsFocused(true);
+        setDraft(String(value ?? ""));
+      }}
+      onChange={(e) => {
+        const next = e.target.value;
+        setDraft(next);
+        commitIfValid(next);
+      }}
+      onBlur={() => {
+        setIsFocused(false);
+        if (skipCommitRef.current) {
+          skipCommitRef.current = false;
+          return;
+        }
+        commitOnBlur();
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") e.currentTarget.blur();
+        if (e.key === "Escape") {
+          skipCommitRef.current = true;
+          setDraft(null);
+          e.currentTarget.blur();
+        }
+      }}
+    />
+  );
+});
+
 const UserColors = ({ config, updateConfig }) => {
   const userColors = Array.isArray(config?.userColors) ? config.userColors : [];
   const [draft, setDraft] = React.useState(
@@ -122,8 +207,8 @@ const ProjectorSettings = ({
   return (
     <div className="flex flex-col gap-3 font-mono">
       <div className="pl-12">
-        <div className="opacity-50 mb-1 text-[11px] relative inline-block">
-          Aspect Ratio:
+        <div className="mb-1 text-[11px] relative inline-block">
+          <span className="opacity-50">Aspect Ratio:</span>
           <HelpIcon helpText={HELP_TEXT.aspectRatio} />
         </div>
         <Select
@@ -183,8 +268,8 @@ export const SettingsModal = ({
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-3 font-mono border-b border-neutral-800 pb-6">
           <div className="pl-12">
-            <div className="opacity-50 mb-1 text-[11px] relative inline-block">
-              Signal Source:
+            <div className="mb-1 text-[11px] relative inline-block">
+              <span className="opacity-50">Signal Source:</span>
               <HelpIcon helpText={HELP_TEXT.sequencerMode} />
             </div>
             <div className="space-y-2">
@@ -224,8 +309,8 @@ export const SettingsModal = ({
           {!config.sequencerMode && (
             <>
               <div className="pl-12">
-                <div className="opacity-50 mb-1 text-[11px] relative inline-block">
-                  Input Source:
+                <div className="mb-1 text-[11px] relative inline-block">
+                  <span className="opacity-50">Input Source:</span>
                   <HelpIcon helpText={HELP_TEXT.inputType} />
                 </div>
                 <Select
@@ -303,8 +388,8 @@ export const SettingsModal = ({
               {inputConfig.type === "osc" && (
                 <>
                   <div className="pl-12">
-                    <div className="opacity-50 mb-1 text-[11px] relative inline-block">
-                      OSC Port:
+                    <div className="mb-1 text-[11px] relative inline-block">
+                      <span className="opacity-50">OSC Port:</span>
                       <HelpIcon helpText={HELP_TEXT.oscPort} />
                     </div>
                     <NumberInput
@@ -343,19 +428,17 @@ export const SettingsModal = ({
 
           {config.sequencerMode && (
             <div className="pl-12">
-              <div className="opacity-50 mb-1 text-[11px] relative inline-block">
-                Sequencer BPM:
+              <div className="mb-1 text-[11px] relative inline-block">
+                <span className="opacity-50">Sequencer BPM:</span>
                 <HelpIcon helpText={HELP_TEXT.sequencerBpm} />
               </div>
-              <NumberInput
-                value={config.sequencerBpm || 120}
-                onChange={(e) =>
-                  updateConfig({
-                    sequencerBpm: parseInt(e.target.value) || 120,
-                  })
-                }
+              <DraftIntInput
+                value={config.sequencerBpm ?? 120}
+                fallback={config.sequencerBpm ?? 120}
+                onCommit={(next) => updateConfig({ sequencerBpm: next })}
                 step={1}
                 className="py-1 w-full"
+                style={{ width: "100%" }}
               />
             </div>
           )}

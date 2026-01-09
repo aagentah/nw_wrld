@@ -748,6 +748,16 @@ const Dashboard = () => {
         ? updates.sequencerMode
         : wasSequencerMode;
 
+      if (
+        willBeSequencerMode &&
+        Object.prototype.hasOwnProperty.call(updates || {}, "sequencerBpm") &&
+        typeof updates.sequencerBpm === "number" &&
+        Number.isFinite(updates.sequencerBpm) &&
+        sequencerEngineRef.current
+      ) {
+        sequencerEngineRef.current.setBpm(updates.sequencerBpm);
+      }
+
       if (wasSequencerMode && !willBeSequencerMode && isSequencerPlaying) {
         if (sequencerEngineRef.current) {
           sequencerEngineRef.current.stop();
