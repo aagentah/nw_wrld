@@ -7,6 +7,8 @@ export interface HelpIconProps {
 }
 
 export const HelpIcon = ({ helpText }: HelpIconProps) => {
+  if (helpText == null) return null;
+  if (typeof helpText === "string" && helpText.trim().length === 0) return null;
   return (
     <Tooltip content={helpText} position="top">
       <span className="absolute top-[2px] -right-2 -translate-y-1/2 translate-x-1/2 cursor-help bg-neutral-200 rounded-full opacity-75">

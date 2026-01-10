@@ -47,10 +47,7 @@ class SequencerPlayback {
 
   setBpm(bpm: number): void {
     this.bpm = bpm;
-    if (this.isPlaying) {
-      this.stop();
-      this.play();
-    }
+    if (this.isPlaying) Tone.Transport.bpm.value = this.bpm;
   }
 
   play(): void {

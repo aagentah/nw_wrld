@@ -23,6 +23,7 @@ export interface InputEventBase {
 export interface MidiTrackSelectionEvent extends InputEventBase {
   source: "midi";
   note: number;
+  channel: number;
   velocity: number;
 }
 
@@ -46,8 +47,12 @@ export interface OscMethodTriggerEvent extends InputEventBase {
   address: string;
 }
 
-export type TrackSelectionEventData = MidiTrackSelectionEvent | OscTrackSelectionEvent;
-export type MethodTriggerEventData = MidiMethodTriggerEvent | OscMethodTriggerEvent;
+export type TrackSelectionEventData =
+  | MidiTrackSelectionEvent
+  | OscTrackSelectionEvent;
+export type MethodTriggerEventData =
+  | MidiMethodTriggerEvent
+  | OscMethodTriggerEvent;
 
 export type InputEventPayload =
   | { type: "track-selection"; data: TrackSelectionEventData }
@@ -58,4 +63,3 @@ export interface MidiDeviceInfo {
   name: string;
   manufacturer?: string;
 }
-

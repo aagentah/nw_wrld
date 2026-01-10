@@ -1,7 +1,7 @@
 {
   "name": "nw-wrld",
   "productName": "nw_wrld",
-  "version": "0.2.0-beta",
+  "version": "0.3.0-beta",
   "description": "nw_wrld is an event-driven sequencer for triggering visuals using web technologies. It enables users to scale up audiovisual compositions for prototyping, demos, exhibitions, and live performances. Users code their own visual modules, then orchestrate them using the project's native UI composer.",
   "main": "dist/index.js",
   "scripts": {
@@ -130,13 +130,20 @@
       "src/dashboard/views/**",
       "src/dashboard/assets/audio/**",
       "src/shared/**",
-      "src/assets/**"
+      "src/assets/**",
+      "!**/node_modules/**/prebuilds/android-*/**",
+      "!**/node_modules/**/prebuilds/linux-*/**",
+      "!**/node_modules/**/prebuilds/win32-*/**"
     ],
     "mac": {
       "target": [
         "dmg"
       ],
-      "icon": "build/logo.icns"
+      "icon": "build/logo.icns",
+      "hardenedRuntime": true,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.inherit.plist",
+      "notarize": true
     },
     "win": {
       "target": [

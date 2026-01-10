@@ -299,6 +299,18 @@ Once you're comfortable with the sequencer, you can connect external hardware fo
 4. Go to **Settings → Configure Mappings** to customize trigger notes
 5. Your DAW now controls the visuals in real-time
 
+### DAW Notes (Channel 1 Defaults + Best Practice)
+
+Many DAWs send note events on **MIDI Channel 1** by default. nw_wrld lets you choose which MIDI channel controls track selection and which controls method/channel triggers:
+
+- **Simplest setup (one channel)**:
+  - Set both **Track Select MIDI Channel** and **Method Triggers MIDI Channel** to `1`.
+  - Avoid overlap by using different note ranges for track selection vs triggers.
+
+- **Clean separation (two channels)**:
+  - Route track selection notes to Channel 1 and trigger notes to Channel 2 in your DAW.
+  - Set **Track Select MIDI Channel** = `1` and **Method Triggers MIDI Channel** = `2` in nw_wrld.
+
 ---
 
 ## Troubleshooting

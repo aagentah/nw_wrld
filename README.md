@@ -4,7 +4,6 @@ nw_wrld is an event-driven sequencer for triggering visuals using web technologi
 
 Visuals can be triggered via the built-in 16-step sequencer or by configuring external MIDI/OSC inputs.
 
-
 ![Node Version](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen)
 ![Electron](https://img.shields.io/badge/electron-v39.2.7-blue)
 
@@ -19,10 +18,12 @@ This project is currently in beta. Downloadable installers are not currently pro
 - [x] Isolated sandbox and module-workspace bundling
 - [x] Docblock-declared module dependencies with automated runtime injection
 - [ ] TypeScript migration
-- [ ] Signed and notarized macOS builds + signed Windows builds for frictionless installs
+- [ ] Signed and notarized macOS builds +
+- [ ] signed Windows builds for frictionless installs
 - [ ] Linux support
 - [ ] Userdata and module versioning (plus migration scripts)
 - [ ] Multi-band audio threshold analysis (local processing) for channel triggers
+- [ ] Advanced default sequencer (Working sampler with audio FX)
 - [ ] Remote API input source with HTTP/WebSocket client for cloud-based services (audio analysis APIs, ML models, etc.)
 - [ ] Serial port input support for hardware sensor integration
 - [ ] JSON versioning (and migration scripts)
@@ -200,6 +201,23 @@ For live performance with external hardware, you can connect MIDI controllers or
 2. Select **External (MIDI/OSC)**
 3. Configure MIDI device or OSC port
 4. Go to **Settings → Configure Mappings** to customize trigger notes
+
+### DAW Quickstart (Ableton / FL Studio / Logic / etc.)
+
+Most DAW setups send notes on **MIDI Channel 1** unless you explicitly route or change it. nw_wrld supports both single-channel and split-channel workflows:
+
+- **Option A (simplest): Single MIDI channel**
+
+  - In nw_wrld → Settings → External (MIDI/OSC) → MIDI:
+    - **Track Select MIDI Channel**: `1`
+    - **Method Triggers MIDI Channel**: `1`
+  - Best practice: keep **track notes** and **trigger notes** in different ranges to avoid collisions.
+
+- **Option B (clean separation): Split MIDI channels**
+  - In your DAW, route track-selection notes to Channel 1 and trigger notes to Channel 2 (commonly done with separate MIDI routing tracks/devices).
+  - In nw_wrld → Settings:
+    - **Track Select MIDI Channel**: `1`
+    - **Method Triggers MIDI Channel**: `2`
 
 ### Step 3: Perform Live
 
@@ -406,18 +424,19 @@ These files are managed by the Dashboard and typically don't require manual edit
 
 ## Troubleshooting
 
-| Issue                      | Solution                                                                                                       |
-| -------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| Project folder missing     | App will prompt to reselect - choose or create a new project                                                   |
-| Module doesn't appear      | Verify filename is `MyModule.js` (letters/numbers only), and docblock includes `@nwWrld name/category/imports` |
-| Module won't load          | Open Projector devtools; check for syntax errors, missing imports, or unknown imports                          |
-| Module hidden              | Trigger `show()` method or set `executeOnLoad: true`                                                           |
-| Asset won't load           | Verify path is relative to `assets/` folder                                                                    |
-| Pattern not playing        | Check that methods are assigned to channels                                                                    |
-| No MIDI detected           | Enable IAC Driver/loopMIDI and verify DAW MIDI output                                                          |
-| Method not triggering      | Verify mapping, check method name match, check console                                                         |
-| Hot reload not working     | Check file is saved in project's `modules/` folder                                                             |
-| App won't start (dev mode) | Close other dev servers (port 9000), run `npm install`                                                         |
+| Issue                                 | Solution                                                                                                       |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Project folder missing                | App will prompt to reselect - choose or create a new project                                                   |
+| Module doesn't appear                 | Verify filename is `MyModule.js` (letters/numbers only), and docblock includes `@nwWrld name/category/imports` |
+| Module won't load                     | Open Projector devtools; check for syntax errors, missing imports, or unknown imports                          |
+| Module hidden                         | Trigger `show()` method or set `executeOnLoad: true`                                                           |
+| Asset won't load                      | Verify path is relative to `assets/` folder                                                                    |
+| Pattern not playing                   | Check that methods are assigned to channels                                                                    |
+| No MIDI detected                      | Enable IAC Driver/loopMIDI and verify DAW MIDI output                                                          |
+| MIDI works once, then stops (Windows) | Ensure nw_wrld fully closed (no background process). If using a virtual port, restart the port app or reboot.  |
+| Method not triggering                 | Verify mapping, check method name match, check console                                                         |
+| Hot reload not working                | Check file is saved in project's `modules/` folder                                                             |
+| App won't start (dev mode)            | Close other dev servers (port 9000), run `npm install`                                                         |
 
 ---
 

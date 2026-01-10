@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useAtom } from "jotai";
 import { Modal } from "../shared/Modal";
 import { ModalHeader } from "../components/ModalHeader";
@@ -48,6 +48,17 @@ export const EditTrackModal: React.FC<EditTrackModalProps> = ({
   );
 
   const resolvedTrigger = getTrigger(trackSlot);
+
+  const takenSlotToTrackName = useMemo(() => {
+    const map = new Map();
+    tracks.forEach((t) => {
+      const slot = t?.trackSlot;
+      if (!slot) return;
+      if (track?.id && t?.id === track.id) return;
+      map.set(slot, String(t?.name || "").trim() || `Track ${slot}`);
+    });
+    return map;
+  }, [tracks, track?.id]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -107,12 +118,20 @@ export const EditTrackModal: React.FC<EditTrackModalProps> = ({
             onChange={(e) => setTrackSlot(parseInt(e.target.value))}
             className="w-full py-1 font-mono"
           >
-            {availableSlots.map((slot) => {
+            {Array.from({ length: 10 }, (_, i) => i + 1).map((slot) => {
               const trigger =
                 globalMappings.trackMappings?.[inputType]?.[slot] || "";
+              const takenBy = takenSlotToTrackName.get(slot) || "";
+              const isTaken = Boolean(takenBy);
               return (
-                <option key={slot} value={slot} className="bg-[#101010]">
+                <option
+                  key={slot}
+                  value={slot}
+                  className="bg-[#101010]"
+                  disabled={isTaken}
+                >
                   Track {slot} ({trigger || "not configured"})
+                  {isTaken ? ` — used by ${takenBy}` : ""}
                 </option>
               );
             })}

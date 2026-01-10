@@ -143,7 +143,17 @@ export const DashboardFooter = ({
                   {isPlaying ? "STOP" : "PLAY"}
                 </span>
               </Button>
-              <label className="flex items-center gap-2 cursor-pointer text-[11px] text-neutral-300 font-mono">
+              <label
+                className="flex items-center gap-2 cursor-pointer text-[11px] text-neutral-300 font-mono"
+                onClickCapture={(e) => {
+                  if (e.detail === 0) return;
+                  const input = e.currentTarget.querySelector(
+                    'input[type="checkbox"]'
+                  );
+                  if (!input) return;
+                  setTimeout(() => input.blur(), 0);
+                }}
+              >
                 <Checkbox
                   checked={isMuted}
                   onChange={(e) => onMuteChange(e.target.checked)}

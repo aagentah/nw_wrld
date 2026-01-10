@@ -2012,8 +2012,25 @@ app.whenReady().then(() => {
   });
 });
 
-app.on("before-quit", async () => {
-  if (inputManager) {
-    await inputManager.disconnect();
-  }
+let didRunShutdownCleanup = false;
+app.on("before-quit", (event) => {
+  if (didRunShutdownCleanup) return;
+  didRunShutdownCleanup = true;
+  event.preventDefault();
+
+  (async () => {
+    if (inputManager) {
+      try {
+        await inputManager.disconnect();
+      } catch (e) {
+        console.error("[Main] Failed to disconnect InputManager on quit:", e);
+      }
+    }
+  })()
+    .catch(() => {})
+    .finally(() => {
+      try {
+        app.quit();
+      } catch {}
+    });
 });

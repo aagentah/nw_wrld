@@ -227,10 +227,12 @@ class InputManager {
             if (channel === midiConfig.trackSelectionChannel) {
               this.broadcast("track-selection", {
                 note,
+                channel,
                 velocity,
                 source: "midi",
               });
-            } else if (channel === midiConfig.methodTriggerChannel) {
+            }
+            if (channel === midiConfig.methodTriggerChannel) {
               this.broadcast("method-trigger", {
                 note,
                 channel,
@@ -356,6 +358,7 @@ class InputManager {
     }
   }
 
+<<<<<<< HEAD:src/main/InputManager.ts
   async disconnect(): Promise<void> {
     if (!this.currentSource) return;
 
@@ -363,7 +366,21 @@ class InputManager {
       switch (this.currentSource.type) {
         case "midi":
           if (this.currentSource.instance) {
-            (this.currentSource.instance as MIDIInput).removeListener("noteon");
+            try {
+              (this.currentSource.instance as MIDIInput).removeListener();
+            } catch {
+              (this.currentSource.instance as MIDIInput).removeListener("noteon");
+            }
+          }
+          if (WebMidi.enabled && typeof WebMidi.disable === "function") {
+            try {
+              await WebMidi.disable();
+            } catch {
+              try {
+                WebMidi.disable();
+              } catch {}
+              }
+            }
           }
           break;
         case "osc":

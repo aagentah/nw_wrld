@@ -3,6 +3,8 @@ export const HELP_TEXT = {
     "The MIDI note or OSC address that activates this track. When triggered, the track becomes active and its modules load.",
   modules:
     "Modules that appear in the Projector window. Create your own in your project folder under modules/.",
+  constructor:
+    "Runs when a module is created/loaded. Use this for one-time setup (e.g., initial colors, text, sizes).",
   methods:
     "Actions a module can perform (e.g., change color, show, hide). Trigger methods via sequencer patterns or external MIDI/OSC.",
   executeOnLoadMethods:
@@ -15,12 +17,16 @@ export const HELP_TEXT = {
     "When enabled, the projector automatically refreshes when you make changes in the dashboard (add modules, modify settings, etc.).",
   channelTrigger:
     "Channels trigger methods on active modules. In Sequencer mode, use the 16-step grid. In External mode, use MIDI notes or OSC addresses.",
+  midiChannel:
+    "This channel slot is what triggers these methods (1-16). The actual trigger mapping is configured in Settings → Configure Mappings.",
   emulateMidiPlayback:
     "Triggers current track's MIDI configuration from dashboard. For prototyping only, not designed for live sets.",
   editorMethods:
     "Triggerable methods here are from the static methods array in your file. Click the play icon to test methods with their current parameter values.",
   inputType:
     "Choose how the app receives triggers: MIDI (hardware/IAC Driver), OSC (network messages from TouchOSC, Max/MSP, etc.).",
+  midiChannels:
+    "MIDI message channels used for external triggers. Track Select chooses which MIDI channel activates tracks; Triggers chooses which MIDI channel fires channel slots on the active track.",
   trackTrigger:
     "The identifier that activates this track. For MIDI: use note names (C-1, F#2). For OSC: use /track/name pattern (e.g., /track/intro).",
   trackSlot:
@@ -35,6 +41,8 @@ export const HELP_TEXT = {
     "UDP port for receiving OSC messages. Default: 8000. Configure your OSC sender to match this port. OSC naming: use /track/name for tracks, /ch/name for channels.",
   sequencerMode:
     "Choose your signal source. Sequencer (default): program patterns with a 16-step grid. External: connect MIDI/OSC hardware for live performance.",
+  sequencerGrid:
+    "Program 16-step patterns here. Each row is a channel; lit steps trigger the channel on that beat.",
   sequencerBpm:
     "Set the sequencer tempo in BPM. Controls playback speed when using the sequencer.",
 };
