@@ -73,6 +73,8 @@ class Text extends ModuleBase {
     },
   ];
 
+  textElem!: HTMLDivElement | null;
+
   constructor(container) {
     super(container);
     this.name = Text.name;

@@ -358,34 +358,37 @@ class InputManager {
     }
   }
 
-<<<<<<< HEAD:src/main/InputManager.ts
   async disconnect(): Promise<void> {
-    if (!this.currentSource) return;
-
     try {
-      switch (this.currentSource.type) {
-        case "midi":
-          if (this.currentSource.instance) {
-            try {
-              (this.currentSource.instance as MIDIInput).removeListener();
-            } catch {
-              (this.currentSource.instance as MIDIInput).removeListener("noteon");
-            }
-          }
-          if (WebMidi.enabled && typeof WebMidi.disable === "function") {
-            try {
-              await WebMidi.disable();
-            } catch {
+      if (this.currentSource) {
+        switch (this.currentSource.type) {
+          case "midi":
+            if (this.currentSource.instance) {
               try {
-                WebMidi.disable();
-              } catch {}
+                (this.currentSource.instance as MIDIInput).removeListener("noteon");
+              } catch {
+                // Fallback for older webmidi versions
+                try {
+                  ((this.currentSource.instance as any).removeListener as () => void)();
+                } catch {}
               }
             }
-          }
-          break;
-        case "osc":
-          (this.currentSource.instance as OSCPort).close();
-          break;
+            if (WebMidi.enabled && typeof WebMidi.disable === "function") {
+              try {
+                await WebMidi.disable();
+              } catch {
+                try {
+                  WebMidi.disable();
+                } catch {}
+              }
+            }
+            break;
+          case "osc":
+            if (this.currentSource.instance) {
+              (this.currentSource.instance as OSCPort).close();
+            }
+            break;
+        }
       }
 
       this.broadcastStatus(INPUT_STATUS.DISCONNECTED, "");
@@ -398,17 +401,13 @@ class InputManager {
 
   static getAvailableMIDIDevices(): Promise<Array<{ id: string; name: string; manufacturer?: string }>> {
     return new Promise((resolve) => {
+      // Use promise-based WebMidi.enable()
       WebMidi.enable({}).then(() => {
-        const inputs = (WebMidi as any).inputs;
-        console.log("[InputManager] WebMidi.inputs:", inputs);
-        console.log("[InputManager] inputs.length:", inputs?.length);
-        console.log("[InputManager] inputs[0]:", inputs?.[0]);
-        const devices = inputs.map((input: MIDIInput) => ({
+        const devices = (WebMidi as any).inputs.map((input: MIDIInput) => ({
           id: input.id,
           name: input.name,
           manufacturer: input.manufacturer,
         }));
-        console.log("[InputManager] devices:", devices);
         resolve(devices);
       }).catch((err: Error | null) => {
         console.error("[InputManager] Failed to enable WebMIDI:", err);
@@ -419,3 +418,4 @@ class InputManager {
 }
 
 export default InputManager;
+
