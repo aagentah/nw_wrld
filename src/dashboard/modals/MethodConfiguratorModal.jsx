@@ -7,29 +7,29 @@ import React, {
 } from "react";
 import { useAtom } from "jotai";
 import { remove } from "lodash";
-import { useIPCSend } from "../core/hooks/useIPC.js";
-import { Modal } from "../shared/Modal.jsx";
-import { ModalHeader } from "../components/ModalHeader.js";
-import { SortableWrapper } from "../shared/SortableWrapper.jsx";
-import { SortableList, arrayMove } from "../shared/SortableList.jsx";
+import { useIPCSend } from "../core/hooks/useIPC";
+import { Modal } from "../shared/Modal";
+import { ModalHeader } from "../components/ModalHeader";
+import { SortableWrapper } from "../shared/SortableWrapper";
+import { SortableList, arrayMove } from "../shared/SortableList";
 import { horizontalListSortingStrategy } from "@dnd-kit/sortable";
-import { ModalFooter } from "../components/ModalFooter.js";
-import { Button } from "../components/Button.js";
-import { Select } from "../components/FormInputs.js";
-import { HelpIcon } from "../components/HelpIcon.js";
-import { MethodBlock } from "../components/MethodBlock.js";
-import { Tooltip } from "../components/Tooltip.js";
+import { ModalFooter } from "../components/ModalFooter";
+import { Button } from "../components/Button";
+import { Select } from "../components/FormInputs";
+import { HelpIcon } from "../components/HelpIcon";
+import { MethodBlock } from "../components/MethodBlock";
+import { Tooltip } from "../components/Tooltip";
 import { FaExclamationTriangle } from "react-icons/fa";
 import {
   userDataAtom,
   selectedChannelAtom,
   activeSetIdAtom,
-} from "../core/state.js";
-import { updateActiveSet, getMethodsByLayer } from "../core/utils.js";
-import { getActiveSetTracks } from "../../shared/utils/setUtils.js";
-import { getBaseMethodNames } from "../utils/moduleUtils.js";
-import { HELP_TEXT } from "../../shared/helpText.js";
-import { MethodCodeModal } from "./MethodCodeModal.jsx";
+} from "../core/state";
+import { updateActiveSet, getMethodsByLayer } from "../core/utils";
+import { getActiveSetTracks } from "../../shared/utils/setUtils";
+import { getBaseMethodNames } from "../utils/moduleUtils";
+import { HELP_TEXT } from "../../shared/helpText";
+import { MethodCodeModal } from "./MethodCodeModal";
 
 const SortableItem = React.memo(
   ({

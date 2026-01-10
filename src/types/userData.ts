@@ -45,6 +45,7 @@ export interface UserConfig {
   sequencerMode: boolean;
   sequencerBpm: number;
   sequencerMuted?: boolean;
+  userColors?: string[];
   aspectRatio?: AspectRatioConfig["id"];
   bgColor?: string;
 }
@@ -83,6 +84,7 @@ export interface Track {
   channelMappings?: Record<string, number>;
   modules: ModuleRef[];
   modulesData: Record<InstanceId, ModuleInstanceData>;
+  isVisible?: boolean;
 }
 
 export interface NwSet {

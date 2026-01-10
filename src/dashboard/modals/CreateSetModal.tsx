@@ -1,0 +1,110 @@
+import React, { useState, useEffect } from "react";
+import { useAtom } from "jotai";
+import { Modal } from "../shared/Modal";
+import { ModalHeader } from "../components/ModalHeader";
+import { ModalFooter } from "../components/ModalFooter";
+import { Button } from "../components/Button";
+import { TextInput, Label, ValidationError } from "../components/FormInputs";
+import { useNameValidation } from "../core/hooks/useNameValidation";
+import {
+  userDataAtom,
+  activeTrackIdAtom,
+  activeSetIdAtom,
+} from "../core/state";
+import type { Atom } from "jotai";
+import { updateUserData } from "../core/utils";
+import type { UserData } from "@/types";
+
+export interface CreateSetModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onAlert?: (message: string) => void;
+}
+
+export const CreateSetModal: React.FC<CreateSetModalProps> = ({
+  isOpen,
+  onClose,
+  onAlert,
+}) => {
+  const [userData, setUserData] = useAtom(userDataAtom);
+  const [, setActiveTrackId] = useAtom(activeTrackIdAtom) as [any, (value: any) => void];
+  const [, setActiveSetId] = useAtom(activeSetIdAtom) as [any, (value: any) => void];
+  const [setName, setSetName] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const sets = userData.sets || [];
+
+  const { validate } = useNameValidation(sets as unknown as Record<string, unknown>[]);
+  const validation = validate(setName);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setSetName("");
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  const canSubmit = validation.isValid && !submitting;
+
+  const handleSubmit = async () => {
+    if (!canSubmit) return;
+    setSubmitting(true);
+    try {
+      const newSetId = `set_${Date.now()}`;
+      updateUserData(setUserData, (draft) => {
+        if (!Array.isArray(draft.sets)) {
+          draft.sets = [];
+        }
+        draft.sets.push({
+          id: newSetId,
+          name: setName.trim(),
+          tracks: [],
+        });
+      });
+
+      setActiveSetId(newSetId);
+      setActiveTrackId(null);
+      onClose();
+    } catch (e) {
+      console.error("Error creating set:", e);
+      if (onAlert) onAlert("Failed to create set.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose}>
+      <ModalHeader title="CREATE SET" onClose={onClose} />
+
+      <div className="flex flex-col gap-4 p-6">
+        <div>
+          <Label>Set Name</Label>
+          <TextInput
+            id="set-name"
+            value={setName}
+            onChange={(e) => setSetName(e.target.value)}
+            placeholder="Enter set name"
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && canSubmit) {
+                handleSubmit();
+              }
+            }}
+          />
+          <ValidationError value={setName} validation={validation} />
+        </div>
+      </div>
+
+      <ModalFooter>
+        <Button onClick={onClose} type="secondary">
+          Cancel
+        </Button>
+        <Button onClick={handleSubmit} disabled={!canSubmit}>
+          {submitting ? "Creating..." : "Create Set"}
+        </Button>
+      </ModalFooter>
+    </Modal>
+  );
+};

@@ -3,20 +3,43 @@
     "target": "ES2020",
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "module": "ESNext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
-    "jsx": "react",
+    "jsx": "react-jsx",
 
     "allowJs": true,
     "checkJs": false,
     "noEmit": true,
+    "allowImportingTsExtensions": true,
 
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "isolatedModules": true,
+    "allowSyntheticDefaultImports": true,
 
-    "strict": false
+    "strict": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "strictFunctionTypes": false,
+    "strictBindCallApply": false,
+    "strictPropertyInitialization": false,
+    "noImplicitThis": false,
+    "alwaysStrict": false,
+
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noImplicitReturns": false,
+    "noFallthroughCasesInSwitch": false,
+
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@types/*": ["src/types/*"],
+      "@dashboard/*": ["src/dashboard/*"],
+      "@projector/*": ["src/projector/*"],
+      "@shared/*": ["src/shared/*"]
+    }
   },
   "include": ["src/**/*", "index.js"],
   "exclude": ["node_modules", "dist", "release", "build"]

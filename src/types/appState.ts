@@ -4,4 +4,5 @@ export interface AppState {
   activeTrackId: TrackId | null;
   activeSetId: SetId | null;
   sequencerMuted?: boolean;
+  workspacePath?: string | null;
 }
