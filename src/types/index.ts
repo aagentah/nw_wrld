@@ -6,6 +6,7 @@ export type {
   InstanceId,
   JsonObject,
   JsonValue,
+  MappingTable,
   MethodBlock,
   MethodOption,
   ModuleInstanceData,
@@ -62,3 +63,4 @@ export type {
   SandboxRequestResult,
 } from "./sandbox";
 export type { NwSandboxIpc, NwWrldAppBridge, NwWrldBridge } from "./bridge";
+export type { RecordingData } from "../shared/json/recordingUtils";

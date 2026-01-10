@@ -1,6 +1,6 @@
 import React from "react";
-import { Modal } from "../shared/Modal.jsx";
-import { ModalHeader } from "../components/ModalHeader.js";
+import { Modal } from "../shared/Modal";
+import { ModalHeader } from "../components/ModalHeader";
 
 export const TrackDataModal = ({ isOpen, onClose, trackData }) => {
   if (!isOpen) return null;

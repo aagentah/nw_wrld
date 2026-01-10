@@ -1,0 +1,494 @@
+import React, {
+  useMemo,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import { FaCode, FaDice, FaLock, FaPlay } from "react-icons/fa";
+import {
+  TextInput,
+  NumberInput,
+  ColorInput,
+  Select,
+  Checkbox,
+} from "./FormInputs";
+import { MatrixGrid } from "../shared/MatrixGrid";
+import { AssetOptionInput } from "./AssetOptionInput";
+import type { MethodOptionDefinition, MethodDefinition } from "@/types";
+
+const CUSTOM_VALUE = "__nw_wrld_custom__";
+
+interface DraftNumberInputProps {
+  value: number;
+  min?: number;
+  max?: number;
+  fallback: number;
+  onCommit: (value: number) => void;
+}
+
+const DraftNumberInput = React.memo<DraftNumberInputProps>(
+  ({ value, min, max, fallback, onCommit }) => {
+    const [draft, setDraft] = useState<string | null>(null);
+    const [isFocused, setIsFocused] = useState(false);
+    const skipCommitRef = useRef(false);
+
+    useEffect(() => {
+      if (!isFocused) setDraft(null);
+    }, [isFocused, value]);
+
+    const displayed = draft !== null ? draft : String(value ?? "");
+
+    const commitIfValid = useCallback(
+      (raw: string) => {
+        const s = String(raw);
+        const isIntermediate =
+          s === "" ||
+          s === "-" ||
+          s === "." ||
+          s === "-." ||
+          s.endsWith(".") ||
+          /e[+-]?$/i.test(s);
+        if (isIntermediate) return;
+        const n = Number(s);
+        if (!Number.isFinite(n)) return;
+        onCommit(n);
+      },
+      [onCommit]
+    );
+
+    const commitOnBlur = useCallback(() => {
+      if (draft === null) return;
+      const s = String(draft);
+      const isIntermediate =
+        s === "" ||
+        s === "-" ||
+        s === "." ||
+        s === "-." ||
+        s.endsWith(".") ||
+        /e[+-]?$/i.test(s);
+      if (isIntermediate) {
+        onCommit(fallback);
+        return;
+      }
+      const n = Number(s);
+      if (!Number.isFinite(n)) {
+        onCommit(fallback);
+        return;
+      }
+      onCommit(n);
+    }, [draft, fallback, onCommit]);
+
+    return (
+      <NumberInput
+        value={displayed}
+        min={min}
+        max={max}
+        onFocus={() => {
+          skipCommitRef.current = false;
+          setIsFocused(true);
+          setDraft(String(value ?? ""));
+        }}
+        onChange={(e) => {
+          const next = e.target.value;
+          setDraft(next);
+          commitIfValid(next);
+        }}
+        onBlur={() => {
+          setIsFocused(false);
+          if (skipCommitRef.current) {
+            skipCommitRef.current = false;
+            return;
+          }
+          commitOnBlur();
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") (e.currentTarget as HTMLInputElement).blur();
+          if (e.key === "Escape") {
+            skipCommitRef.current = true;
+            setDraft(null);
+            (e.currentTarget as HTMLInputElement).blur();
+          }
+        }}
+      />
+    );
+  }
+);
+
+DraftNumberInput.displayName = "DraftNumberInput";
+
+export interface MethodOptionWithValue {
+  name: string;
+  value: any;
+  randomValues?: any[];
+  randomRange?: [number | string, number | string];
+  randomizeFromUserColors?: boolean;
+}
+
+export interface MethodBlockProps {
+  method: {
+    name: string;
+    options: MethodOptionWithValue[];
+  };
+  mode?: "dashboard" | "editor";
+  moduleMethods?: MethodDefinition[][];
+  moduleName?: string | null;
+  userColors?: string[];
+  dragHandleProps?: any;
+  onRemove?: (methodName: string) => void;
+  onShowCode?: (methodName: string) => void;
+  onTrigger?: (method: { name: string; options: MethodOptionWithValue[] }) => void;
+  onOptionChange?: (methodName: string, optionName: string, value: any) => void;
+  onToggleRandom?: (optionName: string, option: MethodOptionDefinition) => void;
+  onRandomRangeChange?: (
+    optionName: string,
+    index: number,
+    value: string | number,
+    option: MethodOptionDefinition
+  ) => void;
+  onAddMissingOption?: (methodName: string, optionName: string) => void;
+}
+
+export const MethodBlock = React.memo<MethodBlockProps>(
+  ({
+    method,
+    mode = "dashboard",
+    moduleMethods = [],
+    moduleName = null,
+    userColors = [],
+    dragHandleProps = null,
+    onRemove = null,
+    onShowCode = null,
+    onTrigger = null,
+    onOptionChange = null,
+    onToggleRandom = null,
+    onRandomRangeChange = null,
+    onAddMissingOption = null,
+  }) => {
+    const [isFlashing, setIsFlashing] = useState(false);
+    const [customColorOpenByOption, setCustomColorOpenByOption] = useState<Record<string, boolean>>({});
+
+    const methodOptions = useMemo(
+      () => moduleMethods.flat().find((m) => m.name === method.name)?.options || [],
+      [moduleMethods, method.name]
+    );
+
+    const handleOptionChange = useCallback(
+      (optionName: string, value: any) => {
+        if (onOptionChange) {
+          onOptionChange(method.name, optionName, value);
+        }
+      },
+      [method.name, onOptionChange]
+    );
+
+    const renderInput = (option: MethodOptionDefinition, currentOption: MethodOptionWithValue) => {
+      const isRandomized =
+        Array.isArray(currentOption.randomRange) ||
+        (option.type === "select" &&
+          Array.isArray(currentOption.randomValues) &&
+          currentOption.randomValues.length > 0) ||
+        (option.type === "color" &&
+          Array.isArray(currentOption.randomValues) &&
+          currentOption.randomValues.length > 0 &&
+          currentOption.randomizeFromUserColors);
+
+      const optionDef = moduleMethods
+        .flat()
+        .find((m) => m.name === method.name)
+        ?.options.find((o) => o.name === option.name);
+      const allowRandomization = optionDef?.allowRandomization || false;
+
+      if (mode === "editor") {
+        if (option.type === "number") {
+          const fallback =
+            typeof option.defaultVal === "number"
+              ? option.defaultVal
+              : typeof currentOption.value === "number"
+              ? currentOption.value
+              : 0;
+          return (
+            <DraftNumberInput
+              value={currentOption.value}
+              min={option.min}
+              max={option.max}
+              fallback={fallback}
+              onCommit={(next) => handleOptionChange(option.name, next)}
+            />
+          );
+        } else if (option.type === "select") {
+          return (
+            <Select
+              value={currentOption.value}
+              onChange={(e) => handleOptionChange(option.name, e.target.value)}
+            >
+              {option.values?.map((val) => (
+                <option key={val} value={val} className="bg-[#101010]">
+                  {val}
+                </option>
+              ))}
+            </Select>
+          );
+        } else if (option.type === "assetFile" || option.type === "assetDir") {
+          const kind = option.type === "assetDir" ? "dir" : "file";
+          return (
+            <AssetOptionInput
+              kind={kind}
+              baseDir={option.assetBaseDir}
+              extensions={option.assetExtensions}
+              allowCustom={option.allowCustom !== false}
+              value={currentOption.value}
+              onChange={(next) => handleOptionChange(option.name, next)}
+            />
+          );
+        } else if (option.type === "text") {
+          return (
+            <TextInput
+              value={currentOption.value}
+              onChange={(e) => handleOptionChange(option.name, e.target.value)}
+              className="w-20 py-0.5"
+            />
+          );
+        } else if (option.type === "color") {
+          const values = Array.isArray(userColors) ? userColors : [];
+          const isCustomOpen =
+            customColorOpenByOption[option.name] ??
+            !values.includes(currentOption.value);
+          const selectValue =
+            !isCustomOpen && values.includes(currentOption.value)
+              ? currentOption.value
+              : CUSTOM_VALUE;
+          return (
+            <div className="flex items-center gap-2">
+              {values.length > 0 ? (
+                <Select
+                  value={selectValue}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    if (next === CUSTOM_VALUE) {
+                      setCustomColorOpenByOption((prev) => ({
+                        ...prev,
+                        [option.name]: true,
+                      }));
+                      return;
+                    }
+                    setCustomColorOpenByOption((prev) => ({
+                      ...prev,
+                      [option.name]: false,
+                    }));
+                    handleOptionChange(option.name, next);
+                  }}
+                  style={{ width: "120px" }}
+                >
+                  {values.map((hex) => (
+                    <option key={hex} value={hex} className="bg-[#101010]">
+                      {hex}
+                    </option>
+                  ))}
+                  <option value={CUSTOM_VALUE} className="bg-[#101010]">
+                    custom…
+                  </option>
+                </Select>
+              ) : null}
+              {values.length === 0 || isCustomOpen ? (
+                <ColorInput
+                  value={currentOption.value}
+                  onChange={(e) => {
+                    setCustomColorOpenByOption((prev) => ({
+                      ...prev,
+                      [option.name]: true,
+                    }));
+                    handleOptionChange(option.name, e.target.value);
+                  }}
+                />
+              ) : null}
+            </div>
+          );
+        } else if (option.type === "boolean") {
+          return (
+            <Checkbox
+              checked={currentOption.value}
+              onChange={(e) =>
+                handleOptionChange(option.name, e.target.checked)
+              }
+            />
+          );
+        } else if (option.type === "matrix") {
+          return (
+            <MatrixGrid
+              value={currentOption.value}
+              onChange={(value) => handleOptionChange(option.name, value)}
+            />
+          );
+        }
+      }
+
+      return null;
+    };
+
+    return (
+      <div
+        className={`flex flex-col border w-fit flex-shrink-0 ${
+          isFlashing ? "border-red-500" : "border-neutral-600"
+        }`}
+      >
+        <div className="relative py-2 px-3 font-mono">
+          <div className="h-0 -translate-y-[17px] w-full px-2 min-w-max flex justify-between items-baseline mb-2">
+            <span
+              className={`px-1 mr-4 text-[11px] font-mono text-neutral-300 bg-[#101010] ${
+                mode === "dashboard" &&
+                dragHandleProps &&
+                method.name !== "matrix"
+                  ? "cursor-move"
+                  : method.name === "matrix"
+                  ? "cursor-not-allowed"
+                  : "cursor-default"
+              }`}
+              {...(mode === "dashboard" && dragHandleProps
+                ? dragHandleProps
+                : {})}
+            >
+              {mode === "dashboard" && method.name !== "matrix" && (
+                <span className="text-md text-neutral-300">{"\u2261 "}</span>
+              )}
+              {mode === "dashboard" && method.name === "matrix" && (
+                <span
+                  className="inline-flex items-center text-[11px] text-neutral-300/60"
+                  title="Not movable"
+                >
+                  <FaLock className="text-[10px] mr-1" />
+                </span>
+              )}
+              <span className="opacity-80">{method.name}</span>
+            </span>
+
+            <div className="flex items-center gap-2">
+              {mode === "dashboard" && onRemove && (
+                <div
+                  className="px-1 text-red-500/50 cursor-pointer text-[11px] bg-[#101010]"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRemove(method.name);
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  title="Delete Method"
+                >
+                  [{"\u00D7"}]
+                </div>
+              )}
+              {mode === "editor" && onTrigger && (
+                <div
+                  className="px-1 text-red-500/50 cursor-pointer text-[11px] bg-[#101010]"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsFlashing(true);
+                    onTrigger(method);
+                    setTimeout(() => {
+                      setIsFlashing(false);
+                    }, 50);
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  title="Trigger Method"
+                >
+                  <FaPlay className="text-[10px]" />
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div
+            className={`pt-2 grid gap-4 font-mono min-w-max ${
+              methodOptions?.length === 1
+                ? "grid-cols-1"
+                : methodOptions?.length >= 2
+                ? method.name === "matrix"
+                  ? "grid-cols-[max-content_max-content]"
+                  : "grid-cols-2"
+                : "grid-cols-1"
+            }`}
+          >
+            {methodOptions?.map((option) => {
+              const methodOptionValues = Array.isArray(method?.options)
+                ? method.options
+                : [];
+              const currentOption = methodOptionValues.find(
+                (o) => o.name === option.name
+              );
+
+              if (!currentOption) {
+                if (mode === "dashboard" && onAddMissingOption) {
+                  return (
+                    <div
+                      className="w-[192px] text-[11px] text-neutral-300 font-mono flex items-center gap-2"
+                      key={option.name}
+                    >
+                      <span>ERROR: Missing key "{option.name}"</span>
+                      <button
+                        onClick={() =>
+                          onAddMissingOption(method.name, option.name)
+                        }
+                        className="py-0.5 px-2 text-[11px] font-mono bg-white/5 text-neutral-300 border border-neutral-300 cursor-pointer whitespace-nowrap hover:bg-neutral-300 hover:text-[#101010]"
+                        title="Add missing option with default value"
+                      >
+                        Fix
+                      </button>
+                    </div>
+                  );
+                }
+                return null;
+              }
+
+              const optionDef = moduleMethods
+                .flat()
+                .find((m) => m.name === method.name)
+                ?.options.find((o) => o.name === option.name);
+              const allowRandomization = optionDef?.allowRandomization || false;
+              const isRandomized =
+                Array.isArray(currentOption.randomRange) ||
+                (option.type === "select" &&
+                  Array.isArray(currentOption.randomValues) &&
+                  currentOption.randomValues.length > 0) ||
+                (option.type === "color" &&
+                  Array.isArray(currentOption.randomValues) &&
+                  currentOption.randomValues.length > 0 &&
+                  currentOption.randomizeFromUserColors);
+              const showDice =
+                mode === "dashboard" &&
+                onToggleRandom &&
+                (allowRandomization ||
+                  option.type === "select" ||
+                  (option.type === "color" &&
+                    Array.isArray(userColors) &&
+                    userColors.length > 0));
+
+              return (
+                <div
+                  key={option.name}
+                  className="flex flex-col gap-1 text-[11px] text-neutral-300 font-mono"
+                >
+                  <div className="inline-flex items-center font-mono">
+                    {option.name}:
+                    {mode === "dashboard" && showDice && (
+                      <FaDice
+                        className={`ml-1.5 cursor-pointer text-[10px] ${
+                          isRandomized
+                            ? "text-neutral-300"
+                            : "text-neutral-300/30"
+                        }`}
+                        onClick={() => onToggleRandom(option.name, option)}
+                        title="Toggle Randomization"
+                      />
+                    )}
+                  </div>
+                  {renderInput(option, currentOption)}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
+);
+
+MethodBlock.displayName = "MethodBlock";

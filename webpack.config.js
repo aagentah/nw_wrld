@@ -7,15 +7,18 @@ module.exports = (env, argv) => {
   return {
     mode,
     entry: {
-      dashboard: ["./src/rendererPolyfills.js", "./src/dashboard/entry.js"],
-      projector: ["./src/rendererPolyfills.js", "./src/projector/entry.js"],
-      moduleSandbox: "./src/projector/moduleSandboxEntry.js",
+      dashboard: ["./src/rendererPolyfills.ts", "./src/dashboard/entry.tsx"],
+      projector: ["./src/rendererPolyfills.ts", "./src/projector/entry.tsx"],
+      moduleSandbox: "./src/projector/moduleSandboxEntry.ts",
     },
     output: {
       path: path.resolve(__dirname, "dist"),
       filename: "[name].js",
       globalObject: "globalThis",
-      publicPath: "auto", // Use this as the publicPath
+      publicPath: "auto",
+    },
+    resolve: {
+      extensions: [".js", ".jsx", ".ts", ".tsx"],
     },
     devtool: isProduction ? false : "eval-source-map",
     node: {
@@ -25,12 +28,16 @@ module.exports = (env, argv) => {
     module: {
       rules: [
         {
-          test: /\.(js|jsx)$/,
+          test: /\.(js|jsx|ts|tsx)$/,
           exclude: /node_modules/,
           use: {
             loader: "babel-loader",
             options: {
-              presets: ["@babel/preset-env", "@babel/preset-react"],
+              presets: [
+                "@babel/preset-env",
+                ["@babel/preset-react", { runtime: "automatic" }],
+                "@babel/preset-typescript"
+              ],
             },
           },
         },
@@ -54,7 +61,10 @@ module.exports = (env, argv) => {
     },
     plugins: [],
     devServer: {
-      static: path.join(__dirname, "dist"),
+      static: [
+        path.join(__dirname, "dist"),
+        path.join(__dirname, "src"),
+      ],
       compress: true,
       port: 9000,
       hot: true,

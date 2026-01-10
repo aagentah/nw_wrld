@@ -2,11 +2,12 @@
 <html style="display: block; width: 100%;">
 <head>
   <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' 'unsafe-eval';">
   <title>nw_wrld</title>
 </head>
 <body class="dashboard-body"  style="display: block; width: 100%;">
   <div id="dashboard" class="dashboard"></div>
   <div id="midiOutput"></div>
-  <script src="../../../dist/dashboard.js"></script>
+  <script src="/dashboard.js"></script>
 </body>
 </html>

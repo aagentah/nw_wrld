@@ -2,11 +2,13 @@ import type { JsonValue, MethodBlock } from "./userData";
 
 export type MethodOptionType =
   | "number"
-  | "boolean"
-  | "string"
+  | "text"
   | "color"
+  | "boolean"
+  | "select"
   | "matrix"
-  | "select";
+  | "assetFile"
+  | "assetDir";
 
 export interface MethodOptionDefinition {
   name: string;
@@ -16,6 +18,9 @@ export interface MethodOptionDefinition {
   max?: number;
   values?: string[];
   allowRandomization?: boolean;
+  assetBaseDir?: string;
+  assetExtensions?: string[];
+  allowCustom?: boolean;
 }
 
 export interface MethodDefinition {
