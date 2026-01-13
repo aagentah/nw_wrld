@@ -381,24 +381,6 @@ Many DAWs send note events on **MIDI Channel 1** by default. nw_wrld lets you ch
 
 **libasound.so cannot open shared object file (Windows 11 + WSL/Ubuntu):**
 
-If you see this error when starting nw_wrld on WSL:
-```
-error while loading shared libraries: libasound.so.2: cannot open shared object file
-```
-
-This is a known issue with Electron on Linux/WSL environments. To fix it:
-
-```bash
-# Install the ALSA library
-sudo apt-get update
-sudo apt-get install libasound2-dev
-
-# If the issue persists, create a symbolic link
-sudo ln -s /lib/x86_64-linux-gnu/libasound.so.2 /usr/lib/x86_64-linux-gnu/libasound.so
-```
-
-**Note:** Linux support is currently in beta. Full Linux support is on the roadmap. If you encounter other Linux-specific issues, please report them via [GitHub Issues](https://github.com/aagentah/nw_wrld/issues).
-
 For more help, see [Troubleshooting](README.md#troubleshooting) in the README or check [GitHub Issues](https://github.com/aagentah/nw_wrld/issues).
 
 ---
