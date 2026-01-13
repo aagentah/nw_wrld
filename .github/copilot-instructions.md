@@ -13,6 +13,15 @@ You are reviewing changes in `nw_wrld`, an Electron app with a deliberate archit
 
 Optimize for **zero regression** and **honoring existing architecture/contracts**, not generic cleanliness.
 
+#### Commenting policy (strict)
+
+Only leave review comments for **must-fix issues** (real red flags). If something is “nice to have”, **do not comment**.
+
+To make this concrete:
+
+- A comment is **must-fix** only if it points to a likely **bug**, **security issue**, **contract break**, **race condition**, **data loss**, or a **clear regression risk**.
+- If you are not confident it is must-fix, **stay silent**.
+
 #### Review priorities (in order)
 
 1. **Behavior safety**
@@ -30,7 +39,10 @@ Optimize for **zero regression** and **honoring existing architecture/contracts*
 
 #### What NOT to comment on (unless it causes a real bug)
 
-- Minor duplication in types, local type aliases, formatting, or “clean code” refactors.
+- Minor duplication, local helpers, formatting, or “clean code / DRY” refactors.
+- Suggestions to extract helpers purely to reduce repetition, unless the repetition is causing inconsistent behavior or an actual bug.
+- Defensive Electron lifecycle checks repeated in-place, unless there is a specific incorrect check causing a crash or leak.
+- “Prefer X style” suggestions (naming, file order, small refactors) unless they prevent a real defect.
 - Suggestions to “export for reuse” without a demonstrated callsite need.
 
 #### When you do suggest a change, include all of the following
@@ -39,3 +51,11 @@ Optimize for **zero regression** and **honoring existing architecture/contracts*
 - **Fan-out**: who/what depends on it (files/paths).
 - **Proof**: what test(s)/command(s) demonstrate no regression.
   - Prefer: `npm run typecheck:all`, `npm run lint`, `npm run test:unit`, `npm run build:renderer`.
+
+#### Severity label (required for every comment)
+
+Start every comment with:
+
+- `MUST-FIX:` and a one-line summary.
+
+If you cannot justify `MUST-FIX`, do not comment.
