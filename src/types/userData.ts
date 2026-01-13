@@ -10,6 +10,8 @@ export type JsonObject = { [key: string]: JsonValue };
 
 export type InputType = "midi" | "osc";
 
+export type NoteMatchMode = "pitchClass" | "exactNote";
+
 export interface InputConfig {
   type: InputType;
   deviceName?: string;
@@ -17,12 +19,18 @@ export interface InputConfig {
   methodTriggerChannel: number;
   velocitySensitive: boolean;
   port: number;
+  noteMatchMode?: NoteMatchMode;
 }
 
 export type MappingTable = Record<string, string>;
 
+export interface NoteMatchMappings {
+  pitchClass: MappingTable;
+  exactNote: MappingTable;
+}
+
 export interface GlobalMappings {
-  midi: MappingTable;
+  midi: NoteMatchMappings | MappingTable;
   osc: MappingTable;
 }
 

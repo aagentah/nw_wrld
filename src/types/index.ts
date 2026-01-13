@@ -13,6 +13,7 @@ export type {
   ModuleRef,
   ModuleType,
   NwSet,
+  NoteMatchMode,
   SetId,
   Track,
   TrackId,
