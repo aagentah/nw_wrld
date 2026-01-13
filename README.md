@@ -200,7 +200,7 @@ For live performance with external hardware, you can connect MIDI controllers or
 1. Dashboard → **Settings** → **Signal Source**
 2. Select **External (MIDI/OSC)**
 3. Configure MIDI device or OSC port
-4. Go to **Settings → Configure Mappings** to customize trigger notes
+4. Go to **Settings → Configure Mappings** to customize trigger mappings (MIDI Pitch Class or MIDI Exact Note / OSC addresses)
 
 ### DAW Quickstart (Ableton / FL Studio / Logic / etc.)
 
@@ -209,21 +209,24 @@ Most DAW setups send notes on **MIDI Channel 1** unless you explicitly route or 
 - **Option A (simplest): Single MIDI channel**
 
   - In nw_wrld → Settings → External (MIDI/OSC) → MIDI:
-    - **Track Select MIDI Channel**: `1`
     - **Method Triggers MIDI Channel**: `1`
-  - Best practice: keep **track notes** and **trigger notes** in different ranges to avoid collisions.
+    - **Track Select MIDI Channel**: `1`
+  - Use **Settings → Configure Mappings** to choose either:
+    - **MIDI (Pitch Class)**: octave-agnostic mapping using C..B (avoids DAW octave-name differences)
+    - **MIDI (Exact Note)**: octave-specific mapping using full MIDI note numbers (0–127)
+  - Then map which triggers activate track selection vs method triggers.
 
 - **Option B (clean separation): Split MIDI channels**
-  - In your DAW, route track-selection notes to Channel 1 and trigger notes to Channel 2 (commonly done with separate MIDI routing tracks/devices).
+  - In your DAW, route method trigger notes to Channel 1 and track-selection notes to Channel 2 (commonly done with separate MIDI routing tracks/devices).
   - In nw_wrld → Settings:
-    - **Track Select MIDI Channel**: `1`
-    - **Method Triggers MIDI Channel**: `2`
+    - **Method Triggers MIDI Channel**: `1`
+    - **Track Select MIDI Channel**: `2`
 
 ### Step 3: Perform Live
 
 1. Play your DAW
 2. Track activation note loads modules
-3. MIDI notes trigger mapped methods
+3. MIDI Pitch Class or Exact Note triggers mapped methods
 4. Real-time audiovisual performance
 
 ---
@@ -299,7 +302,13 @@ Switch between modes in **Settings → Signal Source**.
 
 **Sequencer Mode (Default)** - Program patterns with a 16-step grid per channel. Perfect for getting started, testing modules, and creating standalone pieces without external hardware. Adjustable BPM (60-130), patterns loop continuously and save with your tracks.
 
-**External Mode (Advanced)** - Connect MIDI/OSC hardware for live performance. Map MIDI notes or OSC addresses to visual methods for real-time control from Ableton, hardware controllers, TouchOSC, etc. Configure global mappings in Settings for consistent control across all tracks.
+**External Mode (Advanced)** - Connect MIDI/OSC hardware for live performance.
+
+- **MIDI (Pitch Class)**: map C..B (octave-agnostic). This avoids “G7 vs G8” naming differences across DAWs because matching is based on pitch class.
+- **MIDI (Exact Note)**: map full MIDI note numbers (0–127) for octave-specific triggers.
+- **OSC**: map OSC addresses.
+
+Configure global mappings in Settings for consistent control across all tracks.
 
 Switch modes anytime - your tracks, modules, and methods remain the same. Only the trigger source changes.
 
@@ -437,6 +446,7 @@ These files are managed by the Dashboard and typically don't require manual edit
 | Method not triggering                 | Verify mapping, check method name match, check console                                                         |
 | Hot reload not working                | Check file is saved in project's `modules/` folder                                                             |
 | App won't start (dev mode)            | Close other dev servers (port 9000), run `npm install`                                                         |
+| libasound.so error (Linux/WSL)        | Install ALSA: `sudo apt-get install libasound2-dev`. See [GETTING_STARTED](GETTING_STARTED.md#linuxwsl-issues) |
 
 ---
 

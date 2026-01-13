@@ -296,7 +296,7 @@ Once you're comfortable with the sequencer, you can connect external hardware fo
 1. Open Dashboard → **Settings**
 2. **Signal Source** → Select **External (MIDI/OSC)**
 3. Configure your MIDI device or OSC port
-4. Go to **Settings → Configure Mappings** to customize trigger notes
+4. Go to **Settings → Configure Mappings** to customize trigger mappings (MIDI pitch classes / OSC addresses)
 5. Your DAW now controls the visuals in real-time
 
 ### DAW Notes (Channel 1 Defaults + Best Practice)
@@ -304,12 +304,13 @@ Once you're comfortable with the sequencer, you can connect external hardware fo
 Many DAWs send note events on **MIDI Channel 1** by default. nw_wrld lets you choose which MIDI channel controls track selection and which controls method/channel triggers:
 
 - **Simplest setup (one channel)**:
-  - Set both **Track Select MIDI Channel** and **Method Triggers MIDI Channel** to `1`.
-  - Avoid overlap by using different note ranges for track selection vs triggers.
+
+  - Set both **Method Triggers MIDI Channel** and **Track Select MIDI Channel** to `1`.
+  - Use **Settings → Configure Mappings** to choose which pitch classes (C..B) activate track selection vs method triggers.
 
 - **Clean separation (two channels)**:
-  - Route track selection notes to Channel 1 and trigger notes to Channel 2 in your DAW.
-  - Set **Track Select MIDI Channel** = `1` and **Method Triggers MIDI Channel** = `2` in nw_wrld.
+  - Route method trigger notes to Channel 1 and track selection notes to Channel 2 in your DAW.
+  - Set **Method Triggers MIDI Channel** = `1` and **Track Select MIDI Channel** = `2` in nw_wrld.
 
 ---
 
@@ -375,6 +376,28 @@ Many DAWs send note events on **MIDI Channel 1** by default. nw_wrld lets you ch
 - Close other dev servers using port 9000
 - Run `npm install` again
 - Check Node.js version: `node --version` (should be v20+)
+
+### Linux/WSL Issues
+
+**libasound.so cannot open shared object file (Windows 11 + WSL/Ubuntu):**
+
+If you see this error when starting nw_wrld on WSL:
+```
+error while loading shared libraries: libasound.so.2: cannot open shared object file
+```
+
+This is a known issue with Electron on Linux/WSL environments. To fix it:
+
+```bash
+# Install the ALSA library
+sudo apt-get update
+sudo apt-get install libasound2-dev
+
+# If the issue persists, create a symbolic link
+sudo ln -s /lib/x86_64-linux-gnu/libasound.so.2 /usr/lib/x86_64-linux-gnu/libasound.so
+```
+
+**Note:** Linux support is currently in beta. Full Linux support is on the roadmap. If you encounter other Linux-specific issues, please report them via [GitHub Issues](https://github.com/aagentah/nw_wrld/issues).
 
 For more help, see [Troubleshooting](README.md#troubleshooting) in the README or check [GitHub Issues](https://github.com/aagentah/nw_wrld/issues).
 
