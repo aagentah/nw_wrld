@@ -314,6 +314,23 @@ Many DAWs send note events on **MIDI Channel 1** by default. nw_wrld lets you ch
 
 ---
 
+## Sending MIDI from Strudel (Steps)
+
+1. Install Strudel by following the instructions at [Strudel Codeberg](https://codeberg.org/uzu/strudel).
+2. Ensure your MIDI routing is set up (per the instructions above), and confirm `nw_wrld` is configured by following the **Switch to External mode** instructions.
+3. In Strudel, send notes to a specific MIDI port and channel by appending `.midi('port_name').midichan(<channel_number>)`. Make sure to use single brackets for the port_name.
+4. Note that sending a pattern to MIDI will stop local (browser) sound for that pattern; to keep local audio and send MIDI with the same rhythm, reuse the same rhythmic pattern for two outputs (audio + MIDI). See code example below:
+```js
+// 1) Declare the rhythm once (notes + rests define the rhythm)
+const r = "c4 ~ e4 g4 ~ e4 ~"   // short melody with rests
+
+// 2) Local audio pattern (plays Strudel sound)
+$: note(r).s("piano")
+
+// 3) Use same pattern to send to nw_wrld through Midi port
+$: note(r).midi('MIDI_port_name').midichan(1) // send to MIDI_port_name channel 1
+```
+
 ## Troubleshooting
 
 ### Project Folder Issues
