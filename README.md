@@ -410,7 +410,7 @@ nw_wrld/
 │   │   ├── midi/               # MIDI utilities
 │   │   └── audio/              # Audio feedback
 │   │
-│   └── renderer.js             # SDK initialization
+│   └── renderer.ts             # SDK initialization
 │
 ├── package.json
 └── README.md

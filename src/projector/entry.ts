@@ -5,3 +5,4 @@ import Projector from "./Projector.js";
 if (document.querySelector(".projector")) {
   Projector.init();
 }
+
