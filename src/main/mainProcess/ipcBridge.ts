@@ -1,75 +1,40 @@
-const { ipcMain, clipboard, shell } = require("electron");
-const path = require("path");
-const fs = require("fs");
-const { pathToFileURL } = require("url");
+import { app, clipboard, ipcMain, shell } from "electron";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { pathToFileURL } from "node:url";
+import InputManager from "../InputManager";
+import { srcDir, state } from "./state";
+import {
+  isExistingDirectory,
+  resolveWithinDir,
+  safeJsonFilename,
+  safeModuleName,
+} from "./pathSafety";
+import {
+  getJsonDirForBridge,
+  getJsonStatusForProject,
+  maybeMigrateLegacyJsonFileForBridge,
+} from "./workspace";
+import { atomicWriteFile, atomicWriteFileSync } from "../../shared/json/atomicWrite";
+import { readJsonWithBackup, readJsonWithBackupSync } from "../../shared/json/readJsonWithBackup";
+import { parseNwWrldDocblockMetadata } from "../../shared/nwWrldDocblock";
+import { sanitizeJsonForBridge } from "../../shared/validation/jsonBridgeValidation";
+import { normalizeInputConfig } from "../../shared/validation/inputConfigValidation";
+import {
+  escapeRegExpLiteral,
+  normalizeGetMethodCodeArgs,
+} from "../../shared/validation/methodCodeRequestValidation";
+import { normalizeOpenExternalUrl } from "../../shared/validation/openExternalValidation";
+import {
+  normalizeModuleSummaries,
+  normalizeModuleUrlResult,
+  normalizeModuleWithMeta,
+} from "../../shared/validation/workspaceValidation";
 
-const { app } = require("electron");
+type WebContentsWithId = { id?: unknown };
+type SenderEvent = { sender?: WebContentsWithId };
 
-const runtimeMainProcessDir = path.join(
-  __dirname,
-  "..",
-  "..",
-  "..",
-  "dist",
-  "runtime",
-  "main",
-  "mainProcess"
-);
-
-const { state, srcDir } = require(path.join(runtimeMainProcessDir, "state.js"));
-const { isExistingDirectory, resolveWithinDir, safeModuleName, safeJsonFilename } = require(
-  path.join(runtimeMainProcessDir, "pathSafety.js")
-);
-const { getJsonStatusForProject, getJsonDirForBridge, maybeMigrateLegacyJsonFileForBridge } = require(
-  path.join(runtimeMainProcessDir, "workspace.js")
-);
-
-const { atomicWriteFile, atomicWriteFileSync } = require(
-  path.join(srcDir, "..", "dist", "runtime", "shared", "json", "atomicWrite.js")
-);
-
-const { parseNwWrldDocblockMetadata } = require(
-  path.join(srcDir, "..", "dist", "runtime", "shared", "nwWrldDocblock.js")
-);
-
-const { sanitizeJsonForBridge } = require(
-  path.join(srcDir, "..", "dist", "runtime", "shared", "validation", "jsonBridgeValidation.js")
-);
-
-const { normalizeInputConfig } = require(
-  path.join(srcDir, "..", "dist", "runtime", "shared", "validation", "inputConfigValidation.js")
-);
-
-const { normalizeModuleSummaries, normalizeModuleWithMeta, normalizeModuleUrlResult } = require(
-  path.join(srcDir, "..", "dist", "runtime", "shared", "validation", "workspaceValidation.js")
-);
-
-const { normalizeGetMethodCodeArgs, escapeRegExpLiteral } = require(
-  path.join(
-    srcDir,
-    "..",
-    "dist",
-    "runtime",
-    "shared",
-    "validation",
-    "methodCodeRequestValidation.js"
-  )
-);
-
-const { normalizeOpenExternalUrl } = require(
-  path.join(srcDir, "..", "dist", "runtime", "shared", "validation", "openExternalValidation.js")
-);
-
-const { readJsonWithBackup, readJsonWithBackupSync } = require(
-  path.join(srcDir, "..", "dist", "runtime", "shared", "json", "readJsonWithBackup.js")
-);
-
-const InputManagerModule = require(
-  path.join(srcDir, "..", "dist", "runtime", "main", "InputManager.js")
-);
-const InputManager = InputManagerModule?.default || InputManagerModule;
-
-const getProjectDirForEvent = (event) => {
+const getProjectDirForEvent = (event: SenderEvent): string | null => {
   try {
     const senderId = event?.sender?.id;
     if (typeof senderId === "number" && state.webContentsToProjectDir.has(senderId)) {
@@ -81,8 +46,8 @@ const getProjectDirForEvent = (event) => {
 
 const MODULE_METADATA_MAX_BYTES = 16 * 1024;
 
-const readFileHeadUtf8 = async (filePath, maxBytes) => {
-  let fh;
+const readFileHeadUtf8 = async (filePath: string, maxBytes: number): Promise<string> => {
+  let fh: fs.promises.FileHandle | undefined;
   try {
     fh = await fs.promises.open(filePath, "r");
     const buf = Buffer.alloc(Math.max(0, Number(maxBytes) || 0));
@@ -97,20 +62,20 @@ const readFileHeadUtf8 = async (filePath, maxBytes) => {
   }
 };
 
-function registerIpcBridge() {
+export function registerIpcBridge(): void {
   ipcMain.on("bridge:project:getDir", (event) => {
-    event.returnValue = getProjectDirForEvent(event);
+    event.returnValue = getProjectDirForEvent(event as unknown as SenderEvent);
   });
   ipcMain.on("bridge:project:isRequired", (event) => {
     event.returnValue = true;
   });
   ipcMain.on("bridge:project:isDirAvailable", (event) => {
-    const projectDir = getProjectDirForEvent(event);
+    const projectDir = getProjectDirForEvent(event as unknown as SenderEvent);
     event.returnValue = Boolean(projectDir && isExistingDirectory(projectDir));
   });
 
   ipcMain.handle("bridge:workspace:listModuleFiles", async (event) => {
-    const projectDir = getProjectDirForEvent(event);
+    const projectDir = getProjectDirForEvent(event as unknown as SenderEvent);
     if (!projectDir || !isExistingDirectory(projectDir)) return [];
     const modulesDir = path.join(projectDir, "modules");
     try {
@@ -122,11 +87,11 @@ function registerIpcBridge() {
   });
 
   ipcMain.handle("bridge:workspace:listModuleSummaries", async (event) => {
-    const projectDir = getProjectDirForEvent(event);
+    const projectDir = getProjectDirForEvent(event as unknown as SenderEvent);
     if (!projectDir || !isExistingDirectory(projectDir)) return [];
     const modulesDir = path.join(projectDir, "modules");
 
-    let entries = [];
+    let entries: string[] = [];
     try {
       entries = await fs.promises.readdir(modulesDir);
     } catch {
@@ -161,7 +126,7 @@ function registerIpcBridge() {
   });
 
   ipcMain.handle("bridge:workspace:readModuleWithMeta", async (event, moduleName) => {
-    const projectDir = getProjectDirForEvent(event);
+    const projectDir = getProjectDirForEvent(event as unknown as SenderEvent);
     if (!projectDir || !isExistingDirectory(projectDir)) return null;
     const safe = safeModuleName(moduleName);
     if (!safe) return null;
@@ -180,7 +145,7 @@ function registerIpcBridge() {
   });
 
   ipcMain.handle("bridge:workspace:getModuleUrl", async (event, moduleName) => {
-    const projectDir = getProjectDirForEvent(event);
+    const projectDir = getProjectDirForEvent(event as unknown as SenderEvent);
     if (!projectDir || !isExistingDirectory(projectDir)) return null;
     const safe = safeModuleName(moduleName);
     if (!safe) return null;
@@ -197,7 +162,7 @@ function registerIpcBridge() {
   });
 
   ipcMain.handle("bridge:workspace:readModuleText", async (event, moduleName) => {
-    const projectDir = getProjectDirForEvent(event);
+    const projectDir = getProjectDirForEvent(event as unknown as SenderEvent);
     if (!projectDir || !isExistingDirectory(projectDir)) return null;
     const safe = safeModuleName(moduleName);
     if (!safe) return null;
@@ -212,7 +177,7 @@ function registerIpcBridge() {
   });
 
   ipcMain.on("bridge:workspace:writeModuleTextSync", (event, moduleName, text) => {
-    const projectDir = getProjectDirForEvent(event);
+    const projectDir = getProjectDirForEvent(event as unknown as SenderEvent);
     if (!projectDir || !isExistingDirectory(projectDir)) {
       event.returnValue = { ok: false, reason: "PROJECT_DIR_MISSING" };
       return;
@@ -235,12 +200,15 @@ function registerIpcBridge() {
       atomicWriteFileSync(fullPath, String(text ?? ""));
       event.returnValue = { ok: true, path: fullPath };
     } catch (e) {
-      event.returnValue = { ok: false, reason: e?.message || "WRITE_FAILED" };
+      event.returnValue = {
+        ok: false,
+        reason: e instanceof Error ? e.message : "WRITE_FAILED",
+      };
     }
   });
 
   ipcMain.on("bridge:workspace:moduleExists", (event, moduleName) => {
-    const projectDir = getProjectDirForEvent(event);
+    const projectDir = getProjectDirForEvent(event as unknown as SenderEvent);
     if (!projectDir || !isExistingDirectory(projectDir)) {
       event.returnValue = false;
       return;
@@ -264,7 +232,7 @@ function registerIpcBridge() {
   });
 
   ipcMain.on("bridge:workspace:showModuleInFolder", (event, moduleName) => {
-    const projectDir = getProjectDirForEvent(event);
+    const projectDir = getProjectDirForEvent(event as unknown as SenderEvent);
     if (!projectDir || !isExistingDirectory(projectDir)) return;
     const safe = safeModuleName(moduleName);
     if (!safe) return;
@@ -277,7 +245,7 @@ function registerIpcBridge() {
   });
 
   ipcMain.on("bridge:workspace:assetUrl", (event, relPath) => {
-    const projectDir = getProjectDirForEvent(event);
+    const projectDir = getProjectDirForEvent(event as unknown as SenderEvent);
     if (!projectDir || !isExistingDirectory(projectDir)) {
       event.returnValue = null;
       return;
@@ -296,7 +264,7 @@ function registerIpcBridge() {
   });
 
   ipcMain.handle("bridge:workspace:listAssets", async (event, relDir) => {
-    const projectDir = getProjectDirForEvent(event);
+    const projectDir = getProjectDirForEvent(event as unknown as SenderEvent);
     if (!projectDir || !isExistingDirectory(projectDir)) {
       return { ok: false, files: [], dirs: [] };
     }
@@ -323,7 +291,7 @@ function registerIpcBridge() {
   });
 
   ipcMain.handle("bridge:workspace:readAssetText", async (event, relPath) => {
-    const projectDir = getProjectDirForEvent(event);
+    const projectDir = getProjectDirForEvent(event as unknown as SenderEvent);
     if (!projectDir || !isExistingDirectory(projectDir)) return null;
     const assetsDir = path.join(projectDir, "assets");
     const fullPath = resolveWithinDir(assetsDir, String(relPath || ""));
@@ -336,7 +304,7 @@ function registerIpcBridge() {
   });
 
   ipcMain.handle("bridge:json:read", async (event, filename, defaultValue) => {
-    const projectDir = getProjectDirForEvent(event);
+    const projectDir = getProjectDirForEvent(event as unknown as SenderEvent);
     const safeName = safeJsonFilename(filename);
     if (!safeName) return defaultValue;
     if (projectDir && isExistingDirectory(projectDir)) {
@@ -351,7 +319,7 @@ function registerIpcBridge() {
   });
 
   ipcMain.on("bridge:json:readSync", (event, filename, defaultValue) => {
-    const projectDir = getProjectDirForEvent(event);
+    const projectDir = getProjectDirForEvent(event as unknown as SenderEvent);
     const safeName = safeJsonFilename(filename);
     if (!safeName) {
       event.returnValue = defaultValue;
@@ -369,7 +337,7 @@ function registerIpcBridge() {
   });
 
   ipcMain.handle("bridge:json:write", async (event, filename, data) => {
-    const projectDir = getProjectDirForEvent(event);
+    const projectDir = getProjectDirForEvent(event as unknown as SenderEvent);
     const safeName = safeJsonFilename(filename);
     if (!safeName) return { ok: false, reason: "INVALID_FILENAME" };
     const status = getJsonStatusForProject(projectDir);
@@ -381,12 +349,15 @@ function registerIpcBridge() {
       await atomicWriteFile(filePath, JSON.stringify(data, null, 2));
       return { ok: true };
     } catch (e) {
-      return { ok: false, reason: e?.message || "WRITE_FAILED" };
+      return {
+        ok: false,
+        reason: e instanceof Error ? e.message : "WRITE_FAILED",
+      };
     }
   });
 
   ipcMain.on("bridge:json:writeSync", (event, filename, data) => {
-    const projectDir = getProjectDirForEvent(event);
+    const projectDir = getProjectDirForEvent(event as unknown as SenderEvent);
     const safeName = safeJsonFilename(filename);
     if (!safeName) {
       event.returnValue = { ok: false, reason: "INVALID_FILENAME" };
@@ -406,7 +377,10 @@ function registerIpcBridge() {
       atomicWriteFileSync(filePath, JSON.stringify(data, null, 2));
       event.returnValue = { ok: true };
     } catch (e) {
-      event.returnValue = { ok: false, reason: e?.message || "WRITE_FAILED" };
+      event.returnValue = {
+        ok: false,
+        reason: e instanceof Error ? e.message : "WRITE_FAILED",
+      };
     }
   });
 
@@ -438,13 +412,16 @@ function registerIpcBridge() {
 
   ipcMain.on("bridge:app:getVersion", (event) => {
     try {
-      const tryReadVersion = (p) => {
+      const tryReadVersion = (p: string): string | null => {
         try {
           if (!p || typeof p !== "string") return null;
           if (!fs.existsSync(p)) return null;
           const raw = fs.readFileSync(p, "utf-8");
-          const pkg = JSON.parse(raw);
-          const v = pkg?.version;
+          const pkg = JSON.parse(raw) as unknown;
+          const v =
+            pkg && typeof pkg === "object" && "version" in pkg
+              ? (pkg as { version?: unknown }).version
+              : null;
           return typeof v === "string" && v.trim() ? v.trim() : null;
         } catch {
           return null;
@@ -471,20 +448,23 @@ function registerIpcBridge() {
 
   ipcMain.on("bridge:app:getRepositoryUrl", (event) => {
     try {
-      const tryRead = (p) => {
+      const tryRead = (p: string): string | null => {
         try {
           if (!p || typeof p !== "string") return null;
           if (!fs.existsSync(p)) return null;
           const raw = fs.readFileSync(p, "utf-8");
-          const pkg = JSON.parse(raw);
-          const repo = pkg?.repository;
+          const pkg = JSON.parse(raw) as unknown;
+          const repo =
+            pkg && typeof pkg === "object" && "repository" in pkg
+              ? (pkg as { repository?: unknown }).repository
+              : null;
           const url =
             typeof repo === "string"
               ? repo
-              : repo && typeof repo.url === "string"
-                ? repo.url
+              : repo && typeof repo === "object" && "url" in repo
+                ? (repo as { url?: unknown }).url
                 : null;
-          return url || null;
+          return typeof url === "string" ? url : null;
         } catch {
           return null;
         }
@@ -516,11 +496,11 @@ function registerIpcBridge() {
       const moduleBasePath = path.join(srcDir, "projector", "helpers", "moduleBase.js");
       const threeBasePath = path.join(srcDir, "projector", "helpers", "threeBase.js");
 
-      let filePath = null;
-      let fileContent = null;
-      const searchOrder = [];
+      let filePath: string | null = null;
+      let fileContent: string | null = null;
+      const searchOrder: string[] = [];
 
-      const projectDir = getProjectDirForEvent(event);
+      const projectDir = getProjectDirForEvent(event as unknown as SenderEvent);
       const safeModule = safeModuleName(moduleName);
       if (projectDir && isExistingDirectory(projectDir) && safeModule) {
         const modulesDir = path.join(projectDir, "modules");
@@ -564,7 +544,7 @@ function registerIpcBridge() {
       let parenCount = 0;
       let braceCount = 0;
       let inString = false;
-      let stringChar = null;
+      let stringChar: string | null = null;
       let foundMethodBody = false;
       let i = startIndex + methodNameMatch[0].indexOf("(");
 
@@ -651,7 +631,9 @@ function registerIpcBridge() {
   ipcMain.handle("input:configure", async (event, payload) => {
     if (state.inputManager) {
       const normalized = normalizeInputConfig(payload);
-      await state.inputManager.initialize(normalized);
+      await (state.inputManager as InputManager).initialize(
+        normalized as Parameters<InputManager["initialize"]>[0]
+      );
     }
     return { success: true };
   });
@@ -664,5 +646,3 @@ function registerIpcBridge() {
     console.log(message);
   });
 }
-
-module.exports = { registerIpcBridge };
