@@ -487,6 +487,17 @@ const Projector = {
           src.moduleId,
           src.text
         );
+        if (!initRes || initRes.ok !== true) {
+          const err =
+            (initRes && (initRes.error || initRes.reason)) ||
+            "INTROSPECTION_FAILED";
+          return {
+            moduleId: safeModuleId,
+            ok: false,
+            error: String(err),
+            mtimeMs,
+          };
+        }
 
         const displayName = initRes?.name || safeModuleId;
         return {
