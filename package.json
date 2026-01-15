@@ -14,7 +14,7 @@
     "build:runtime": "tsc -p tsconfig.runtime.json",
     "build:scripts": "tsc -p tsconfig.scripts.json",
     "check:runtime-lane": "npm run build:scripts && node dist/scripts/checkRuntimeLaneNoDuplicateSources.js",
-    "test:unit": "npm run build:runtime && npm run check:runtime-lane && node --test test",
+    "test:unit": "npm run build:runtime && npm run check:runtime-lane && node --test test/*.test.js",
     "test:e2e": "npm run build:runtime && npm run build && playwright test",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
