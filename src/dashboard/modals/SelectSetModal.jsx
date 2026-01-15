@@ -6,7 +6,7 @@ import { SortableList, arrayMove } from "../shared/SortableList.jsx";
 import { ModalHeader } from "../components/ModalHeader";
 import { ModalFooter } from "../components/ModalFooter";
 import { Button } from "../components/Button";
-import { RadioButton, Label } from "../components/FormInputs.js";
+import { RadioButton, Label } from "../components/FormInputs";
 import { updateUserData } from "../core/utils";
 import { EditSetModal } from "./EditSetModal.jsx";
 import { ConfirmationModal } from "./ConfirmationModal.jsx";

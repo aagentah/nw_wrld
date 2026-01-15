@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { NumberInput } from "../components/FormInputs.js";
+import { NumberInput } from "../components/FormInputs";
 
 export const MatrixGrid = ({ value, onChange }) => {
   const normalizeValue = (val) => {

@@ -28,7 +28,7 @@ import { Button } from "./components/Button";
 import { ModalHeader } from "./components/ModalHeader";
 import { ModalFooter } from "./components/ModalFooter";
 import { ModuleEditorModal } from "./components/ModuleEditorModal.js";
-import { NewModuleDialog } from "./components/NewModuleDialog.js";
+import { NewModuleDialog } from "./components/NewModuleDialog";
 import {
   loadUserData,
   saveUserData,
@@ -67,7 +67,7 @@ import { TrackItem } from "./components/track/TrackItem.jsx";
 import { DashboardHeader } from "./components/DashboardHeader.jsx";
 import { DashboardFooter } from "./components/DashboardFooter.jsx";
 import { useWorkspaceModules } from "./core/hooks/useWorkspaceModules.ts";
-import { useInputEvents } from "./core/hooks/useInputEvents.js";
+import { useInputEvents } from "./core/hooks/useInputEvents";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import { getProjectDir } from "../shared/utils/projectDir.ts";
 

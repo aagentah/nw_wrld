@@ -8,7 +8,7 @@ import {
   RadioButton,
   ColorInput,
   TextInput,
-} from "../components/FormInputs.js";
+} from "../components/FormInputs";
 import { HelpIcon } from "../components/HelpIcon";
 import { HELP_TEXT } from "../../shared/helpText.ts";
 

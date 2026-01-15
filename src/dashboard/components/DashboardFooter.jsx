@@ -2,7 +2,7 @@ import React from "react";
 import { useAtom } from "jotai";
 import { FaPlay, FaStop } from "react-icons/fa";
 import { recordingDataAtom } from "../core/state.ts";
-import { Checkbox } from "./FormInputs.js";
+import { Checkbox } from "./FormInputs";
 import { Button } from "./Button";
 
 export const DashboardFooter = ({

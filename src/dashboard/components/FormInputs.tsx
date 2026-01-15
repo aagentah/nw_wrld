@@ -1,9 +1,14 @@
 import React from "react";
-import { TERMINAL_STYLES } from "../core/constants.ts";
+import { TERMINAL_STYLES } from "../core/constants";
 
 export { TERMINAL_STYLES };
 
-export const TextInput = ({ style, ...props }) => {
+export const TextInput = ({
+  style,
+  ...props
+}: React.InputHTMLAttributes<HTMLInputElement> & {
+  style?: React.CSSProperties;
+}) => {
   return (
     <input
       type="text"
@@ -22,12 +27,21 @@ export const TextInput = ({ style, ...props }) => {
   );
 };
 
-export const NumberInput = ({ style, min, max, ...props }) => {
+export const NumberInput = ({
+  style,
+  min,
+  max,
+  ...props
+}: React.InputHTMLAttributes<HTMLInputElement> & {
+  style?: React.CSSProperties;
+  min?: string | number;
+  max?: string | number;
+}) => {
   return (
     <input
       type="number"
-      min={min || null}
-      max={max || null}
+      min={min ?? undefined}
+      max={max ?? undefined}
       style={{
         fontSize: TERMINAL_STYLES.fontSize,
         fontFamily: TERMINAL_STYLES.fontFamily,
@@ -44,7 +58,14 @@ export const NumberInput = ({ style, min, max, ...props }) => {
   );
 };
 
-export const Select = ({ style, children, ...props }) => {
+export const Select = ({
+  style,
+  children,
+  ...props
+}: React.SelectHTMLAttributes<HTMLSelectElement> & {
+  style?: React.CSSProperties;
+  children?: React.ReactNode;
+}) => {
   return (
     <select
       style={{
@@ -64,7 +85,14 @@ export const Select = ({ style, children, ...props }) => {
   );
 };
 
-export const Checkbox = ({ style, checked, defaultChecked, ...props }) => {
+export const Checkbox = ({
+  style,
+  checked,
+  defaultChecked,
+  ...props
+}: React.InputHTMLAttributes<HTMLInputElement> & {
+  style?: React.CSSProperties;
+}) => {
   return (
     <input
       type="checkbox"
@@ -90,7 +118,12 @@ export const Checkbox = ({ style, checked, defaultChecked, ...props }) => {
   );
 };
 
-export const RadioButton = ({ style, ...props }) => {
+export const RadioButton = ({
+  style,
+  ...props
+}: React.InputHTMLAttributes<HTMLInputElement> & {
+  style?: React.CSSProperties;
+}) => {
   return (
     <input
       type="radio"
@@ -115,7 +148,12 @@ export const RadioButton = ({ style, ...props }) => {
   );
 };
 
-export const ColorInput = ({ style, ...props }) => {
+export const ColorInput = ({
+  style,
+  ...props
+}: React.InputHTMLAttributes<HTMLInputElement> & {
+  style?: React.CSSProperties;
+}) => {
   return (
     <input
       type="color"
@@ -132,7 +170,12 @@ export const ColorInput = ({ style, ...props }) => {
   );
 };
 
-export const FileInput = ({ style, ...props }) => {
+export const FileInput = ({
+  style,
+  ...props
+}: React.InputHTMLAttributes<HTMLInputElement> & {
+  style?: React.CSSProperties;
+}) => {
   return (
     <input
       type="file"
@@ -151,7 +194,14 @@ export const FileInput = ({ style, ...props }) => {
   );
 };
 
-export const Label = ({ style, children, ...props }) => {
+export const Label = ({
+  style,
+  children,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement> & {
+  style?: React.CSSProperties;
+  children?: React.ReactNode;
+}) => {
   return (
     <div
       style={{
@@ -168,7 +218,13 @@ export const Label = ({ style, children, ...props }) => {
   );
 };
 
-export const ValidationError = ({ value, validation }) => {
+export const ValidationError = ({
+  value,
+  validation,
+}: {
+  value: string;
+  validation: { isValid: boolean; errorMessage: string };
+}) => {
   if (value.trim().length === 0 || validation.isValid) return null;
 
   return <div className="text-red-400 text-[11px] mt-1 font-mono">{validation.errorMessage}</div>;

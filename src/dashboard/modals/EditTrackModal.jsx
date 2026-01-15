@@ -4,7 +4,7 @@ import { Modal } from "../shared/Modal.jsx";
 import { ModalHeader } from "../components/ModalHeader";
 import { ModalFooter } from "../components/ModalFooter";
 import { Button } from "../components/Button";
-import { TextInput, Select, Label, ValidationError } from "../components/FormInputs.js";
+import { TextInput, Select, Label, ValidationError } from "../components/FormInputs";
 import { HelpIcon } from "../components/HelpIcon";
 import { userDataAtom, activeSetIdAtom } from "../core/state.ts";
 import { updateActiveSet } from "../core/utils";

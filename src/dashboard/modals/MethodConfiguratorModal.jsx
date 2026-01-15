@@ -1,10 +1,4 @@
-import React, {
-  useState,
-  useMemo,
-  useCallback,
-  useEffect,
-  useRef,
-} from "react";
+import React, { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useAtom } from "jotai";
 import { remove } from "lodash";
 import { useIPCSend } from "../core/hooks/useIPC";
@@ -15,16 +9,12 @@ import { SortableList, arrayMove } from "../shared/SortableList.jsx";
 import { horizontalListSortingStrategy } from "@dnd-kit/sortable";
 import { ModalFooter } from "../components/ModalFooter";
 import { Button } from "../components/Button";
-import { Select } from "../components/FormInputs.js";
+import { Select } from "../components/FormInputs";
 import { HelpIcon } from "../components/HelpIcon";
 import { MethodBlock } from "../components/MethodBlock.js";
 import { Tooltip } from "../components/Tooltip";
 import { FaExclamationTriangle } from "react-icons/fa";
-import {
-  userDataAtom,
-  selectedChannelAtom,
-  activeSetIdAtom,
-} from "../core/state.ts";
+import { userDataAtom, selectedChannelAtom, activeSetIdAtom } from "../core/state.ts";
 import { updateActiveSet, getMethodsByLayer } from "../core/utils";
 import { getActiveSetTracks } from "../../shared/utils/setUtils.ts";
 import { getBaseMethodNames } from "../utils/moduleUtils.ts";
@@ -50,44 +40,26 @@ const SortableItem = React.memo(
 
         const type = optionDef?.type || null;
         if (type === "select") {
-          if (
-            Array.isArray(option.randomValues) &&
-            option.randomValues.length
-          ) {
+          if (Array.isArray(option.randomValues) && option.randomValues.length) {
             changeOption(method.name, optionName, undefined, "randomValues");
             return;
           }
-          const values = Array.isArray(optionDef?.values)
-            ? optionDef.values
-            : [];
+          const values = Array.isArray(optionDef?.values) ? optionDef.values : [];
           if (!values.length) return;
           changeOption(method.name, optionName, [...values], "randomValues");
           return;
         }
 
         if (type === "color") {
-          if (
-            option.randomValues !== undefined &&
-            option.randomizeFromUserColors
-          ) {
+          if (option.randomValues !== undefined && option.randomizeFromUserColors) {
             changeOption(method.name, optionName, undefined, "randomValues");
-            changeOption(
-              method.name,
-              optionName,
-              undefined,
-              "randomizeFromUserColors"
-            );
+            changeOption(method.name, optionName, undefined, "randomizeFromUserColors");
             return;
           }
           const values = Array.isArray(userColors) ? userColors : [];
           if (!values.length) return;
           changeOption(method.name, optionName, [...values], "randomValues");
-          changeOption(
-            method.name,
-            optionName,
-            true,
-            "randomizeFromUserColors"
-          );
+          changeOption(method.name, optionName, true, "randomizeFromUserColors");
           return;
         }
 
@@ -100,10 +72,10 @@ const SortableItem = React.memo(
           typeof optionDef?.defaultVal === "boolean"
             ? optionDef.defaultVal
             : typeof optionDef?.defaultVal === "number"
-            ? optionDef.defaultVal
-            : typeof option.defaultVal === "boolean"
-            ? option.defaultVal
-            : parseFloat(option.defaultVal);
+              ? optionDef.defaultVal
+              : typeof option.defaultVal === "boolean"
+                ? option.defaultVal
+                : parseFloat(option.defaultVal);
 
         let min, max;
         if (typeof defaultVal === "boolean") {
@@ -125,9 +97,7 @@ const SortableItem = React.memo(
 
         const type = optionDef?.type || null;
         if (type === "select") {
-          const values = Array.isArray(optionDef?.values)
-            ? optionDef.values
-            : [];
+          const values = Array.isArray(optionDef?.values) ? optionDef.values : [];
           if (!values.length) return;
           if (!Array.isArray(indexOrValues)) return;
           const selected = values.filter((v) => indexOrValues.includes(v));
@@ -146,20 +116,10 @@ const SortableItem = React.memo(
           const selected = values.filter((v) => indexOrValues.includes(v));
           if (selected.length === 0) {
             changeOption(method.name, optionName, undefined, "randomValues");
-            changeOption(
-              method.name,
-              optionName,
-              undefined,
-              "randomizeFromUserColors"
-            );
+            changeOption(method.name, optionName, undefined, "randomizeFromUserColors");
           } else {
             changeOption(method.name, optionName, selected, "randomValues");
-            changeOption(
-              method.name,
-              optionName,
-              true,
-              "randomizeFromUserColors"
-            );
+            changeOption(method.name, optionName, true, "randomizeFromUserColors");
           }
           return;
         }
@@ -249,9 +209,7 @@ export const MethodConfiguratorModal = ({
   const module = useMemo(() => {
     if (!selectedChannel) return null;
     return predefinedModules.find(
-      (m) =>
-        m.id === selectedChannel.moduleType ||
-        m.name === selectedChannel.moduleType
+      (m) => m.id === selectedChannel.moduleType || m.name === selectedChannel.moduleType
     );
   }, [predefinedModules, selectedChannel]);
 
@@ -269,9 +227,7 @@ export const MethodConfiguratorModal = ({
     return new Set((workspaceModuleLoadFailures || []).filter(Boolean));
   }, [workspaceModuleLoadFailures]);
   const isFileMissing =
-    isWorkspaceMode &&
-    selectedModuleType &&
-    !workspaceFileSet.has(selectedModuleType);
+    isWorkspaceMode && selectedModuleType && !workspaceFileSet.has(selectedModuleType);
   const isLoadFailed =
     isWorkspaceMode &&
     selectedModuleType &&
@@ -280,8 +236,8 @@ export const MethodConfiguratorModal = ({
   const missingReasonText = isFileMissing
     ? `Module "${selectedModuleType}" was referenced by this track but "${selectedModuleType}.js" was not found in your workspace modules folder.`
     : isLoadFailed
-    ? `Module "${selectedModuleType}.js" exists in your workspace but failed to load. Fix the module file (syntax/runtime error) and save to retry.`
-    : `Module "${selectedModuleType}" is not available in the current workspace scan.`;
+      ? `Module "${selectedModuleType}.js" exists in your workspace but failed to load. Fix the module file (syntax/runtime error) and save to retry.`
+      : `Module "${selectedModuleType}" is not available in the current workspace scan.`;
 
   const [activeSetId] = useAtom(activeSetIdAtom);
 
@@ -292,22 +248,12 @@ export const MethodConfiguratorModal = ({
     sendToProjector("module-introspect", {
       moduleId: selectedChannel.moduleType,
     });
-  }, [
-    isOpen,
-    needsIntrospection,
-    selectedChannel?.moduleType,
-    sendToProjector,
-  ]);
+  }, [isOpen, needsIntrospection, selectedChannel?.moduleType, sendToProjector]);
 
   useEffect(() => {
     if (!isOpen) return;
     if (!selectedChannel) return;
-    if (
-      !module ||
-      !Array.isArray(module.methods) ||
-      module.methods.length === 0
-    )
-      return;
+    if (!module || !Array.isArray(module.methods) || module.methods.length === 0) return;
 
     const channelKey = selectedChannel.isConstructor
       ? "constructor"
@@ -322,8 +268,7 @@ export const MethodConfiguratorModal = ({
       if (!track?.modulesData?.[selectedChannel.instanceId]) return;
       const methodList = selectedChannel.isConstructor
         ? track.modulesData[selectedChannel.instanceId].constructor
-        : track.modulesData[selectedChannel.instanceId].methods[channelKey] ||
-          [];
+        : track.modulesData[selectedChannel.instanceId].methods[channelKey] || [];
       if (!Array.isArray(methodList) || methodList.length === 0) return;
 
       let changed = false;
@@ -356,10 +301,7 @@ export const MethodConfiguratorModal = ({
                 changed = true;
               }
             }
-            if (
-              Array.isArray(opt.randomRange) &&
-              opt.randomRange.length === 2
-            ) {
+            if (Array.isArray(opt.randomRange) && opt.randomRange.length === 2) {
               const [a, b] = opt.randomRange;
               const na = typeof a === "number" ? a : Number(a);
               const nb = typeof b === "number" ? b : Number(b);
@@ -368,10 +310,7 @@ export const MethodConfiguratorModal = ({
                   clampNumber(na, optDef.min, optDef.max),
                   clampNumber(nb, optDef.min, optDef.max),
                 ];
-                if (
-                  opt.randomRange[0] !== next[0] ||
-                  opt.randomRange[1] !== next[1]
-                ) {
+                if (opt.randomRange[0] !== next[0] || opt.randomRange[1] !== next[1]) {
                   opt.randomRange = next;
                   changed = true;
                 }
@@ -385,11 +324,7 @@ export const MethodConfiguratorModal = ({
           if (optDef.type === "boolean") {
             if (typeof opt.value !== "boolean") {
               const next =
-                opt.value === "true"
-                  ? true
-                  : opt.value === "false"
-                  ? false
-                  : optDef.defaultVal;
+                opt.value === "true" ? true : opt.value === "false" ? false : optDef.defaultVal;
               if (opt.value !== next) {
                 opt.value = next;
                 changed = true;
@@ -418,11 +353,9 @@ export const MethodConfiguratorModal = ({
                   delete opt.randomValues;
                   changed = true;
                 } else {
-                  const sameLength =
-                    filtered.length === opt.randomValues.length;
+                  const sameLength = filtered.length === opt.randomValues.length;
                   const sameOrder =
-                    sameLength &&
-                    filtered.every((v, i) => opt.randomValues[i] === v);
+                    sameLength && filtered.every((v, i) => opt.randomValues[i] === v);
                   if (!sameOrder) {
                     opt.randomValues = filtered;
                     changed = true;
@@ -453,9 +386,7 @@ export const MethodConfiguratorModal = ({
             } else if (v && typeof v === "object") {
               rows = v.rows || 1;
               cols = v.cols || 1;
-              excludedCells = Array.isArray(v.excludedCells)
-                ? v.excludedCells
-                : [];
+              excludedCells = Array.isArray(v.excludedCells) ? v.excludedCells : [];
             }
 
             const nextRows = Math.max(1, Math.min(5, Number(rows) || 1));
@@ -565,19 +496,16 @@ export const MethodConfiguratorModal = ({
         const insertMethod = methodName === "matrix" ? "unshift" : "push";
 
         if (selectedChannel.isConstructor) {
-          track.modulesData[selectedChannel.instanceId].constructor[
-            insertMethod
-          ](initializedMethod);
+          track.modulesData[selectedChannel.instanceId].constructor[insertMethod](
+            initializedMethod
+          );
         } else {
-          if (
-            !track.modulesData[selectedChannel.instanceId].methods[channelKey]
-          ) {
-            track.modulesData[selectedChannel.instanceId].methods[channelKey] =
-              [];
+          if (!track.modulesData[selectedChannel.instanceId].methods[channelKey]) {
+            track.modulesData[selectedChannel.instanceId].methods[channelKey] = [];
           }
-          track.modulesData[selectedChannel.instanceId].methods[channelKey][
-            insertMethod
-          ](initializedMethod);
+          track.modulesData[selectedChannel.instanceId].methods[channelKey][insertMethod](
+            initializedMethod
+          );
         }
       });
     },
@@ -639,9 +567,7 @@ export const MethodConfiguratorModal = ({
 
   const availableMethods = useMemo(() => {
     if (!module || !module.methods) return [];
-    return module.methods.filter(
-      (m) => !methodConfigs.some((mc) => mc.name === m.name)
-    );
+    return module.methods.filter((m) => !methodConfigs.some((mc) => mc.name === m.name));
   }, [methodConfigs, module]);
 
   const methodsByLayer = useMemo(() => {
@@ -656,15 +582,11 @@ export const MethodConfiguratorModal = ({
       ];
     }
     const layersWithMethods = methodLayers.map((layer) => {
-      const layerMethods = methodConfigs.filter((method) =>
-        layer.methods.includes(method.name)
-      );
+      const layerMethods = methodConfigs.filter((method) => layer.methods.includes(method.name));
       return {
         ...layer,
         configuredMethods: layerMethods,
-        availableMethods: availableMethods.filter((m) =>
-          layer.methods.includes(m.name)
-        ),
+        availableMethods: availableMethods.filter((m) => layer.methods.includes(m.name)),
       };
     });
     return layersWithMethods;
@@ -701,9 +623,7 @@ export const MethodConfiguratorModal = ({
       <Modal isOpen={isOpen} onClose={onClose} position="bottom" size="full">
         <ModalHeader title={modalTitle} onClose={onClose} />
         <div className="px-6 py-6">
-          <div className="text-neutral-300/70 text-[11px] font-mono">
-            {missingReasonText}
-          </div>
+          <div className="text-neutral-300/70 text-[11px] font-mono">{missingReasonText}</div>
         </div>
       </Modal>
     );
@@ -717,8 +637,7 @@ export const MethodConfiguratorModal = ({
         <div className="flex flex-col gap-6">
           {methodsByLayer.map((layer, layerIndex) => {
             const hasMethodsOrAvailable =
-              layer.configuredMethods.length > 0 ||
-              layer.availableMethods.length > 0;
+              layer.configuredMethods.length > 0 || layer.availableMethods.length > 0;
 
             if (!hasMethodsOrAvailable) return null;
 
@@ -739,21 +658,14 @@ export const MethodConfiguratorModal = ({
                       disabled={layer.availableMethods.length === 0}
                       style={{
                         opacity: layer.availableMethods.length === 0 ? 0.5 : 1,
-                        cursor:
-                          layer.availableMethods.length === 0
-                            ? "not-allowed"
-                            : "pointer",
+                        cursor: layer.availableMethods.length === 0 ? "not-allowed" : "pointer",
                       }}
                     >
                       <option value="" disabled className="text-neutral-300/30">
                         add method
                       </option>
                       {layer.availableMethods.map((method) => (
-                        <option
-                          key={method.name}
-                          value={method.name}
-                          className="bg-[#101010]"
-                        >
+                        <option key={method.name} value={method.name} className="bg-[#101010]">
                           {method.name}
                         </option>
                       ))}
@@ -778,13 +690,10 @@ export const MethodConfiguratorModal = ({
                         const channelKey = selectedChannel.isConstructor
                           ? "constructor"
                           : String(selectedChannel.channelNumber);
-                        const track =
-                          activeSet.tracks[selectedChannel.trackIndex];
+                        const track = activeSet.tracks[selectedChannel.trackIndex];
                         const methods = selectedChannel.isConstructor
-                          ? track.modulesData[selectedChannel.instanceId]
-                              .constructor
-                          : track.modulesData[selectedChannel.instanceId]
-                              .methods[channelKey];
+                          ? track.modulesData[selectedChannel.instanceId].constructor
+                          : track.modulesData[selectedChannel.instanceId].methods[channelKey];
 
                         const reorderedLayer = arrayMove(
                           currentLayer.configuredMethods,
@@ -792,25 +701,20 @@ export const MethodConfiguratorModal = ({
                           newIndex
                         );
 
-                        const allReorderedMethods = methodsByLayer.reduce(
-                          (acc, l) => {
-                            if (l.name === currentLayer.name) {
-                              return [...acc, ...reorderedLayer];
-                            } else {
-                              return [...acc, ...l.configuredMethods];
-                            }
-                          },
-                          []
-                        );
+                        const allReorderedMethods = methodsByLayer.reduce((acc, l) => {
+                          if (l.name === currentLayer.name) {
+                            return [...acc, ...reorderedLayer];
+                          } else {
+                            return [...acc, ...l.configuredMethods];
+                          }
+                        }, []);
 
                         if (selectedChannel.isConstructor) {
-                          track.modulesData[
-                            selectedChannel.instanceId
-                          ].constructor = allReorderedMethods;
+                          track.modulesData[selectedChannel.instanceId].constructor =
+                            allReorderedMethods;
                         } else {
-                          track.modulesData[selectedChannel.instanceId].methods[
-                            channelKey
-                          ] = allReorderedMethods;
+                          track.modulesData[selectedChannel.instanceId].methods[channelKey] =
+                            allReorderedMethods;
                         }
                       });
                     }}
@@ -853,35 +757,34 @@ export const MethodConfiguratorModal = ({
           })}
         </div>
 
-        {!selectedChannel?.isConstructor &&
-          (onEditChannel || onDeleteChannel) && (
-            <ModalFooter>
-              {onEditChannel && (
-                <Button
-                  onClick={() => {
-                    onEditChannel(selectedChannel.channelNumber);
-                    onClose();
-                  }}
-                  type="secondary"
-                  className="text-[11px]"
-                >
-                  EDIT CHANNEL
-                </Button>
-              )}
-              {onDeleteChannel && (
-                <Button
-                  onClick={() => {
-                    onDeleteChannel(selectedChannel.channelNumber);
-                    onClose();
-                  }}
-                  type="secondary"
-                  className="text-[11px]"
-                >
-                  DELETE CHANNEL
-                </Button>
-              )}
-            </ModalFooter>
-          )}
+        {!selectedChannel?.isConstructor && (onEditChannel || onDeleteChannel) && (
+          <ModalFooter>
+            {onEditChannel && (
+              <Button
+                onClick={() => {
+                  onEditChannel(selectedChannel.channelNumber);
+                  onClose();
+                }}
+                type="secondary"
+                className="text-[11px]"
+              >
+                EDIT CHANNEL
+              </Button>
+            )}
+            {onDeleteChannel && (
+              <Button
+                onClick={() => {
+                  onDeleteChannel(selectedChannel.channelNumber);
+                  onClose();
+                }}
+                type="secondary"
+                className="text-[11px]"
+              >
+                DELETE CHANNEL
+              </Button>
+            )}
+          </ModalFooter>
+        )}
       </Modal>
 
       <MethodCodeModal

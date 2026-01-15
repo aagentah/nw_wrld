@@ -2,9 +2,16 @@ import React, { useState } from "react";
 import { Button } from "./Button";
 import { ModalHeader } from "./ModalHeader";
 import { ModalFooter } from "./ModalFooter";
-import { TextInput, Select, Label } from "./FormInputs.js";
+import { TextInput, Select, Label } from "./FormInputs";
 
-const Modal = ({ isOpen, onClose, children, size = "small" }) => {
+type ModalProps = {
+  isOpen: boolean;
+  onClose: () => void;
+  children: React.ReactNode;
+  size?: "small" | "large";
+};
+
+const Modal = ({ isOpen, children, size = "small" }: ModalProps) => {
   if (!isOpen) return null;
 
   return (
@@ -20,27 +27,32 @@ const Modal = ({ isOpen, onClose, children, size = "small" }) => {
   );
 };
 
+type NewModuleDialogProps = {
+  isOpen: boolean;
+  onClose: () => void;
+  onCreateModule: (moduleName: string, templateType: string) => void;
+  workspacePath?: string | null;
+};
+
 export const NewModuleDialog = ({
   isOpen,
   onClose,
   onCreateModule,
   workspacePath = null,
-}) => {
+}: NewModuleDialogProps) => {
   const [moduleName, setModuleName] = useState("");
   const [templateType, setTemplateType] = useState("basic");
   const [error, setError] = useState("");
 
-  const validateModuleName = (name) => {
+  const validateModuleName = (name: string) => {
     if (!name || name.trim() === "") {
       return "Module name is required";
     }
 
-    // Check if name is a valid JavaScript identifier
     if (!/^[A-Z][a-zA-Z0-9]*$/.test(name)) {
       return "Module name must start with uppercase letter and contain only letters and numbers";
     }
 
-    // Check if file already exists (workspace modules)
     try {
       const bridge = globalThis.nwWrldBridge;
       if (
@@ -52,7 +64,8 @@ export const NewModuleDialog = ({
         return "A module with this name already exists";
       }
     } catch (err) {
-      return `Error checking file: ${err.message}`;
+      const msg = err instanceof Error ? err.message : String(err);
+      return `Error checking file: ${msg}`;
     }
 
     return null;
@@ -149,3 +162,4 @@ export const NewModuleDialog = ({
     </Modal>
   );
 };
+

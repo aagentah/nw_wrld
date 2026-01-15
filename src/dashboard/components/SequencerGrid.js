@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { NumberInput } from "./FormInputs.js";
+import { NumberInput } from "./FormInputs";
 import { HelpIcon } from "./HelpIcon";
 import { HELP_TEXT } from "../../shared/helpText.ts";
 

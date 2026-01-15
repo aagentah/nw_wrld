@@ -8,7 +8,7 @@ import {
   Select,
   Checkbox,
   TERMINAL_STYLES,
-} from "./FormInputs.js";
+} from "./FormInputs";
 import { getBaseMethodNames } from "../utils/moduleUtils.ts";
 import { MethodBlock } from "./MethodBlock.js";
 import { HelpIcon } from "./HelpIcon";

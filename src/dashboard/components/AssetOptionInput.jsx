@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Select, TextInput } from "./FormInputs.js";
+import { Select, TextInput } from "./FormInputs";
 
 const CUSTOM_VALUE = "__nw_wrld_custom__";
 

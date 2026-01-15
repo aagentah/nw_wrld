@@ -12,7 +12,7 @@ import {
   ColorInput,
   Select,
   Checkbox,
-} from "./FormInputs.js";
+} from "./FormInputs";
 import { MatrixGrid } from "../shared/MatrixGrid.jsx";
 import { AssetOptionInput } from "./AssetOptionInput.jsx";
 

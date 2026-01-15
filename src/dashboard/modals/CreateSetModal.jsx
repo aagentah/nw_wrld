@@ -4,7 +4,7 @@ import { Modal } from "../shared/Modal.jsx";
 import { ModalHeader } from "../components/ModalHeader";
 import { ModalFooter } from "../components/ModalFooter";
 import { Button } from "../components/Button";
-import { TextInput, Label, ValidationError } from "../components/FormInputs.js";
+import { TextInput, Label, ValidationError } from "../components/FormInputs";
 import { useNameValidation } from "../core/hooks/useNameValidation";
 import {
   userDataAtom,

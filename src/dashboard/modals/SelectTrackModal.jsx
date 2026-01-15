@@ -6,7 +6,7 @@ import { SortableList, arrayMove } from "../shared/SortableList.jsx";
 import { ModalHeader } from "../components/ModalHeader";
 import { ModalFooter } from "../components/ModalFooter";
 import { Button } from "../components/Button";
-import { RadioButton, Label } from "../components/FormInputs.js";
+import { RadioButton, Label } from "../components/FormInputs";
 import { updateActiveSet } from "../core/utils";
 import { getActiveSetTracks, getActiveSet } from "../../shared/utils/setUtils.ts";
 import { EditTrackModal } from "./EditTrackModal.jsx";
