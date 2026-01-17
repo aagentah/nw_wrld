@@ -39,6 +39,16 @@ class MockMidiInput {
     }
     set.delete(handler);
   }
+
+  emit(type: string, ...args: unknown[]) {
+    const set = this.listenersByType.get(type);
+    if (!set || set.size === 0) return;
+    for (const fn of Array.from(set)) {
+      try {
+        fn(...args);
+      } catch {}
+    }
+  }
 }
 
 export class MockWebMidi {
@@ -107,6 +117,27 @@ export class MockWebMidi {
         fn({ port: input ? { id: input.id, name: input.name } : { id: device.id, name: device.name } });
       } catch {}
     }
+  }
+
+  noteOn(deviceId: string, payload: { note: number; channel: number; velocity?: number }) {
+    const input = this.getInputById(deviceId);
+    if (!input) return false;
+    const note = typeof payload?.note === "number" ? payload.note : NaN;
+    const channel = typeof payload?.channel === "number" ? payload.channel : NaN;
+    const velocity =
+      typeof payload?.velocity === "number" && Number.isFinite(payload.velocity)
+        ? payload.velocity
+        : 1;
+    if (!Number.isFinite(note) || note < 0 || note > 127) return false;
+    if (!Number.isFinite(channel) || channel < 1 || channel > 16) return false;
+    if (!Number.isFinite(velocity) || velocity < 0 || velocity > 1) return false;
+
+    input.emit("noteon", {
+      note: { number: Math.trunc(note) },
+      message: { channel: Math.trunc(channel) },
+      velocity,
+    });
+    return true;
   }
 }
 

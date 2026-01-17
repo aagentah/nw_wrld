@@ -130,6 +130,7 @@ if (isTestEnv && isMockMidi) {
       reset: (devices: unknown) => ipcRenderer.invoke("test:midi:reset", devices),
       disconnect: (deviceId: unknown) => ipcRenderer.invoke("test:midi:disconnect", deviceId),
       reconnect: (device: unknown) => ipcRenderer.invoke("test:midi:reconnect", device),
+      noteOn: (payload: unknown) => ipcRenderer.invoke("test:midi:noteOn", payload),
     },
   };
 }

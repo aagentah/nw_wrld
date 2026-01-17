@@ -788,6 +788,17 @@ export function registerIpcBridge(): void {
       mock.reconnectDevice({ id, name, manufacturer });
       return { ok: true };
     });
+
+    ipcMain.handle("test:midi:noteOn", async (_event, payload: unknown) => {
+      const p = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : null;
+      const deviceId = p && typeof p.deviceId === "string" ? p.deviceId : "";
+      const note = p && typeof p.note === "number" ? p.note : NaN;
+      const channel = p && typeof p.channel === "number" ? p.channel : NaN;
+      const velocity = p && typeof p.velocity === "number" ? p.velocity : undefined;
+      if (!deviceId) return { ok: false };
+      const ok = mock.noteOn(deviceId, { note, channel, velocity });
+      return { ok };
+    });
   }
 
   ipcMain.on("log-to-main", (event, message) => {
