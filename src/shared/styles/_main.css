@@ -119,6 +119,8 @@ html {
 
 .code-viewer,
 .code-viewer *,
+.debug-log-viewer,
+.debug-log-viewer *,
 input,
 textarea,
 select,
@@ -128,6 +130,16 @@ select,
   -moz-user-select: text;
   -ms-user-select: text;
   user-select: text;
+}
+
+.debug-log-viewer *::selection {
+  background-color: rgba(150, 150, 150, 0.3);
+  color: inherit;
+}
+
+.debug-log-viewer *::-moz-selection {
+  background-color: rgba(150, 150, 150, 0.3);
+  color: inherit;
 }
 
 .drag-region {

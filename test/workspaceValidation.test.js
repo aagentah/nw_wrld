@@ -4,6 +4,7 @@ const path = require("node:path");
 
 const {
   normalizeModuleSummaries,
+  normalizeWorkspaceModuleScanResult,
   normalizeModuleWithMeta,
   normalizeModuleUrlResult,
 } = require(path.join(
@@ -29,6 +30,25 @@ test("workspace normalizer filters and shapes module summaries", () => {
     { file: "A.js", id: "A", name: "A", category: "Cat", hasMetadata: true },
     { file: "B.js", id: "B", hasMetadata: false },
   ]);
+});
+
+test("workspace normalizer shapes module scan result (summaries + skipped)", () => {
+  const input = {
+    summaries: [
+      { file: "A.js", id: "A", name: "A", category: "Cat", hasMetadata: true },
+      { file: "", id: "B", hasMetadata: false },
+    ],
+    skipped: [
+      { file: "text copy.js", reason: "Invalid filename: must match ^[A-Za-z][A-Za-z0-9]*$" },
+      { file: "", reason: "x" },
+      null,
+    ],
+  };
+  const res = normalizeWorkspaceModuleScanResult(input);
+  assert.deepEqual(res, {
+    summaries: [{ file: "A.js", id: "A", name: "A", category: "Cat", hasMetadata: true }],
+    skipped: [{ file: "text copy.js", reason: "Invalid filename: must match ^[A-Za-z][A-Za-z0-9]*$" }],
+  });
 });
 
 test("workspace normalizer accepts valid readModuleWithMeta result", () => {

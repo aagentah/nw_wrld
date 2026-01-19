@@ -53,6 +53,36 @@ export function normalizeModuleSummaries(value: Jsonish): ModuleSummary[] {
   return out;
 }
 
+export type SkippedWorkspaceModule = {
+  file: string;
+  reason: string;
+};
+
+export function normalizeSkippedWorkspaceModules(value: Jsonish): SkippedWorkspaceModule[] {
+  const list = Array.isArray(value) ? value : [];
+  const out: SkippedWorkspaceModule[] = [];
+  for (const item of list) {
+    if (!isPlainObject(item)) continue;
+    const file = asTrimmedString(item.file);
+    const reason = asTrimmedString(item.reason);
+    if (!file || !reason) continue;
+    out.push({ file, reason });
+  }
+  return out;
+}
+
+export type WorkspaceModuleScanResult = {
+  summaries: ModuleSummary[];
+  skipped: SkippedWorkspaceModule[];
+};
+
+export function normalizeWorkspaceModuleScanResult(value: Jsonish): WorkspaceModuleScanResult {
+  if (!isPlainObject(value)) return { summaries: [], skipped: [] };
+  const summaries = normalizeModuleSummaries(value.summaries);
+  const skipped = normalizeSkippedWorkspaceModules(value.skipped);
+  return { summaries, skipped };
+}
+
 export type ModuleWithMeta = { text: string; mtimeMs: number };
 
 export function normalizeModuleWithMeta(value: Jsonish): ModuleWithMeta | null {

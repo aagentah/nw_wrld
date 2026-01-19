@@ -5,7 +5,8 @@
     "module": "ESNext",
     "moduleResolution": "node",
     "resolveJsonModule": true,
-    "jsx": "react",
+    "jsx": "react-jsx",
+    "allowImportingTsExtensions": true,
 
     "allowJs": true,
     "checkJs": false,

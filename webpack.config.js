@@ -7,9 +7,12 @@ module.exports = (env, argv) => {
   return {
     mode,
     entry: {
-      dashboard: ["./src/rendererPolyfills.js", "./src/dashboard/entry.js"],
-      projector: ["./src/rendererPolyfills.js", "./src/projector/entry.js"],
-      moduleSandbox: "./src/projector/moduleSandboxEntry.js",
+      dashboard: ["./src/rendererPolyfills.ts", "./src/dashboard/entry.ts"],
+      projector: ["./src/rendererPolyfills.ts", "./src/projector/entry.ts"],
+      moduleSandbox: "./src/projector/moduleSandboxEntry.ts",
+    },
+    resolve: {
+      extensions: [".js", ".jsx", ".ts", ".tsx", ".json"],
     },
     output: {
       path: path.resolve(__dirname, "dist"),
@@ -25,12 +28,30 @@ module.exports = (env, argv) => {
     module: {
       rules: [
         {
+          test: /\.(ts|tsx)$/,
+          include: [path.resolve(__dirname, "src")],
+          exclude: /node_modules/,
+          use: {
+            loader: "babel-loader",
+            options: {
+              presets: [
+                "@babel/preset-env",
+                ["@babel/preset-react", { runtime: "automatic" }],
+                ["@babel/preset-typescript", { isTSX: true, allExtensions: true }],
+              ],
+            },
+          },
+        },
+        {
           test: /\.(js|jsx)$/,
           exclude: /node_modules/,
           use: {
             loader: "babel-loader",
             options: {
-              presets: ["@babel/preset-env", "@babel/preset-react"],
+              presets: [
+                "@babel/preset-env",
+                ["@babel/preset-react", { runtime: "automatic" }],
+              ],
             },
           },
         },

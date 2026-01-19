@@ -4,7 +4,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const os = require("node:os");
 
-const { atomicWriteFile } = require("../src/shared/json/atomicWrite.cjs");
+const { atomicWriteFile } = require("../dist/runtime/shared/json/atomicWrite.js");
 
 test("atomicWriteFile: last write wins and leaves no temp files", async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "nw_wrld_atomicwrite_"));

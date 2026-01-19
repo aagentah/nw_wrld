@@ -2,23 +2,13 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const path = require("node:path");
 
-const { sanitizeJsonForBridge } = require(path.join(
-  __dirname,
-  "..",
-  "dist",
-  "runtime",
-  "shared",
-  "validation",
-  "jsonBridgeValidation.js"
-));
+const { sanitizeJsonForBridge } = require(
+  path.join(__dirname, "..", "dist", "runtime", "shared", "validation", "jsonBridgeValidation.js")
+);
 
 test("userData.json sanitize preserves default flags and minimum shape", () => {
   const defaultValue = { config: {}, sets: [], _isDefaultData: true };
-  const res = sanitizeJsonForBridge(
-    "userData.json",
-    defaultValue,
-    defaultValue
-  );
+  const res = sanitizeJsonForBridge("userData.json", defaultValue, defaultValue);
   assert.equal(res._isDefaultData, true);
   assert.ok(res.config && typeof res.config === "object");
   assert.ok(Array.isArray(res.sets));
@@ -29,11 +19,7 @@ test("userData.json sanitize repairs missing config/sets types", () => {
     config: {},
     sets: [{ id: "set_1", name: "Set 1", tracks: [] }],
   };
-  const res = sanitizeJsonForBridge(
-    "userData.json",
-    { config: null, sets: null },
-    defaultValue
-  );
+  const res = sanitizeJsonForBridge("userData.json", { config: null, sets: null }, defaultValue);
   assert.ok(res.config && typeof res.config === "object");
   assert.ok(Array.isArray(res.sets));
 });
@@ -74,4 +60,11 @@ test("userData.json sanitize drops invalid module entries and ensures modulesDat
   const track = res.sets[0].tracks[0];
   assert.equal(track.modules.length, 1);
   assert.ok(track.modulesData && typeof track.modulesData === "object");
+});
+
+test("userData.json sanitize preserves config.aspectRatio (startup-critical)", () => {
+  const defaultValue = { config: {}, sets: [] };
+  const input = { config: { aspectRatio: "16-9" }, sets: [] };
+  const res = sanitizeJsonForBridge("userData.json", input, defaultValue);
+  assert.equal(res.config.aspectRatio, "16-9");
 });

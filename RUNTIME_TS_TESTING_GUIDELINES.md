@@ -22,6 +22,9 @@ This document is the standard we will follow (and enforce) for any future work i
 - **`unknown` is allowed only at true boundaries**, and must be narrowed immediately.
   - Examples of “true boundaries”: JSON parsing, IPC payloads, sandbox messages, device callbacks.
   - Rule: keep `unknown` at the function signature (`(value: unknown)`) and convert to safe, constrained types in the first few lines using guards.
+- **No duplicate implementations for runtime modules.**
+  - If a module is migrated into the runtime TS lane (`tsconfig.runtime.json`), there must not also be a parallel source implementation (e.g. `src/**.js` + `src/**.ts`, or `src/**.cjs` + `src/**.ts`).
+  - A migration is not complete until all consumers are updated to use the runtime output and the legacy implementation is removed.
 - **No “validation for validation’s sake.”**
   - Only add runtime validation/tests when the area is truly critical (rubric below).
 - **No mystery diffs.**
@@ -91,6 +94,36 @@ In this repo, the canonical boundary points include:
 
 ---
 
+### Preference: runtime code must not import from `src/` at runtime
+
+When migrating logic into the runtime TS lane, the **single runtime source of truth** is the compiled output under `dist/runtime/**`.
+
+- Runtime code should **not** use “require-from-`src` fallbacks” (e.g., “try `dist/runtime`, else `src/`”).
+- If a module is needed at runtime, it should be **compiled into** `dist/runtime/**` (via `tsconfig.runtime.json`) and imported normally from the runtime bundle.
+- This avoids duplicated implementations (`.js` + `.ts`) and keeps runtime behavior consistent with what unit tests execute.
+
+---
+
+### Clarification: when to import from `dist/runtime/**` vs `src/**`
+
+This repo has two “worlds” that can both consume shared logic:
+
+- **Runtime lane (Electron/Node execution)**:
+  - Main-process/runtime code should import from **`dist/runtime/**`\*\*.
+  - Runtime-focused unit tests should import from **`dist/runtime/**`\*\* to validate what actually executes at runtime.
+  - This keeps runtime behavior consistent and enforces the “single runtime source of truth” rule.
+
+- **App/renderer/source code (bundled UI code under `src/`)**:
+  - Source/UI code should import from **`src/**`** (typically `src/shared/**`), not from `dist/runtime/**`.
+  - Avoid making `src/**` depend on build artifacts under `dist/**` (it creates brittle build-order coupling and breaks clean builds).
+
+In practice:
+
+- **Use `dist/runtime/**`\*\* when the code path is intended to run as part of the runtime TS lane (Electron main process / runtime execution) or when a unit test is explicitly validating that compiled output.
+- **Use `src/**`\*\* for renderer/UI modules and other source code that is bundled by webpack.
+
+---
+
 ### How to add a new “TS island” safely (checklist)
 
 - **Define the boundary**:
@@ -109,8 +142,20 @@ In this repo, the canonical boundary points include:
   - 1–2 “invalid input contained” tests
 - **Prove no regression**:
   - Run `npm run test:unit`.
+  - Confirm the runtime lane duplicate check passes (it is run as part of `npm run test:unit`).
 
 ---
+
+### Enforcement: runtime lane must not have duplicate source implementations
+
+This repo enforces the “single runtime source of truth” rule for modules listed in `tsconfig.runtime.json`:
+
+- If a path is included as runtime TS (e.g. `src/foo/bar.ts`), there must not also exist a `src/foo/bar.js` or `src/foo/bar.cjs`.
+- This prevents accidentally shipping or relying on a `src/**` fallback implementation.
+
+Run:
+
+- `npm run test:unit` (includes the enforcement check)
 
 ### Validation style (no dependencies, no `any`)
 
@@ -204,15 +249,9 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const path = require("node:path");
 
-const { normalizeCriticalPayload } = require(path.join(
-  __dirname,
-  "..",
-  "dist",
-  "runtime",
-  "shared",
-  "validation",
-  "yourNewValidator.js"
-));
+const { normalizeCriticalPayload } = require(
+  path.join(__dirname, "..", "dist", "runtime", "shared", "validation", "yourNewValidator.js")
+);
 
 test("normalizer preserves valid payload", () => {
   const payload = { id: "x" };

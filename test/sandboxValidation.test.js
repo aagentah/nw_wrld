@@ -57,6 +57,19 @@ test("sandbox normalizer ensures error is a string on ok:false", () => {
   assert.deepEqual(res, { ok: false, error: "42" });
 });
 
+test("sandbox normalizer preserves moduleType on initTrack ok:false when safe", () => {
+  const res = normalizeSandboxResult("initTrack", {
+    ok: false,
+    error: "Invalid or unexpected token",
+    moduleType: "BadSyntax",
+  });
+  assert.deepEqual(res, {
+    ok: false,
+    error: "Invalid or unexpected token",
+    moduleType: "BadSyntax",
+  });
+});
+
 test("sandbox request normalizer rejects missing invokeOnInstance fields", () => {
   assert.deepEqual(normalizeSandboxRequestProps("invokeOnInstance", {}), {
     ok: false,

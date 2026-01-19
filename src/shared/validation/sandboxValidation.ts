@@ -157,12 +157,17 @@ export function normalizeSandboxRequestProps(
   return { ok: false, error: "INVALID_TYPE" };
 }
 
-function normalizeOkEnvelope(result: Jsonish): { ok: boolean; error?: string } {
+function normalizeOkEnvelope(
+  result: Jsonish
+): { ok: boolean; error?: string; moduleType?: string } {
   if (!isPlainObject(result)) return { ok: false, error: "INVALID_RESULT" };
   const ok = result.ok;
   const okBool = typeof ok === "boolean" ? ok : false;
   if (okBool) return { ok: true };
   const err = asString(result.error) || "SANDBOX_ERROR";
+  const moduleTypeRaw = asNonEmptyString(result.moduleType);
+  const moduleType = moduleTypeRaw && isSafeModuleType(moduleTypeRaw) ? moduleTypeRaw : null;
+  if (moduleType) return { ok: false, error: err, moduleType };
   return { ok: false, error: err };
 }
 
