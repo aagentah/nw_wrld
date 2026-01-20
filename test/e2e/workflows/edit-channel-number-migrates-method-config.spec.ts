@@ -126,7 +126,7 @@ test("edit channel number migrates method config from old key to new key", async
   const expectedText = `E2E_EDIT_CH_${suffix}`;
 
   const fromKey = "1";
-  const toKey = "2";
+  const toKey = "5";
 
   try {
     await app.firstWindow();

@@ -62,6 +62,35 @@ test("userData.json sanitize drops invalid module entries and ensures modulesDat
   assert.ok(track.modulesData && typeof track.modulesData === "object");
 });
 
+test("userData.json sanitize ensures each track has at least 3 channelMappings keys", () => {
+  const defaultValue = { config: {}, sets: [] };
+  const input = {
+    config: {},
+    sets: [
+      {
+        id: "set_1",
+        name: "Set 1",
+        tracks: [
+          {
+            id: 1,
+            name: "T",
+            modules: [],
+            modulesData: {},
+            channelMappings: { "1": 1 },
+          },
+        ],
+      },
+    ],
+  };
+  const res = sanitizeJsonForBridge("userData.json", input, defaultValue);
+  const track = res.sets[0].tracks[0];
+  assert.ok(track.channelMappings && typeof track.channelMappings === "object");
+  const keys = Object.keys(track.channelMappings);
+  assert.ok(keys.includes("1"));
+  assert.ok(keys.includes("2"));
+  assert.ok(keys.includes("3"));
+});
+
 test("userData.json sanitize preserves config.aspectRatio (startup-critical)", () => {
   const defaultValue = { config: {}, sets: [] };
   const input = { config: { aspectRatio: "16-9" }, sets: [] };

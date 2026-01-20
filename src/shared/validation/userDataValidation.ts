@@ -60,9 +60,29 @@ function normalizeTrack(value: Jsonish): Jsonish | null {
     out.modulesData = {};
   }
 
-  if (!isPlainObject(out.channelMappings) && out.channelMappings != null) {
+  if (!isPlainObject(out.channelMappings)) {
     ensure();
     out.channelMappings = {};
+  }
+
+  const cm = out.channelMappings as Record<string, Jsonish>;
+  const valid = new Set<number>();
+  for (const k of Object.keys(cm)) {
+    const n = parseInt(k, 10);
+    if (!Number.isFinite(n)) continue;
+    if (n < 1 || n > 12) continue;
+    if (String(n) !== k) continue;
+    valid.add(n);
+  }
+
+  if (valid.size < 3) {
+    ensure();
+    for (let slot = 1; slot <= 12 && valid.size < 3; slot++) {
+      if (valid.has(slot)) continue;
+      const key = String(slot);
+      cm[key] = slot;
+      valid.add(slot);
+    }
   }
 
   return changed ? out : value;

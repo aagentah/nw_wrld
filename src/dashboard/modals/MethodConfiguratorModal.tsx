@@ -358,6 +358,27 @@ export const MethodConfiguratorModal = ({
 
   const [activeSetId] = useAtom(activeSetIdAtom);
 
+  const selectedTrackChannelCount = useMemo(() => {
+    const ch = selectedChannel as SelectedChannel | null;
+    if (!ch) return 0;
+    const tracks = getActiveSetTracks(userData, activeSetId);
+    const trackUnknown = tracks[ch.trackIndex];
+    if (!trackUnknown || typeof trackUnknown !== "object") return 0;
+    const track = trackUnknown as Record<string, unknown>;
+    const cmUnknown = track.channelMappings;
+    const cm =
+      cmUnknown && typeof cmUnknown === "object" && !Array.isArray(cmUnknown)
+        ? (cmUnknown as Record<string, unknown>)
+        : {};
+    const valid = Object.keys(cm).filter((k) => {
+      const n = parseInt(k, 10);
+      if (!Number.isFinite(n)) return false;
+      if (n < 1 || n > 12) return false;
+      return String(n) === k;
+    });
+    return valid.length;
+  }, [userData, activeSetId, selectedChannel]);
+
   useEffect(() => {
     if (!isOpen) return;
     if (!needsIntrospection) return;
@@ -984,6 +1005,8 @@ export const MethodConfiguratorModal = ({
                 }}
                 type="secondary"
                 className="text-[11px]"
+                disabled={selectedTrackChannelCount <= 3}
+                title={selectedTrackChannelCount <= 3 ? "Minimum 3 channels required" : "Delete Channel"}
               >
                 DELETE CHANNEL
               </Button>

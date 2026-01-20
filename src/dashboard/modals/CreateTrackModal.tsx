@@ -98,7 +98,7 @@ export const CreateTrackModal = ({ isOpen, onClose, inputConfig, onAlert }: Crea
           name: trackName,
           trackSlot: trackSlot,
           bpm: 120,
-          channelMappings: {},
+          channelMappings: { "1": 1, "2": 2, "3": 3 },
           modules: [],
           modulesData: {},
         });

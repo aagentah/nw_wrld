@@ -116,6 +116,14 @@ export const useDashboardUiState = ({ selectedChannel, setUserData, activeSetId 
             channelMappings: Record<string, unknown>;
             modulesData: Record<string, { methods?: Record<string, unknown> }>;
           };
+          const channelCount = Object.keys(currentTrack.channelMappings || {}).filter((k) => {
+            const n = parseInt(k, 10);
+            if (!Number.isFinite(n)) return false;
+            if (n < 1 || n > 12) return false;
+            return String(n) === k;
+          }).length;
+          if (channelCount <= 3) return;
+
           const channelKey = String(channelNumber);
 
           delete currentTrack.channelMappings[channelKey];

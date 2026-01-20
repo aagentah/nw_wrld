@@ -1,4 +1,4 @@
-import { memo, useState, useEffect, useCallback, useRef } from "react";
+import { memo, useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useAtom } from "jotai";
 import { remove } from "lodash";
 import { FaPlus } from "react-icons/fa";
@@ -102,7 +102,6 @@ export const TrackItem = memo(
       }
 
       if (!nextChannel) {
-        alert("All 12 channels are already in use.");
         return;
       }
 
@@ -118,6 +117,14 @@ export const TrackItem = memo(
         cm[String(nextChannel)] = nextChannel;
       });
     }, [track, trackIndex, setUserData, activeSetId]);
+
+    const isAtMaxChannels = useMemo(() => {
+      const existing = new Set(Object.keys(track?.channelMappings || {}).map(Number));
+      for (let i = 1; i <= 12; i++) {
+        if (!existing.has(i)) return false;
+      }
+      return true;
+    }, [track?.channelMappings]);
 
     const handleRemoveModule = useCallback(
       (instanceId: string) => {
@@ -312,9 +319,17 @@ export const TrackItem = memo(
               onClick={handleAddChannel}
               icon={<FaPlus />}
               data-testid="track-add-channel"
-              disabled={track.modules.length === 0}
-              className={track.modules.length === 0 ? "opacity-50 cursor-not-allowed" : ""}
-              title={track.modules.length === 0 ? "Add a module first" : "Add Channel"}
+              disabled={track.modules.length === 0 || isAtMaxChannels}
+              className={
+                track.modules.length === 0 || isAtMaxChannels ? "opacity-50 cursor-not-allowed" : ""
+              }
+              title={
+                track.modules.length === 0
+                  ? "Add a module first"
+                  : isAtMaxChannels
+                    ? "Max 12 channels"
+                    : "Add Channel"
+              }
             >
               CHANNEL
             </Button>
