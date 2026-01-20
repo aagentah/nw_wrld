@@ -5,6 +5,7 @@ import { registerLogBridge } from "./ipcBridge/registerLogBridge";
 import { registerOsBridge } from "./ipcBridge/registerOsBridge";
 import { registerProjectBridge } from "./ipcBridge/registerProjectBridge";
 import { registerTestAudioBridge } from "./ipcBridge/registerTestAudioBridge";
+import { registerTestFileBridge } from "./ipcBridge/registerTestFileBridge";
 import { registerTestMidiBridge } from "./ipcBridge/registerTestMidiBridge";
 import { registerWorkspaceBridge } from "./ipcBridge/registerWorkspaceBridge";
 
@@ -17,5 +18,6 @@ export function registerIpcBridge(): void {
   registerInputBridge();
   registerTestMidiBridge();
   registerTestAudioBridge();
+  registerTestFileBridge();
   registerLogBridge();
 }

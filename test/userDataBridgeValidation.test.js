@@ -68,3 +68,21 @@ test("userData.json sanitize preserves config.aspectRatio (startup-critical)", (
   const res = sanitizeJsonForBridge("userData.json", input, defaultValue);
   assert.equal(res.config.aspectRatio, "16-9");
 });
+
+test("userData.json sanitize guarantees file mappings keys exist", () => {
+  const defaultValue = require(path.join(__dirname, "..", "dist", "runtime", "shared", "config", "defaultConfig.js"))
+    .DEFAULT_USER_DATA;
+  const input = {
+    config: {
+      trackMappings: { midi: {}, osc: {}, audio: {} },
+      channelMappings: { midi: {}, osc: {}, audio: {} },
+    },
+    sets: [],
+  };
+  const res = sanitizeJsonForBridge("userData.json", input, defaultValue);
+  assert.ok(res.config && typeof res.config === "object");
+  assert.ok(res.config.trackMappings && typeof res.config.trackMappings === "object");
+  assert.ok(res.config.channelMappings && typeof res.config.channelMappings === "object");
+  assert.ok(res.config.trackMappings.file && typeof res.config.trackMappings.file === "object");
+  assert.ok(res.config.channelMappings.file && typeof res.config.channelMappings.file === "object");
+});

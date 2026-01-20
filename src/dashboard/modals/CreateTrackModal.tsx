@@ -34,7 +34,14 @@ export const CreateTrackModal = ({ isOpen, onClose, inputConfig, onAlert }: Crea
   const [trackSlot, setTrackSlot] = useState(1);
   const [submitting, setSubmitting] = useState(false);
 
-  const inputType = inputConfig?.type === "osc" ? "osc" : inputConfig?.type === "audio" ? "audio" : "midi";
+  const inputType =
+    inputConfig?.type === "osc"
+      ? "osc"
+      : inputConfig?.type === "audio"
+        ? "audio"
+        : inputConfig?.type === "file"
+          ? "file"
+          : "midi";
   const noteMatchMode = inputConfig?.noteMatchMode === "exactNote" ? "exactNote" : "pitchClass";
   const globalMappings = (userData as Record<string, unknown>).config || {};
   const maxTrackSlots = inputType === "midi" ? 12 : 10;

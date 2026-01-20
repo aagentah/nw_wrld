@@ -48,7 +48,16 @@ type RuntimeAudioConfig = Omit<InputConfig, "type"> & {
   noteMatchMode?: string;
 };
 
-type RuntimeInputConfig = RuntimeMidiConfig | RuntimeOscConfig | RuntimeAudioConfig;
+type RuntimeFileConfig = Omit<InputConfig, "type"> & {
+  type: "file";
+  noteMatchMode?: string;
+};
+
+type RuntimeInputConfig =
+  | RuntimeMidiConfig
+  | RuntimeOscConfig
+  | RuntimeAudioConfig
+  | RuntimeFileConfig;
 
 type WindowWebContents = {
   isDestroyed(): boolean;
@@ -66,6 +75,7 @@ type CurrentSource =
   | { type: "midi"; instance: MidiInput }
   | { type: "osc"; instance: UDPPort }
   | { type: "audio"; instance: { close?: () => unknown } }
+  | { type: "file"; instance: { close?: () => unknown } }
   | null;
 
 type WebMidiProvider = {
@@ -261,6 +271,9 @@ class InputManager {
         case "audio":
           await this.initAudio(config as RuntimeAudioConfig);
           break;
+        case "file":
+          await this.initFile(config as RuntimeFileConfig);
+          break;
         default:
           console.warn("[InputManager] Unknown input type:", inputType);
           this.broadcastStatus(
@@ -455,6 +468,11 @@ class InputManager {
     this.broadcastStatus(INPUT_STATUS.CONNECTED, "Audio (listening)");
   }
 
+  async initFile(_fileConfig: RuntimeFileConfig) {
+    this.currentSource = { type: "file", instance: {} };
+    this.broadcastStatus(INPUT_STATUS.CONNECTED, "File (ready)");
+  }
+
   async disconnect() {
     try {
       if (this.currentSource) {
@@ -485,6 +503,13 @@ class InputManager {
             }
             break;
           case "audio":
+            if (this.currentSource.instance && typeof this.currentSource.instance.close === "function") {
+              try {
+                this.currentSource.instance.close();
+              } catch {}
+            }
+            break;
+          case "file":
             if (this.currentSource.instance && typeof this.currentSource.instance.close === "function") {
               try {
                 this.currentSource.instance.close();

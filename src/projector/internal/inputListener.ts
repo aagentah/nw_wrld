@@ -175,6 +175,16 @@ export function initInputListener(this: InputListenerContext) {
                 logger.log(`🎯 [INPUT] AUDIO channel maps to channels:`, channelNames);
               }
             }
+          } else if (data.source === "file") {
+            const mappedChannels = trackMappings[String((data as { channelName?: unknown }).channelName)];
+            if (mappedChannels) {
+              channelNames = Array.isArray(mappedChannels)
+                ? mappedChannels
+                : [mappedChannels];
+              if (debugEnabled) {
+                logger.log(`🎯 [INPUT] FILE channel maps to channels:`, channelNames);
+              }
+            }
           }
         } else {
           if (debugEnabled) {
@@ -213,7 +223,14 @@ export function initInputListener(this: InputListenerContext) {
 
     if (this.debugOverlayActive && debugEnabled) {
       const timeStr = Number(timestamp).toFixed(5);
-      const source = data.source === "midi" ? "MIDI" : data.source === "audio" ? "AUDIO" : "OSC";
+      const source =
+        data.source === "midi"
+          ? "MIDI"
+          : data.source === "audio"
+            ? "AUDIO"
+            : data.source === "file"
+              ? "FILE"
+              : "OSC";
       let log = `[${timeStr}] ${source} Event\n`;
       if (data.source === "midi") {
         const key = noteNumberToTriggerKey(
@@ -233,6 +250,8 @@ export function initInputListener(this: InputListenerContext) {
       } else if (data.source === "osc") {
         log += `  Address: ${(data as { address?: unknown }).address}\n`;
       } else if (data.source === "audio") {
+        log += `  Channel: ${(data as { channelName?: unknown }).channelName}\n`;
+      } else if (data.source === "file") {
         log += `  Channel: ${(data as { channelName?: unknown }).channelName}\n`;
       }
       if (trackName) {

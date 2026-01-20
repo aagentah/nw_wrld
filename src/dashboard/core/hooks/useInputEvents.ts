@@ -152,7 +152,15 @@ export const useInputEvents = ({
 
     const timeStr = timestamp.toFixed(5);
     const sourceLabel =
-      source === "midi" ? "MIDI" : source === "osc" ? "OSC" : source === "audio" ? "AUDIO" : "Input";
+      source === "midi"
+        ? "MIDI"
+        : source === "osc"
+          ? "OSC"
+          : source === "audio"
+            ? "AUDIO"
+            : source === "file"
+              ? "FILE"
+              : "Input";
     const eventTypeLabel = type === "track-selection" ? "Track Selection" : "Method Trigger";
 
     let log = `[${timeStr}] ${sourceLabel} ${eventTypeLabel}\n`;
@@ -183,7 +191,7 @@ export const useInputEvents = ({
         }\n`;
         log += `  Channel: ${String(data.channel)}\n`;
       }
-    } else if (source === "osc" || source === "audio") {
+    } else if (source === "osc" || source === "audio" || source === "file") {
       const address = typeof data.address === "string" ? (data.address as string) : null;
       const identifier = typeof data.identifier === "string" ? (data.identifier as string) : null;
       const channelName =
@@ -398,6 +406,23 @@ export const useInputEvents = ({
                 );
               }
             } else if (source === "audio") {
+              const channelName =
+                typeof data.channelName === "string" ? (data.channelName as string) : null;
+              if (channelName) {
+                Object.entries(activeTrack.channelMappings as Record<string, unknown>).forEach(
+                  ([channelNumber, slotNumber]) => {
+                    const resolvedTrigger = resolveChannelTrigger(
+                      slotNumber,
+                      currentInputType,
+                      globalMappings
+                    );
+                    if (resolvedTrigger === channelName) {
+                      channelsToFlash.push(channelNumber);
+                    }
+                  }
+                );
+              }
+            } else if (source === "file") {
               const channelName =
                 typeof data.channelName === "string" ? (data.channelName as string) : null;
               if (channelName) {

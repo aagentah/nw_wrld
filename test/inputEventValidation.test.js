@@ -90,6 +90,21 @@ test("input-event normalizer accepts AUDIO method-trigger", () => {
   assert.deepEqual(res, payload);
 });
 
+test("input-event normalizer accepts FILE method-trigger", () => {
+  const payload = {
+    type: "method-trigger",
+    data: {
+      source: "file",
+      channelName: "low",
+      velocity: 0.25,
+      timestamp: 5,
+    },
+  };
+
+  const res = normalizeInputEventPayload(payload);
+  assert.deepEqual(res, payload);
+});
+
 test("input-event normalizer rejects invalid payloads", () => {
   assert.equal(normalizeInputEventPayload(null), null);
   assert.equal(normalizeInputEventPayload({}), null);

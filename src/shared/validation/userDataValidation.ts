@@ -151,6 +151,11 @@ export function sanitizeUserDataForBridge(
       ensure();
       cfg.trackMappings = { ...tm, audio: {} };
     }
+    if (!isPlainObject((cfg.trackMappings as Record<string, Jsonish>).file)) {
+      const tm2 = cfg.trackMappings as Record<string, Jsonish>;
+      ensure();
+      cfg.trackMappings = { ...tm2, file: {} };
+    }
   }
 
   const fallbackChannelMappings = isPlainObject(fallbackCfg.channelMappings)
@@ -167,6 +172,14 @@ export function sanitizeUserDataForBridge(
         : {};
       ensure();
       cfg.channelMappings = { ...cm, audio: fallbackAudio };
+    }
+    if (!isPlainObject((cfg.channelMappings as Record<string, Jsonish>).file)) {
+      const cm2 = cfg.channelMappings as Record<string, Jsonish>;
+      const fallbackFile = isPlainObject(fallbackChannelMappings.file)
+        ? (fallbackChannelMappings.file as Record<string, Jsonish>)
+        : {};
+      ensure();
+      cfg.channelMappings = { ...cm2, file: fallbackFile };
     }
   }
 

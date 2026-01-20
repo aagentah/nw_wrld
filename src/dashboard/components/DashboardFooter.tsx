@@ -8,6 +8,7 @@ type InputConfig = {
   type?: string;
   port?: number;
   deviceName?: string;
+  fileAssetRelPath?: string;
 };
 
 type InputStatus = {
@@ -46,6 +47,7 @@ export const DashboardFooter = ({
   isProjectorReady,
 }: DashboardFooterProps) => {
   const [_recordingData] = useAtom(recordingDataAtom);
+  const isFileMode = !config?.sequencerMode && inputConfig?.type === "file";
 
   const getStatusColor = () => {
     switch (inputStatus.status) {
@@ -139,16 +141,16 @@ export const DashboardFooter = ({
 
       <div className="border-t border-neutral-800 py-4 px-6">
         <div className="w-full flex justify-start gap-4 items-center">
-          {config?.sequencerMode ? (
+          {config?.sequencerMode || isFileMode ? (
             <>
               <Button
                 onClick={isPlaying ? onStop : onPlayPause}
                 className={isPlaying ? "decoration-neutral-300" : ""}
-                title={isPlaying ? "Stop playback" : "Play sequencer"}
+                title={isPlaying ? "Stop playback" : config?.sequencerMode ? "Play sequencer" : "Play file"}
                 icon={isPlaying ? <FaStop /> : <FaPlay />}
-                disabled={!isProjectorReady && !isPlaying}
+                disabled={(!isProjectorReady && !isPlaying) || (isFileMode && !inputConfig?.fileAssetRelPath && !isPlaying)}
                 as="button"
-                data-testid="sequencer-play-toggle"
+                data-testid={config?.sequencerMode ? "sequencer-play-toggle" : "file-play-toggle"}
               >
                 <span className="relative inline-block">{isPlaying ? "STOP" : "PLAY"}</span>
               </Button>

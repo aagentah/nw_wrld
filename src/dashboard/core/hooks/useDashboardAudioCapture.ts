@@ -6,6 +6,8 @@ type Band = "low" | "medium" | "high";
 type Levels = Record<Band, number>;
 type PeaksDb = Record<Band, number>;
 
+const DEFAULT_GAINS: Record<Band, number> = { low: 6.0, medium: 14.0, high: 18.0 };
+
 type AudioCaptureState =
   | { status: "idle"; levels: Levels; peaksDb: PeaksDb }
   | { status: "starting"; levels: Levels; peaksDb: PeaksDb }
@@ -17,8 +19,8 @@ const clamp01 = (n: number) => (n < 0 ? 0 : n > 1 ? 1 : n);
 
 function bandForHz(hz: number): Band | null {
   if (!Number.isFinite(hz) || hz <= 0) return null;
-  if (hz < 250) return "low";
-  if (hz < 4000) return "medium";
+  if (hz < 200) return "low";
+  if (hz < 2000) return "medium";
   return "high";
 }
 
@@ -48,10 +50,13 @@ export function useDashboardAudioCapture({
   const armedRef = useRef<Record<Band, boolean>>({ low: true, medium: true, high: true });
   const lastLevelsRef = useRef<Levels>({ low: 0, medium: 0, high: 0 });
   const lastPeaksDbRef = useRef<PeaksDb>({ low: -Infinity, medium: -Infinity, high: -Infinity });
+  const lastBandRmsLinRef = useRef<Record<Band, number>>({ low: 0, medium: 0, high: 0 });
+  const bandRmsPeakRef = useRef<Record<Band, number>>({ low: 0, medium: 0, high: 0 });
   const lastLevelsUpdateMsRef = useRef(0);
   const emitBandRef = useRef(emitBand);
   const debugRef = useRef(false);
   const lastDebugLevelsLogMsRef = useRef(0);
+  const runIdRef = useRef(0);
   useEffect(() => {
     emitBandRef.current = emitBand;
   }, [emitBand]);
@@ -65,6 +70,7 @@ export function useDashboardAudioCapture({
 
   useEffect(() => {
     const stop = async () => {
+      runIdRef.current += 1;
       if (rafRef.current != null) {
         cancelAnimationFrame(rafRef.current);
         rafRef.current = null;
@@ -77,6 +83,8 @@ export function useDashboardAudioCapture({
         } catch {}
       }
       analyserRef.current = null;
+      lastBandRmsLinRef.current = { low: 0, medium: 0, high: 0 };
+      bandRmsPeakRef.current = { low: 0, medium: 0, high: 0 };
       const ctx = audioContextRef.current;
       audioContextRef.current = null;
       if (ctx) {
@@ -87,6 +95,8 @@ export function useDashboardAudioCapture({
     };
 
     const start = async () => {
+      runIdRef.current += 1;
+      const runId = runIdRef.current;
       debugRef.current = readDebugFlag("nwWrld.debug.audio");
       if (isMockMode) {
         setState({ status: "mock", levels: zero, peaksDb: negInf });
@@ -136,7 +146,7 @@ export function useDashboardAudioCapture({
           low: typeof thresholds?.low === "number" && Number.isFinite(thresholds.low) ? thresholds.low : 0.18,
           medium:
             typeof thresholds?.medium === "number" && Number.isFinite(thresholds.medium) ? thresholds.medium : 0.18,
-          high: typeof thresholds?.high === "number" && Number.isFinite(thresholds.high) ? thresholds.high : 0.18,
+          high: typeof thresholds?.high === "number" && Number.isFinite(thresholds.high) ? thresholds.high : 0.01,
         };
         const lsThreshold = readLocalStorageNumber("nwWrld.audio.threshold", NaN);
         if (Number.isFinite(lsThreshold)) {
@@ -164,6 +174,7 @@ export function useDashboardAudioCapture({
           medium: readLocalStorageNumber("nwWrld.audio.gain.medium", 14.0),
           high: readLocalStorageNumber("nwWrld.audio.gain.high", 18.0),
         };
+
         if (debugRef.current) {
           console.log("[AudioDebug] start", {
             deviceId,
@@ -181,6 +192,7 @@ export function useDashboardAudioCapture({
         const tick = async () => {
           if (!enabled) return;
           if (document.hidden) return;
+          if (runId !== runIdRef.current) return;
           const a = analyserRef.current;
           const c = audioContextRef.current;
           if (!a || !c) return;
@@ -189,6 +201,8 @@ export function useDashboardAudioCapture({
           const fftSize = a.fftSize;
 
           const peaksDb: PeaksDb = { low: -Infinity, medium: -Infinity, high: -Infinity };
+          const sumSqLin: Record<Band, number> = { low: 0, medium: 0, high: 0 };
+          const countLin: Record<Band, number> = { low: 0, medium: 0, high: 0 };
           for (let i = 0; i < bins.length; i++) {
             const hz = (i * sampleRate) / fftSize;
             const band = bandForHz(hz);
@@ -196,12 +210,28 @@ export function useDashboardAudioCapture({
             const db = bins[i];
             if (!Number.isFinite(db)) continue;
             if (db > peaksDb[band]) peaksDb[band] = db;
+            const lin = dbToLin(db);
+            sumSqLin[band] += lin * lin;
+            countLin[band] += 1;
           }
           lastPeaksDbRef.current = peaksDb;
+          const rmsLin: Record<Band, number> = {
+            low: countLin.low ? Math.sqrt(sumSqLin.low / countLin.low) : 0,
+            medium: countLin.medium ? Math.sqrt(sumSqLin.medium / countLin.medium) : 0,
+            high: countLin.high ? Math.sqrt(sumSqLin.high / countLin.high) : 0,
+          };
+          lastBandRmsLinRef.current = rmsLin;
 
           const now = Date.now();
           const maybeEmit = async (band: Band) => {
-            const vel = clamp01(dbToLin(peaksDb[band]) * gains[band]);
+            const rawRms = lastBandRmsLinRef.current[band];
+            const prevPeak = bandRmsPeakRef.current[band];
+            const nextPeak = Math.max(rawRms, prevPeak * 0.995);
+            bandRmsPeakRef.current[band] = nextPeak;
+            const normalized = nextPeak > 1e-12 ? rawRms / nextPeak : 0;
+            const gainRatio = DEFAULT_GAINS[band] > 0 ? gains[band] / DEFAULT_GAINS[band] : 1;
+            const afterGain = normalized * gainRatio;
+            const vel = clamp01(afterGain);
             lastLevelsRef.current[band] = vel;
             const threshold = resolvedThresholds[band];
             const releaseThreshold = resolvedReleaseThresholds[band];
@@ -225,12 +255,15 @@ export function useDashboardAudioCapture({
                 peaksDb: peaksDb[band],
               });
             }
-            await emitBandRef.current({ channelName: band, velocity: vel });
+            try {
+              await emitBandRef.current({ channelName: band, velocity: vel });
+            } catch {}
           };
 
           await maybeEmit("low");
           await maybeEmit("medium");
           await maybeEmit("high");
+          if (runId !== runIdRef.current) return;
 
           if (debugRef.current && now - lastDebugLevelsLogMsRef.current >= 1000) {
             lastDebugLevelsLogMsRef.current = now;

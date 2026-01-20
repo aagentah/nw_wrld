@@ -382,6 +382,10 @@ type InputConfig = {
   deviceName?: string;
   audioThresholds?: { low?: number; medium?: number; high?: number };
   audioMinIntervalMs?: number;
+  fileAssetRelPath?: string;
+  fileAssetName?: string;
+  fileThresholds?: { low?: number; medium?: number; high?: number };
+  fileMinIntervalMs?: number;
   methodTriggerChannel?: number;
   trackSelectionChannel?: number;
   noteMatchMode?: string;
@@ -416,6 +420,12 @@ type SettingsModalProps = {
     | { status: "running"; levels: Record<"low" | "medium" | "high", number>; peaksDb: Record<"low" | "medium" | "high", number> }
     | { status: "error"; message: string; levels: Record<"low" | "medium" | "high", number>; peaksDb: Record<"low" | "medium" | "high", number> }
     | { status: "mock"; levels: Record<"low" | "medium" | "high", number>; peaksDb: Record<"low" | "medium" | "high", number> };
+  fileAudioState:
+    | { status: "idle"; levels: Record<"low" | "medium" | "high", number>; peaksDb: Record<"low" | "medium" | "high", number>; assetRelPath: string | null }
+    | { status: "loading"; levels: Record<"low" | "medium" | "high", number>; peaksDb: Record<"low" | "medium" | "high", number>; assetRelPath: string | null }
+    | { status: "ready"; levels: Record<"low" | "medium" | "high", number>; peaksDb: Record<"low" | "medium" | "high", number>; assetRelPath: string | null; durationSec: number }
+    | { status: "playing"; levels: Record<"low" | "medium" | "high", number>; peaksDb: Record<"low" | "medium" | "high", number>; assetRelPath: string | null; durationSec: number }
+    | { status: "error"; message: string; levels: Record<"low" | "medium" | "high", number>; peaksDb: Record<"low" | "medium" | "high", number>; assetRelPath: string | null };
   onOpenMappings: () => void;
   config: Config;
   updateConfig: (updates: Partial<Config>) => void;
@@ -437,6 +447,7 @@ export const SettingsModal = ({
   availableAudioDevices,
   refreshAudioDevices,
   audioCaptureState,
+  fileAudioState,
   onOpenMappings,
   config,
   updateConfig,
@@ -444,14 +455,48 @@ export const SettingsModal = ({
   onSelectWorkspace,
 }: SettingsModalProps) => {
   const normalizedInputType =
-    inputConfig?.type === "osc" ? "osc" : inputConfig?.type === "audio" ? "audio" : "midi";
+    inputConfig?.type === "osc"
+      ? "osc"
+      : inputConfig?.type === "audio"
+        ? "audio"
+        : inputConfig?.type === "file"
+          ? "file"
+          : "midi";
   const signalSourceValue = config.sequencerMode
     ? "sequencer"
     : normalizedInputType === "osc"
       ? "external-osc"
       : normalizedInputType === "audio"
         ? "external-audio"
+        : normalizedInputType === "file"
+          ? "file-upload"
         : "external-midi";
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const uploadFileToAssets = useCallback(
+    async (file: File) => {
+      const bridge = (globalThis as unknown as { nwWrldBridge?: unknown }).nwWrldBridge;
+      const bridgeObj = bridge && typeof bridge === "object" ? (bridge as Record<string, unknown>) : null;
+      const workspace = bridgeObj && typeof bridgeObj.workspace === "object" ? (bridgeObj.workspace as Record<string, unknown>) : null;
+      const write =
+        workspace && typeof workspace.writeAudioAsset === "function"
+          ? (workspace.writeAudioAsset as (payload: unknown) => Promise<unknown>)
+          : null;
+      if (!write) return;
+      const bytes = await file.arrayBuffer();
+      const res = await write({ filename: file.name, bytes });
+      const r = res && typeof res === "object" ? (res as Record<string, unknown>) : null;
+      const ok = Boolean(r && r.ok === true);
+      const relPath = r && typeof r.relPath === "string" ? r.relPath : "";
+      if (!ok || !relPath) return;
+      setInputConfig({
+        ...inputConfig,
+        fileAssetRelPath: relPath,
+        fileAssetName: file.name,
+      });
+    },
+    [inputConfig, setInputConfig]
+  );
 
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
@@ -535,7 +580,7 @@ export const SettingsModal = ({
                           ? rawThr.medium
                           : 0.18,
                       high:
-                        typeof rawThr?.high === "number" && Number.isFinite(rawThr.high) ? rawThr.high : 0.18,
+                        typeof rawThr?.high === "number" && Number.isFinite(rawThr.high) ? rawThr.high : 0.01,
                     };
                     const interval =
                       typeof inputConfig.audioMinIntervalMs === "number" &&
@@ -557,6 +602,47 @@ export const SettingsModal = ({
                   className="cursor-pointer text-[11px] font-mono text-neutral-300"
                 >
                   External Audio (Low / Medium / High)
+                </label>
+              </div>
+              <div className="flex items-center gap-3 py-1">
+                <RadioButton
+                  id="signal-file-upload"
+                  name="signalSource"
+                  value="file-upload"
+                  checked={signalSourceValue === "file-upload"}
+                  onChange={() => {
+                    updateConfig({ sequencerMode: false });
+                    const rawThr =
+                      inputConfig.fileThresholds && typeof inputConfig.fileThresholds === "object"
+                        ? inputConfig.fileThresholds
+                        : null;
+                    const thr = {
+                      low: typeof rawThr?.low === "number" && Number.isFinite(rawThr.low) ? rawThr.low : 0.18,
+                      medium:
+                        typeof rawThr?.medium === "number" && Number.isFinite(rawThr.medium)
+                          ? rawThr.medium
+                          : 0.18,
+                      high:
+                        typeof rawThr?.high === "number" && Number.isFinite(rawThr.high) ? rawThr.high : 0.01,
+                    };
+                    const interval =
+                      typeof inputConfig.fileMinIntervalMs === "number" &&
+                      Number.isFinite(inputConfig.fileMinIntervalMs)
+                        ? inputConfig.fileMinIntervalMs
+                        : 90;
+                    setInputConfig({
+                      ...inputConfig,
+                      type: "file",
+                      fileThresholds: thr,
+                      fileMinIntervalMs: interval,
+                    });
+                  }}
+                />
+                <label
+                  htmlFor="signal-file-upload"
+                  className="cursor-pointer text-[11px] font-mono text-neutral-300"
+                >
+                  File Upload (Low / Medium / High)
                 </label>
               </div>
             </div>
@@ -846,6 +932,153 @@ export const SettingsModal = ({
                     </div>
                     <div className="text-[10px] opacity-50">
                       For system audio, use a loopback/virtual device and select it here.
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {normalizedInputType === "file" && (
+                <>
+                  <div className="pl-12">
+                    <div className="opacity-50 mb-1 text-[11px]">Audio File (MP3/WAV):</div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".mp3,.wav,audio/*"
+                      data-testid="file-upload-input"
+                      style={{ display: "none" }}
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                        const f = e.target.files && e.target.files[0] ? e.target.files[0] : null;
+                        if (f) {
+                          uploadFileToAssets(f).catch(() => {});
+                        }
+                        e.target.value = "";
+                      }}
+                    />
+                    <div className="flex items-center gap-2">
+                      <Button
+                        onClick={() => {
+                          fileInputRef.current?.click();
+                        }}
+                        className="px-3"
+                      >
+                        UPLOAD
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          setInputConfig({
+                            ...inputConfig,
+                            fileAssetRelPath: "",
+                            fileAssetName: "",
+                          });
+                        }}
+                        className="px-3"
+                      >
+                        CLEAR
+                      </Button>
+                    </div>
+                    <div className="mt-2 text-[10px] text-neutral-400">
+                      {inputConfig.fileAssetName
+                        ? inputConfig.fileAssetName
+                        : inputConfig.fileAssetRelPath
+                          ? String(inputConfig.fileAssetRelPath)
+                          : "No file selected"}
+                    </div>
+                  </div>
+
+                  <div className="pl-12">
+                    <div className="text-[10px] opacity-50">
+                      Status:{" "}
+                      {fileAudioState.status === "error"
+                        ? `Error: ${fileAudioState.message}`
+                        : fileAudioState.status}
+                    </div>
+                    <div className="mt-3 flex flex-col gap-3">
+                      <div>
+                        <div className="text-[10px] opacity-50 mb-1">Trigger Cooldown (ms)</div>
+                        <DraftIntInput
+                          value={
+                            typeof inputConfig.fileMinIntervalMs === "number" &&
+                            Number.isFinite(inputConfig.fileMinIntervalMs)
+                              ? inputConfig.fileMinIntervalMs
+                              : 90
+                          }
+                          fallback={90}
+                          onCommit={(next: number) =>
+                            setInputConfig({
+                              ...inputConfig,
+                              fileMinIntervalMs: Math.max(0, Math.min(10_000, next)),
+                            })
+                          }
+                          step={10}
+                          min={0}
+                          max={10_000}
+                          className="py-1 w-full"
+                        />
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        {(["low", "medium", "high"] as const).map((band) => {
+                          const v0 = fileAudioState.levels?.[band];
+                          const v =
+                            typeof v0 === "number" && Number.isFinite(v0)
+                              ? Math.max(0, Math.min(1, v0))
+                              : 0;
+                          const pct = Math.round(v * 100);
+
+                          const db0 = fileAudioState.peaksDb?.[band];
+                          const db = typeof db0 === "number" && Number.isFinite(db0) ? db0 : -Infinity;
+
+                          const th0 =
+                            inputConfig.fileThresholds && typeof inputConfig.fileThresholds === "object"
+                              ? inputConfig.fileThresholds[band]
+                              : undefined;
+                          const th =
+                            typeof th0 === "number" && Number.isFinite(th0)
+                              ? Math.max(0, Math.min(1, th0))
+                              : 0.18;
+
+                          return (
+                            <div key={band} className="grid grid-cols-[80px_1fr_110px] gap-2 items-center">
+                              <div>
+                                <div className="text-[10px] opacity-50">{band.toUpperCase()}</div>
+                                <div className="text-[10px] text-neutral-400">
+                                  {v.toFixed(2)} / {db === -Infinity ? "--" : `${db.toFixed(1)} dB`}
+                                </div>
+                              </div>
+
+                              <div className="h-2 w-full bg-neutral-800 rounded relative">
+                                <div className="h-2 bg-green-500 rounded" style={{ width: `${pct}%` }} />
+                                <div
+                                  className="absolute top-0 h-2 w-[2px] bg-white/40"
+                                  style={{ left: `${Math.round(th * 100)}%` }}
+                                />
+                              </div>
+
+                              <div>
+                                <div className="text-[10px] opacity-50 mb-1">Threshold</div>
+                                <DraftFloatInput
+                                  value={th}
+                                  fallback={0.18}
+                                  onCommit={(next: number) =>
+                                    setInputConfig({
+                                      ...inputConfig,
+                                      fileThresholds: {
+                                        ...(inputConfig.fileThresholds || {}),
+                                        [band]: Math.max(0, Math.min(1, next)),
+                                      },
+                                    })
+                                  }
+                                  step={0.01}
+                                  min={0}
+                                  max={1}
+                                  className="py-1 w-full"
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 </>

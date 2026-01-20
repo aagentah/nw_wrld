@@ -8,7 +8,7 @@ import { updateUserData } from "../core/utils";
 import { DEFAULT_GLOBAL_MAPPINGS } from "../../shared/config/defaultConfig.ts";
 import { parsePitchClass, pitchClassToName } from "../../shared/midi/midiUtils.ts";
 
-type ActiveTab = "midi-pitchClass" | "midi-exactNote" | "osc" | "audio";
+type ActiveTab = "midi-pitchClass" | "midi-exactNote" | "osc" | "audio" | "file";
 
 type InputMappingsModalProps = {
   isOpen: boolean;
@@ -40,6 +40,8 @@ export const InputMappingsModal = ({ isOpen, onClose }: InputMappingsModalProps)
         ? "osc"
         : inputType === "audio"
           ? "audio"
+          : inputType === "file"
+            ? "file"
         : noteMatchMode === "exactNote"
           ? "midi-exactNote"
           : "midi-pitchClass";
@@ -50,7 +52,7 @@ export const InputMappingsModal = ({ isOpen, onClose }: InputMappingsModalProps)
   const trackMappings = (cfg?.trackMappings as Record<string, unknown>) || {};
   const channelMappings = (cfg?.channelMappings as Record<string, unknown>) || {};
   const isMidi = activeTab.startsWith("midi-");
-  const isAudio = activeTab === "audio";
+  const isAudioOrFile = activeTab === "audio" || activeTab === "file";
   const midiMode = activeTab === "midi-exactNote" ? "exactNote" : "pitchClass";
   const trackSlots = isMidi ? 12 : 10;
   const triggerSlots = 12;
@@ -179,6 +181,9 @@ export const InputMappingsModal = ({ isOpen, onClose }: InputMappingsModalProps)
         } else if (activeTab === "audio") {
           if (!tm.audio) tm.audio = {};
           (tm.audio as Record<string, unknown>)[String(slot)] = value;
+        } else if (activeTab === "file") {
+          if (!tm.file) tm.file = {};
+          (tm.file as Record<string, unknown>)[String(slot)] = value;
         }
       }
     });
@@ -216,6 +221,9 @@ export const InputMappingsModal = ({ isOpen, onClose }: InputMappingsModalProps)
         } else if (activeTab === "audio") {
           if (!cm.audio) cm.audio = {};
           (cm.audio as Record<string, unknown>)[String(slot)] = value;
+        } else if (activeTab === "file") {
+          if (!cm.file) cm.file = {};
+          (cm.file as Record<string, unknown>)[String(slot)] = value;
         }
       }
     });
@@ -307,6 +315,21 @@ export const InputMappingsModal = ({ isOpen, onClose }: InputMappingsModalProps)
                 Audio (Low / Medium / High)
               </label>
             </div>
+            <div className="flex items-center gap-3 py-1">
+              <RadioButton
+                id="input-mappings-file"
+                name="input-mappings-tab"
+                value="file"
+                checked={activeTab === "file"}
+                onChange={() => setActiveTab("file")}
+              />
+              <label
+                htmlFor="input-mappings-file"
+                className="cursor-pointer text-[11px] font-mono text-neutral-300"
+              >
+                File Upload (Low / Medium / High)
+              </label>
+            </div>
           </div>
         </div>
 
@@ -371,13 +394,13 @@ export const InputMappingsModal = ({ isOpen, onClose }: InputMappingsModalProps)
                       </Select>
                     )
                   ) : (
-                    activeTab === "audio" ? (
+                    activeTab === "audio" || activeTab === "file" ? (
                       <Select
                         value={(() => {
-                          const cmAudio = (channelMappings as Record<string, unknown>).audio as
+                          const cmBand = (channelMappings as Record<string, unknown>)[activeTab] as
                             | Record<string, unknown>
                             | undefined;
-                          const raw = cmAudio?.[String(slot)];
+                          const raw = cmBand?.[String(slot)];
                           const v = typeof raw === "string" ? raw : "";
                           return v === "low" || v === "medium" || v === "high" ? v : "";
                         })()}
@@ -409,7 +432,7 @@ export const InputMappingsModal = ({ isOpen, onClose }: InputMappingsModalProps)
             </div>
           </div>
 
-          {!isAudio && (
+          {!isAudioOrFile && (
             <div>
               <div className="text-neutral-300 text-[11px] mb-3 font-mono">
                 Track Select Mappings (1-{trackSlots}):

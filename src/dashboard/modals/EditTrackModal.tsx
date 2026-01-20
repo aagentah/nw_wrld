@@ -35,7 +35,14 @@ export const EditTrackModal = ({ isOpen, onClose, trackIndex, inputConfig }: Edi
   const tracks = getActiveSetTracks(userData, activeSetId);
   const track = (tracks as unknown[])[trackIndex] as Record<string, unknown> | undefined;
   const trackId = track?.id != null ? String(track.id) : null;
-  const inputType = inputConfig?.type === "osc" ? "osc" : inputConfig?.type === "audio" ? "audio" : "midi";
+  const inputType =
+    inputConfig?.type === "osc"
+      ? "osc"
+      : inputConfig?.type === "audio"
+        ? "audio"
+        : inputConfig?.type === "file"
+          ? "file"
+          : "midi";
   const noteMatchMode = inputConfig?.noteMatchMode === "exactNote" ? "exactNote" : "pitchClass";
   const globalMappings = (userData as Record<string, unknown>).config || {};
   const maxTrackSlots = inputType === "midi" ? 12 : 10;

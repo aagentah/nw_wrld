@@ -12,6 +12,7 @@ import { EditChannelModal } from "../modals/EditChannelModal";
 import { ConfirmationModal } from "../modals/ConfirmationModal";
 import { ModuleEditorModal } from "./ModuleEditorModal";
 import { NewModuleDialog } from "./NewModuleDialog";
+import type { FileAudioState } from "../core/hooks/useDashboardFileAudio";
 
 type Confirmation = { message: string; onConfirm?: () => void; type?: "confirm" | "alert" } | null;
 
@@ -63,6 +64,7 @@ type DashboardModalLayerProps = {
     | { status: "running" }
     | { status: "error"; message: string }
     | { status: "mock" };
+  fileAudioState: FileAudioState;
   settings: ProjectorSettings;
   aspectRatio: string;
   setAspectRatio: (ratio: string) => void;
@@ -144,6 +146,7 @@ export const DashboardModalLayer = ({
   availableAudioDevices,
   refreshAudioDevices,
   audioCaptureState,
+  fileAudioState,
   settings,
   aspectRatio,
   setAspectRatio,
@@ -240,6 +243,7 @@ export const DashboardModalLayer = ({
         availableAudioDevices={availableAudioDevices}
         refreshAudioDevices={refreshAudioDevices}
         audioCaptureState={audioCaptureState}
+        fileAudioState={fileAudioState}
         onOpenMappings={() => {
           setIsSettingsModalOpen(false);
           setIsInputMappingsModalOpen(true);
