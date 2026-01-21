@@ -86,6 +86,13 @@ export async function handleTrackSelection(trackName) {
 
   if (debugEnabled) logger.log("📦 [TRACK] Current activeTrack:", this.activeTrack);
 
+  const filteredTrack = {
+    ...track,
+    modules: Array.isArray(track.modules)
+      ? track.modules.filter((m) => !m.disabled)
+      : track.modules,
+  };
+
   if (this.activeTrack && this.activeTrack.name !== trackName) {
     if (debugEnabled) {
       logger.log("📦 [TRACK] Deactivating previous track:", this.activeTrack.name);
@@ -94,9 +101,25 @@ export async function handleTrackSelection(trackName) {
   }
 
   if (this.activeTrack?.name === trackName) {
-    if (debugEnabled) logger.log("⚠️ [TRACK] Track already active, skipping");
-    this.isLoadingTrack = false;
-    return;
+    const activeModules = Array.isArray(this.activeTrack.modules)
+      ? this.activeTrack.modules.filter((m) => !m.disabled)
+      : [];
+    const filteredModules = Array.isArray(filteredTrack.modules)
+      ? filteredTrack.modules
+      : [];
+    if (
+      activeModules.length === filteredModules.length &&
+      activeModules.every(
+        (m, i) =>
+          m.id === filteredModules[i]?.id &&
+          m.type === filteredModules[i]?.type
+      )
+    ) {
+      if (debugEnabled)
+        logger.log("⚠️ [TRACK] Track already active with same enabled modules, skipping");
+      this.isLoadingTrack = false;
+      return;
+    }
   }
 
   const modulesContainer = document.querySelector(".modules");
@@ -108,22 +131,22 @@ export async function handleTrackSelection(trackName) {
     return;
   }
 
-  if (debugEnabled) logger.log("📦 [TRACK] Track modules to load:", track.modules);
+  if (debugEnabled) logger.log("📦 [TRACK] Track modules to load:", filteredTrack.modules);
 
-  if (!Array.isArray(track.modules)) {
-    logger.error(`❌ [TRACK] Track "${trackName}" has invalid modules array:`, track.modules);
+  if (!Array.isArray(filteredTrack.modules)) {
+    logger.error(`❌ [TRACK] Track "${trackName}" has invalid modules array:`, filteredTrack.modules);
     if (debugEnabled) logger.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     this.isLoadingTrack = false;
     return;
   }
 
   try {
-    this.activeTrack = track;
-    this.activeChannelHandlers = this.buildChannelHandlerMap(track);
+    this.activeTrack = filteredTrack;
+    this.activeChannelHandlers = this.buildChannelHandlerMap(filteredTrack);
 
     const moduleSources = {};
     const seenTypes = new Set();
-    for (const m of track.modules) {
+    for (const m of filteredTrack.modules) {
       const t = String(m?.type || "").trim();
       if (!t || seenTypes.has(t)) continue;
       seenTypes.add(t);
@@ -145,7 +168,7 @@ export async function handleTrackSelection(trackName) {
 
     if (debugEnabled) logger.log("⏳ [TRACK] Waiting for sandbox track init...");
     const res = await this.trackSandboxHost.initTrack({
-      track,
+      track: filteredTrack,
       moduleSources,
       assetsBaseUrl,
     });
@@ -176,7 +199,7 @@ export async function handleTrackSelection(trackName) {
     } catch {}
 
     this.activeModules = {};
-    for (const m of track.modules) {
+    for (const m of filteredTrack.modules) {
       const instanceId = String(m?.id || "").trim();
       if (!instanceId) continue;
       this.activeModules[instanceId] = [{}];
@@ -213,23 +236,36 @@ export async function handleTrackSelection(trackName) {
       if (
         this.activeTrack &&
         this.activeTrack.name === pending.trackName &&
-        nextTrack &&
-        isEqual(
-          {
-            name: this.activeTrack.name,
-            modules: this.activeTrack.modules,
-            modulesData: this.activeTrack.modulesData,
-            channelMappings: this.activeTrack.channelMappings,
-          },
-          {
-            name: nextTrack.name,
-            modules: nextTrack.modules,
-            modulesData: nextTrack.modulesData,
-            channelMappings: nextTrack.channelMappings,
-          }
-        )
+        nextTrack
       ) {
-        // No changes needed, track is the same
+        const activeModules = Array.isArray(this.activeTrack.modules)
+          ? this.activeTrack.modules.filter((m) => !m.disabled)
+          : [];
+        const nextModules = Array.isArray(nextTrack.modules)
+          ? nextTrack.modules.filter((m) => !m.disabled)
+          : [];
+        if (
+          isEqual(
+            {
+              name: this.activeTrack.name,
+              modules: activeModules,
+              modulesData: this.activeTrack.modulesData,
+              channelMappings: this.activeTrack.channelMappings,
+            },
+            {
+              name: nextTrack.name,
+              modules: nextModules,
+              modulesData: nextTrack.modulesData,
+              channelMappings: nextTrack.channelMappings,
+            }
+          )
+        ) {
+          // no-op
+        } else {
+          this.deactivateActiveTrack();
+          this.handleTrackSelection(pending.trackName);
+          return;
+        }
       } else {
         this.deactivateActiveTrack();
         this.handleTrackSelection(pending.trackName);

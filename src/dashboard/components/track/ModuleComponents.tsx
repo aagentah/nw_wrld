@@ -130,6 +130,7 @@ type NoteSelectorProps = {
   trackIndex: number;
   instanceId: string;
   moduleType: string;
+  moduleInstance: { id: string; type: string; disabled?: boolean };
   predefinedModules: unknown[];
   onRemoveModule?: ((instanceId: string) => void) | null;
   dragHandleProps?: Record<string, unknown> | null;
@@ -148,6 +149,7 @@ export const NoteSelector = memo(
     trackIndex,
     instanceId,
     moduleType,
+    moduleInstance,
     onRemoveModule,
     dragHandleProps,
     inputConfig,
@@ -389,10 +391,18 @@ export const NoteSelector = memo(
         .attr("fill", "transparent");
     }, []);
 
+    const isDisabled = moduleInstance?.disabled === true;
+    
     return (
-      <div className="px-12 font-mono">
+      <div className={`px-12 font-mono ${isDisabled ? "opacity-50" : ""}`}>
         <div className="mb-2 flex flex-wrap items-center justify-between">
-          <span className="text-neutral-500 text-sm">
+          <span
+            className={`text-sm ${
+              moduleInstance.disabled === true
+                ? "text-neutral-500/50 line-through"
+                : "text-neutral-500"
+            }`}
+          >
             <span>[MODULE]</span> {moduleType}
             {moduleWarningText ? (
               <span className="ml-2 inline-flex items-center">
@@ -419,6 +429,11 @@ export const NoteSelector = memo(
                 </Tooltip>
               </span>
             ) : null}
+            {moduleInstance.disabled === true && (
+              <span className="ml-2 text-yellow-500/70 text-[11px]">
+                [DISABLED]
+              </span>
+            )}
           </span>
           <div className="flex items-center gap-2">
             {dragHandleProps && (
@@ -432,6 +447,34 @@ export const NoteSelector = memo(
                 <span className="text-md text-neutral-300">{"\u2261 "}</span>
               </span>
             )}
+            {(() => {
+              const isDisabled = moduleInstance.disabled === true;
+              return (
+                <div
+                  className={`cursor-pointer text-[11px] ${
+                    isDisabled
+                      ? "text-yellow-500/70"
+                      : "text-green-500/70"
+                  }`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    updateActiveSet(setUserData, activeSetId, (activeSet) => {
+                      const trackDraft = activeSet.tracks[trackIndex];
+                      const module = trackDraft.modules.find(
+                        (m) => m.id === instanceId
+                      );
+                      if (module) {
+                        module.disabled = !isDisabled;
+                      }
+                    });
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  title={isDisabled ? "Enable Module" : "Disable Module"}
+                >
+                  [{isDisabled ? "\u25CF" : "\u25CB"}]
+                </div>
+              );
+            })()}
             {onRemoveModule && (
               <div className="flex items-center gap-2">
                 <div
@@ -672,6 +715,7 @@ export const SortableModuleItem = memo(
                 trackIndex={trackIndex}
                 instanceId={moduleInstance.id}
                 moduleType={moduleInstance.type}
+                moduleInstance={moduleInstance}
                 predefinedModules={predefinedModules}
                 onRemoveModule={onRemoveModule}
                 dragHandleProps={dragHandleProps as unknown as Record<string, unknown>}
