@@ -73,6 +73,7 @@ type SortableItemProps = {
   moduleName: string | null;
   userColors: string[];
   onShowMethodCode: (methodName: string) => void;
+  useLevaControls: boolean;
 };
 
 const SortableItem = memo(
@@ -86,6 +87,7 @@ const SortableItem = memo(
     moduleName,
     userColors,
     onShowMethodCode,
+    useLevaControls,
   }: SortableItemProps) => {
     const toggleRandomization = useCallback(
       (optionName: string, optionDef: OptionDef | null = null) => {
@@ -218,6 +220,7 @@ const SortableItem = memo(
                 moduleMethods={moduleMethods}
                 moduleName={moduleName}
                 userColors={userColors}
+                useLevaControls={useLevaControls}
                 dragHandleProps={dragHandleProps}
                 onRemove={handleRemoveMethod}
                 onShowCode={onShowMethodCode}
@@ -280,6 +283,7 @@ export const MethodConfiguratorModal = ({
 }: MethodConfiguratorModalProps) => {
   const [userData, setUserData] = useAtom(userDataAtom);
   const [selectedChannel] = useAtom(selectedChannelAtom);
+  const [useLevaControls, setUseLevaControls] = useState(false);
   const [selectedMethodForCode, setSelectedMethodForCode] = useState<{
     moduleName: string | null;
     methodName: string;
@@ -388,6 +392,15 @@ export const MethodConfiguratorModal = ({
       moduleId: ch.moduleType,
     });
   }, [isOpen, needsIntrospection, selectedChannel, sendToProjector]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    try {
+      setUseLevaControls(window.localStorage.getItem("nw_wrld:useLevaMethodControls") === "1");
+    } catch {
+      setUseLevaControls(false);
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -851,6 +864,23 @@ export const MethodConfiguratorModal = ({
                     {layer.name} Methods
                   </div>
                   <div className="relative">
+                    <label className="inline-flex items-center gap-2 mr-3 text-[10px] text-neutral-300/70 font-mono select-none">
+                      <input
+                        type="checkbox"
+                        checked={useLevaControls}
+                        onChange={(e) => {
+                          const next = e.target.checked;
+                          setUseLevaControls(next);
+                          try {
+                            window.localStorage.setItem(
+                              "nw_wrld:useLevaMethodControls",
+                              next ? "1" : "0"
+                            );
+                          } catch {}
+                        }}
+                      />
+                      use leva controls
+                    </label>
                     <Select
                       onChange={(e: ChangeEvent<HTMLSelectElement>) => {
                         addMethod(e.target.value);
@@ -958,6 +988,7 @@ export const MethodConfiguratorModal = ({
                             moduleName={module ? module.name : null}
                             userColors={userColors}
                             onShowMethodCode={handleShowMethodCode}
+                            useLevaControls={useLevaControls}
                           />
                           {methodIndex < layer.configuredMethods.length - 1 && (
                             <div className="flex-shrink-0 flex items-center w-4 min-h-[40px]">

@@ -3,6 +3,8 @@ import { FaDice, FaLock, FaPlay } from "react-icons/fa";
 import { TextInput, NumberInput, ColorInput, Select, Checkbox } from "./FormInputs";
 import { MatrixGrid } from "../shared/MatrixGrid";
 import { AssetOptionInput } from "./AssetOptionInput";
+import { LevaPanel, useControls, useCreateStore } from "leva";
+import { NW_WRLD_LEVA_THEME } from "../core/levaTheme";
 
 const CUSTOM_VALUE = "__nw_wrld_custom__";
 
@@ -43,6 +45,7 @@ type MethodBlockProps = {
   moduleMethods?: ModuleMethodDef[];
   moduleName?: string | null;
   userColors?: string[];
+  useLevaControls?: boolean;
   dragHandleProps?: Record<string, unknown> | null;
   onRemove?: ((methodName: string) => void) | null;
   onShowCode?: ((methodName: string) => void) | null;
@@ -157,6 +160,126 @@ const DraftNumberInput = memo(
   }
 );
 
+const MethodLevaControls = memo(
+  ({
+    methodName,
+    optionDefs,
+    optionValuesByName,
+    onOptionChange,
+  }: {
+    methodName: string;
+    optionDefs: MethodOptionDef[];
+    optionValuesByName: Record<string, MethodOptionValue | undefined>;
+    onOptionChange: (methodName: string, optionName: string, value: unknown) => void;
+  }) => {
+    const store = useCreateStore();
+
+    const schema = useMemo(() => {
+      const out: Record<string, unknown> = {};
+      for (const opt of optionDefs) {
+        const current = optionValuesByName[opt.name];
+        const currentValue = current?.value;
+
+        if (opt.type === "number") {
+          const fallback =
+            typeof opt.defaultVal === "number"
+              ? opt.defaultVal
+              : typeof currentValue === "number"
+                ? currentValue
+                : 0;
+          const value = typeof currentValue === "number" ? currentValue : fallback;
+          out[opt.name] = {
+            value,
+            min: opt.min,
+            max: opt.max,
+            label: opt.name,
+            onChange: (v: unknown, _path: string, ctx: { initial: boolean }) => {
+              if (ctx?.initial) return;
+              if (typeof v !== "number" || !Number.isFinite(v)) return;
+              if (v === value) return;
+              onOptionChange(methodName, opt.name, v);
+            },
+          };
+          continue;
+        }
+
+        if (opt.type === "text") {
+          const value = typeof currentValue === "string" ? currentValue : String(currentValue ?? "");
+          out[opt.name] = {
+            value,
+            label: opt.name,
+            onChange: (v: unknown, _path: string, ctx: { initial: boolean }) => {
+              if (ctx?.initial) return;
+              const next = typeof v === "string" ? v : String(v ?? "");
+              if (next === value) return;
+              onOptionChange(methodName, opt.name, next);
+            },
+          };
+          continue;
+        }
+
+        if (opt.type === "boolean") {
+          const value = typeof currentValue === "boolean" ? currentValue : Boolean(currentValue);
+          out[opt.name] = {
+            value,
+            label: opt.name,
+            onChange: (v: unknown, _path: string, ctx: { initial: boolean }) => {
+              if (ctx?.initial) return;
+              const next = Boolean(v);
+              if (next === value) return;
+              onOptionChange(methodName, opt.name, next);
+            },
+          };
+          continue;
+        }
+
+        if (opt.type === "select") {
+          const values = Array.isArray(opt.values) ? opt.values : [];
+          if (values.length === 0) continue;
+          const value =
+            typeof currentValue === "string" && values.includes(currentValue)
+              ? currentValue
+              : typeof opt.defaultVal === "string" && values.includes(opt.defaultVal)
+                ? opt.defaultVal
+                : values[0];
+          out[opt.name] = {
+            options: values,
+            value,
+            label: opt.name,
+            onChange: (v: unknown, _path: string, ctx: { initial: boolean }) => {
+              if (ctx?.initial) return;
+              const next = String(v ?? "");
+              if (next === value) return;
+              onOptionChange(methodName, opt.name, next);
+            },
+          };
+          continue;
+        }
+      }
+      return out;
+    }, [methodName, onOptionChange, optionDefs, optionValuesByName]);
+
+    const schemaForLeva = schema as unknown as Parameters<typeof useControls>[0];
+    useControls(schemaForLeva, { store });
+
+    if (Object.keys(schema).length === 0) return null;
+
+    return (
+      <div className="min-w-[120px]">
+        <LevaPanel
+          store={store}
+          titleBar={false}
+          theme={NW_WRLD_LEVA_THEME}
+          flat
+          hideCopyButton
+          fill
+          oneLineLabels
+        />
+      </div>
+    );
+  }
+);
+
 export const MethodBlock = memo(
   ({
     method,
@@ -164,6 +287,7 @@ export const MethodBlock = memo(
     moduleMethods = [],
     moduleName: _moduleName = null,
     userColors = [],
+    useLevaControls = false,
     dragHandleProps = null,
     onRemove = null,
     onShowCode: _onShowCode = null,
@@ -190,6 +314,43 @@ export const MethodBlock = memo(
       [method.name, onOptionChange]
     );
 
+    const optionValuesByName = useMemo(() => {
+      const values = Array.isArray(method?.options) ? method.options : [];
+      const out: Record<string, MethodOptionValue> = {};
+      for (const v of values) {
+        if (v?.name) out[String(v.name)] = v;
+      }
+      return out;
+    }, [method?.options]);
+
+    const levaOptionDefs = useMemo(() => {
+      if (!useLevaControls) return [];
+      const defs = Array.isArray(methodOptions) ? methodOptions : [];
+      const out: MethodOptionDef[] = [];
+      for (const opt of defs) {
+        const currentOption = optionValuesByName[opt.name];
+        if (!currentOption) continue;
+        const isRandomized =
+          Array.isArray(currentOption.randomRange) ||
+          (opt.type === "select" &&
+            Array.isArray(currentOption.randomValues) &&
+            currentOption.randomValues.length > 0) ||
+          (opt.type === "color" &&
+            Array.isArray(currentOption.randomValues) &&
+            currentOption.randomValues.length > 0 &&
+            currentOption.randomizeFromUserColors);
+        if (isRandomized) continue;
+        if (opt.type === "number" || opt.type === "text" || opt.type === "boolean" || opt.type === "select") {
+          out.push(opt);
+        }
+      }
+      return out;
+    }, [methodOptions, optionValuesByName, useLevaControls]);
+
+    const levaOptionNameSet = useMemo(() => {
+      return new Set(levaOptionDefs.map((d) => d.name));
+    }, [levaOptionDefs]);
+
     const renderInput = (option, currentOption) => {
       const isRandomized =
         Array.isArray(currentOption.randomRange) ||
@@ -206,6 +367,13 @@ export const MethodBlock = memo(
       const _allowRandomization = optionDef?.allowRandomization || false;
 
       if (mode === "editor") {
+        if (
+          useLevaControls &&
+          !isRandomized &&
+          (option.type === "number" || option.type === "text" || option.type === "boolean" || option.type === "select")
+        ) {
+          return null;
+        }
         if (option.type === "number") {
           const fallback =
             typeof option.defaultVal === "number"
@@ -401,6 +569,14 @@ export const MethodBlock = memo(
               ) : null}
             </div>
           );
+        }
+
+        if (
+          useLevaControls &&
+          !isRandomized &&
+          (option.type === "number" || option.type === "text" || option.type === "boolean" || option.type === "select")
+        ) {
+          return null;
         }
 
         if (isRandomized) {
@@ -700,6 +876,16 @@ export const MethodBlock = memo(
                   : "grid-cols-1"
             }`}
           >
+            {useLevaControls && onOptionChange && levaOptionDefs.length > 0 ? (
+              <div className="col-span-full">
+                <MethodLevaControls
+                  methodName={method.name}
+                  optionDefs={levaOptionDefs}
+                  optionValuesByName={optionValuesByName}
+                  onOptionChange={onOptionChange}
+                />
+              </div>
+            ) : null}
             {methodOptions?.map((option) => {
               const methodOptionValues = Array.isArray(method?.options) ? method.options : [];
               const currentOption = methodOptionValues.find((o) => o.name === option.name);
@@ -738,6 +924,7 @@ export const MethodBlock = memo(
                   Array.isArray(currentOption.randomValues) &&
                   currentOption.randomValues.length > 0 &&
                   currentOption.randomizeFromUserColors);
+              if (useLevaControls && !isRandomized && levaOptionNameSet.has(option.name)) return null;
               const showDice =
                 mode === "dashboard" &&
                 onToggleRandom &&
