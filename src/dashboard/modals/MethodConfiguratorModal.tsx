@@ -14,11 +14,11 @@ import { HelpIcon } from "../components/HelpIcon";
 import { MethodBlock } from "../components/MethodBlock";
 import { Tooltip } from "../components/Tooltip";
 import { FaExclamationTriangle } from "react-icons/fa";
-import { userDataAtom, selectedChannelAtom, activeSetIdAtom } from "../core/state.ts";
+import { userDataAtom, selectedChannelAtom, activeSetIdAtom } from "../core/state";
 import { updateActiveSet, getMethodsByLayer } from "../core/utils";
-import { getActiveSetTracks } from "../../shared/utils/setUtils.ts";
-import { getBaseMethodNames } from "../utils/moduleUtils.ts";
-import { HELP_TEXT } from "../../shared/helpText.ts";
+import { getActiveSetTracks } from "../../shared/utils/setUtils";
+import { getBaseMethodNames } from "../utils/moduleUtils";
+import { HELP_TEXT } from "../../shared/helpText";
 import { MethodCodeModal } from "./MethodCodeModal";
 
 type MethodOption = {

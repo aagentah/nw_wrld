@@ -3,10 +3,10 @@ import { useAtom } from "jotai";
 import { Modal } from "../shared/Modal";
 import { ModalHeader } from "../components/ModalHeader";
 import { TextInput, RadioButton, Select } from "../components/FormInputs";
-import { userDataAtom } from "../core/state.ts";
+import { userDataAtom } from "../core/state";
 import { updateUserData } from "../core/utils";
-import { DEFAULT_GLOBAL_MAPPINGS } from "../../shared/config/defaultConfig.ts";
-import { parsePitchClass, pitchClassToName } from "../../shared/midi/midiUtils.ts";
+import { DEFAULT_GLOBAL_MAPPINGS } from "../../shared/config/defaultConfig";
+import { parsePitchClass, pitchClassToName } from "../../shared/midi/midiUtils";
 
 type ActiveTab = "midi-pitchClass" | "midi-exactNote" | "osc";
 

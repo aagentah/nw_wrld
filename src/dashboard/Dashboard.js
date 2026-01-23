@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import { useAtom } from "jotai";
-import { getActiveSetTracks } from "../shared/utils/setUtils.ts";
+import { getActiveSetTracks } from "../shared/utils/setUtils";
 import { useIPCSend, useIPCInvoke } from "./core/hooks/useIPC";
 import { useLatestRef } from "./core/hooks/useLatestRef";
 import {
@@ -13,13 +13,13 @@ import {
   flashingConstructorsAtom,
   recordingStateAtom,
   useFlashingChannels,
-} from "./core/state.ts";
+} from "./core/state";
 import { DashboardHeader } from "./components/DashboardHeader";
 import { DashboardFooter } from "./components/DashboardFooter";
 import { DashboardBody } from "./components/DashboardBody";
 import { DashboardModalLayer } from "./components/DashboardModalLayer";
 import { WorkspaceGateModal } from "./components/WorkspaceGateModal";
-import { useWorkspaceModules } from "./core/hooks/useWorkspaceModules.ts";
+import { useWorkspaceModules } from "./core/hooks/useWorkspaceModules";
 import { useInputEvents } from "./core/hooks/useInputEvents";
 import { useModuleIntrospection } from "./core/hooks/useModuleIntrospection";
 import { useProjectorPerfStats } from "./core/hooks/useProjectorPerfStats";

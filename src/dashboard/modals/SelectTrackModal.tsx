@@ -8,14 +8,14 @@ import { ModalFooter } from "../components/ModalFooter";
 import { Button } from "../components/Button";
 import { RadioButton, Label } from "../components/FormInputs";
 import { updateActiveSet } from "../core/utils";
-import { getActiveSetTracks, getActiveSet } from "../../shared/utils/setUtils.ts";
+import { getActiveSetTracks, getActiveSet } from "../../shared/utils/setUtils";
 import { EditTrackModal } from "./EditTrackModal";
-import { deleteRecordingsForTracks } from "../../shared/json/recordingUtils.ts";
+import { deleteRecordingsForTracks } from "../../shared/json/recordingUtils";
 import {
   parsePitchClass,
   pitchClassToName,
   resolveTrackTrigger,
-} from "../../shared/midi/midiUtils.ts";
+} from "../../shared/midi/midiUtils";
 
 type Track = {
   id: string | number;

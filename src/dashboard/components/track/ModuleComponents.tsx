@@ -9,17 +9,17 @@ import {
   selectedChannelAtom,
   flashingChannelsAtom,
   flashingConstructorsAtom,
-} from "../../core/state.ts";
+} from "../../core/state";
 import { updateActiveSet } from "../../core/utils";
-import { TERMINAL_STYLES } from "../../core/constants.ts";
-import { getActiveSetTracks } from "../../../shared/utils/setUtils.ts";
-import { getRecordingForTrack, getSequencerForTrack } from "../../../shared/json/recordingUtils.ts";
+import { TERMINAL_STYLES } from "../../core/constants";
+import { getActiveSetTracks } from "../../../shared/utils/setUtils";
+import { getRecordingForTrack, getSequencerForTrack } from "../../../shared/json/recordingUtils";
 import {
   resolveTrackTrigger,
   resolveChannelTrigger,
   parsePitchClass,
   pitchClassToName,
-} from "../../../shared/midi/midiUtils.ts";
+} from "../../../shared/midi/midiUtils";
 import { FaExclamationTriangle, FaEye, FaEyeSlash } from "react-icons/fa";
 import { Tooltip } from "../Tooltip";
 

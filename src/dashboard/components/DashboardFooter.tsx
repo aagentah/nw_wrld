@@ -1,6 +1,6 @@
 import { useAtom } from "jotai";
 import { FaPlay, FaStop } from "react-icons/fa";
-import { recordingDataAtom } from "../core/state.ts";
+import { recordingDataAtom } from "../core/state";
 import { Checkbox } from "./FormInputs";
 import { Button } from "./Button";
 

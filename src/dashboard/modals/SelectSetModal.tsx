@@ -10,7 +10,7 @@ import { RadioButton, Label } from "../components/FormInputs";
 import { updateUserData } from "../core/utils";
 import { EditSetModal } from "./EditSetModal";
 import { ConfirmationModal } from "./ConfirmationModal";
-import { deleteRecordingsForTracks } from "../../shared/json/recordingUtils.ts";
+import { deleteRecordingsForTracks } from "../../shared/json/recordingUtils";
 
 type Set = {
   id: string;

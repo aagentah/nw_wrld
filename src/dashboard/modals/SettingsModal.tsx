@@ -10,7 +10,7 @@ import {
   TextInput,
 } from "../components/FormInputs";
 import { HelpIcon } from "../components/HelpIcon";
-import { HELP_TEXT } from "../../shared/helpText.ts";
+import { HELP_TEXT } from "../../shared/helpText";
 
 const isValidHexColor = (value: string): boolean => /^#([0-9A-F]{3}){1,2}$/i.test(value);
 

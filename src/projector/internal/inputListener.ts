@@ -3,7 +3,7 @@ import {
   normalizeNoteMatchMode,
   noteNumberToTriggerKey,
   pitchClassToName,
-} from "../../shared/midi/midiUtils.ts";
+} from "../../shared/midi/midiUtils";
 import logger from "../helpers/logger";
 import { getMessaging } from "./bridge";
 
