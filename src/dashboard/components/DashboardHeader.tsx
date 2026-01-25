@@ -1,9 +1,10 @@
 import { FaBars, FaCog, FaCode, FaMusic, FaTag } from "react-icons/fa";
 import { Button } from "./Button";
 import { useUpdateCheck } from "../core/hooks/useUpdateCheck";
+import { selectSetModalAtom } from "../core/modalAtoms";
+import { useSetAtom } from "jotai";
 
 type DashboardHeaderProps = {
-  onSets?: (() => void) | null;
   onTracks?: (() => void) | null;
   onModules?: (() => void) | null;
   onSettings?: (() => void) | null;
@@ -12,13 +13,13 @@ type DashboardHeaderProps = {
 };
 
 export const DashboardHeader = ({
-  onSets,
   onTracks,
   onModules,
   onSettings,
   onDebugOverlay,
   onReleases,
 }: DashboardHeaderProps) => {
+  const openSelectSet = useSetAtom(selectSetModalAtom)
   const update = useUpdateCheck();
   const hasUpdate = update.status === "updateAvailable";
 
@@ -33,7 +34,7 @@ export const DashboardHeader = ({
     <div className="fixed top-0 left-0 right-0 z-50 bg-[#101010] border-b border-neutral-800 px-6 py-4">
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-6">
-          <Button onClick={onSets} icon={<FaBars />}>
+          <Button onClick={() => openSelectSet(true)} icon={<FaBars />}>
             SETS
           </Button>
           <Button onClick={onTracks} icon={<FaMusic />}>

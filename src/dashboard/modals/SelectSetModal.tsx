@@ -11,6 +11,8 @@ import { updateUserData } from "../core/utils";
 import { EditSetModal } from "./EditSetModal";
 import { ConfirmationModal } from "./ConfirmationModal";
 import { deleteRecordingsForTracks } from "../../shared/json/recordingUtils";
+import { createSetModalAtom, selectSetModalAtom } from "../core/modalAtoms";
+import { useAtom, useSetAtom } from "jotai";
 
 type Set = {
   id: string;
@@ -89,8 +91,6 @@ type UserData = {
 };
 
 type SelectSetModalProps = {
-  isOpen: boolean;
-  onClose: () => void;
   userData: UserData;
   setUserData: (updater: unknown) => void;
   activeTrackId: string | number | null;
@@ -99,13 +99,10 @@ type SelectSetModalProps = {
   setActiveSetId: (id: string | null) => void;
   recordingData: Record<string, unknown>;
   setRecordingData: (updater: (prev: Record<string, unknown>) => Record<string, unknown>) => void;
-  onCreateSet: () => void;
   onConfirmDelete: (message: string, onConfirm: () => void) => void;
 };
 
 export const SelectSetModal = ({
-  isOpen,
-  onClose,
   userData,
   setUserData,
   activeTrackId: _activeTrackId,
@@ -114,13 +111,20 @@ export const SelectSetModal = ({
   setActiveSetId,
   recordingData: _recordingData,
   setRecordingData,
-  onCreateSet,
   onConfirmDelete,
 }: SelectSetModalProps) => {
+  const [isOpen, setIsOpen] = useAtom(selectSetModalAtom)
+  const onClose = () => setIsOpen(false)
+  const toggleCreateSet = useSetAtom(createSetModalAtom)
   const [editingSetId, setEditingSetId] = useState<string | null>(null);
   const [alertMessage, setAlertMessage] = useState<string | null>(null);
 
   const sets = userData.sets || [];
+
+  const handleCreateSet = () => {
+    onClose();
+    toggleCreateSet(true)
+  }
 
   const handleSetSelect = (setId: string) => {
     setActiveSetId(setId);
@@ -217,7 +221,7 @@ export const SelectSetModal = ({
         </div>
 
         <ModalFooter>
-          <Button onClick={onCreateSet} icon={<FaPlus />}>
+          <Button onClick={handleCreateSet} icon={<FaPlus />}>
             Create Set
           </Button>
         </ModalFooter>

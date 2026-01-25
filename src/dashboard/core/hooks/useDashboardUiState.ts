@@ -29,9 +29,7 @@ export const useDashboardUiState = ({ selectedChannel, setUserData, activeSetId 
   const [isNewModuleDialogOpen, setIsNewModuleDialogOpen] = useState(false);
 
   const [isCreateTrackOpen, setIsCreateTrackOpen] = useState(false);
-  const [isCreateSetOpen, setIsCreateSetOpen] = useState(false);
   const [isSelectTrackModalOpen, setIsSelectTrackModalOpen] = useState(false);
-  const [isSelectSetModalOpen, setIsSelectSetModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isAddModuleModalOpen, setIsAddModuleModalOpen] = useState(false);
   const [isManageModulesModalOpen, setIsManageModulesModalOpen] = useState(false);
@@ -151,12 +149,8 @@ export const useDashboardUiState = ({ selectedChannel, setUserData, activeSetId 
 
     isCreateTrackOpen,
     setIsCreateTrackOpen,
-    isCreateSetOpen,
-    setIsCreateSetOpen,
     isSelectTrackModalOpen,
     setIsSelectTrackModalOpen,
-    isSelectSetModalOpen,
-    setIsSelectSetModalOpen,
     isSettingsModalOpen,
     setIsSettingsModalOpen,
     isAddModuleModalOpen,
@@ -214,12 +208,8 @@ export const useDashboardUiState = ({ selectedChannel, setUserData, activeSetId 
 
     isCreateTrackOpen: boolean;
     setIsCreateTrackOpen: Dispatch<SetStateAction<boolean>>;
-    isCreateSetOpen: boolean;
-    setIsCreateSetOpen: Dispatch<SetStateAction<boolean>>;
     isSelectTrackModalOpen: boolean;
     setIsSelectTrackModalOpen: Dispatch<SetStateAction<boolean>>;
-    isSelectSetModalOpen: boolean;
-    setIsSelectSetModalOpen: Dispatch<SetStateAction<boolean>>;
     isSettingsModalOpen: boolean;
     setIsSettingsModalOpen: Dispatch<SetStateAction<boolean>>;
     isAddModuleModalOpen: boolean;

@@ -22,12 +22,8 @@ type PredefinedModules = Parameters<typeof AddModuleModal>[0]["predefinedModules
 type DashboardModalLayerProps = {
   isCreateTrackOpen: boolean;
   setIsCreateTrackOpen: (next: boolean) => void;
-  isCreateSetOpen: boolean;
-  setIsCreateSetOpen: (next: boolean) => void;
   isSelectTrackModalOpen: boolean;
   setIsSelectTrackModalOpen: (next: boolean) => void;
-  isSelectSetModalOpen: boolean;
-  setIsSelectSetModalOpen: (next: boolean) => void;
   isSettingsModalOpen: boolean;
   setIsSettingsModalOpen: (next: boolean) => void;
   isInputMappingsModalOpen: boolean;
@@ -104,12 +100,8 @@ type DashboardModalLayerProps = {
 export const DashboardModalLayer = ({
   isCreateTrackOpen,
   setIsCreateTrackOpen,
-  isCreateSetOpen,
-  setIsCreateSetOpen,
   isSelectTrackModalOpen,
   setIsSelectTrackModalOpen,
-  isSelectSetModalOpen,
-  setIsSelectSetModalOpen,
   isSettingsModalOpen,
   setIsSettingsModalOpen,
   isInputMappingsModalOpen,
@@ -178,8 +170,6 @@ export const DashboardModalLayer = ({
         onAlert={openAlertModal}
       />
       <CreateSetModal
-        isOpen={isCreateSetOpen}
-        onClose={() => setIsCreateSetOpen(false)}
         onAlert={openAlertModal}
       />
       <SelectTrackModal
@@ -199,8 +189,6 @@ export const DashboardModalLayer = ({
         onConfirmDelete={openConfirmationModal}
       />
       <SelectSetModal
-        isOpen={isSelectSetModalOpen}
-        onClose={() => setIsSelectSetModalOpen(false)}
         userData={userData}
         setUserData={setUserData}
         activeTrackId={activeTrackId}
@@ -209,10 +197,6 @@ export const DashboardModalLayer = ({
         setActiveSetId={setActiveSetId}
         recordingData={recordingData}
         setRecordingData={setRecordingData}
-        onCreateSet={() => {
-          setIsSelectSetModalOpen(false);
-          setIsCreateSetOpen(true);
-        }}
         onConfirmDelete={openConfirmationModal}
       />
       <SettingsModal

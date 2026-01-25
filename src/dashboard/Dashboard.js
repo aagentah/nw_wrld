@@ -57,12 +57,8 @@ const Dashboard = () => {
     setWorkspaceModalPath,
     isCreateTrackOpen,
     setIsCreateTrackOpen,
-    isCreateSetOpen,
-    setIsCreateSetOpen,
     isSelectTrackModalOpen,
     setIsSelectTrackModalOpen,
-    isSelectSetModalOpen,
-    setIsSelectSetModalOpen,
     isSettingsModalOpen,
     setIsSettingsModalOpen,
     isInputMappingsModalOpen,
@@ -294,7 +290,6 @@ const Dashboard = () => {
   return (
     <div className="relative bg-[#101010] font-mono h-screen flex flex-col">
       <DashboardHeader
-        onSets={() => setIsSelectSetModalOpen(true)}
         onTracks={() => setIsSelectTrackModalOpen(true)}
         onModules={() => setIsManageModulesModalOpen(true)}
         onSettings={() => setIsSettingsModalOpen(true)}
@@ -347,12 +342,8 @@ const Dashboard = () => {
       <DashboardModalLayer
         isCreateTrackOpen={isCreateTrackOpen}
         setIsCreateTrackOpen={setIsCreateTrackOpen}
-        isCreateSetOpen={isCreateSetOpen}
-        setIsCreateSetOpen={setIsCreateSetOpen}
         isSelectTrackModalOpen={isSelectTrackModalOpen}
         setIsSelectTrackModalOpen={setIsSelectTrackModalOpen}
-        isSelectSetModalOpen={isSelectSetModalOpen}
-        setIsSelectSetModalOpen={setIsSelectSetModalOpen}
         isSettingsModalOpen={isSettingsModalOpen}
         setIsSettingsModalOpen={setIsSettingsModalOpen}
         isInputMappingsModalOpen={isInputMappingsModalOpen}
