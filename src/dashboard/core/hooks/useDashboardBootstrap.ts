@@ -5,6 +5,8 @@ import { loadRecordingData } from "../../../shared/json/recordingUtils";
 import { loadAppState } from "../../../shared/json/appStateUtils";
 import { loadUserData } from "../utils";
 import { useIPCListener } from "./useIPC";
+import { useSetAtom } from "jotai";
+import { workspaceModalAtom } from "../modalAtoms";
 
 type UseDashboardBootstrapArgs = {
   isInitialMountRef: { current: boolean };
@@ -19,7 +21,6 @@ type UseDashboardBootstrapArgs = {
   setWorkspacePath: (next: string | null) => void;
   setWorkspaceModalMode: (mode: "initial" | "lostSync") => void;
   setWorkspaceModalPath: (path: string | null) => void;
-  setIsWorkspaceModalOpen: (open: boolean) => void;
 };
 
 export const useDashboardBootstrap = ({
@@ -35,8 +36,8 @@ export const useDashboardBootstrap = ({
   setWorkspacePath,
   setWorkspaceModalMode,
   setWorkspaceModalPath,
-  setIsWorkspaceModalOpen,
 }: UseDashboardBootstrapArgs) => {
+  const setIsWorkspaceModalOpen = useSetAtom(workspaceModalAtom)
   useEffect(() => {
     const initializeUserData = async () => {
       const data = await loadUserData();

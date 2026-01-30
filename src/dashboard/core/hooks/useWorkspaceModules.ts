@@ -3,6 +3,8 @@ import type { Dispatch, SetStateAction, MutableRefObject } from "react";
 import { getProjectDir } from "../../../shared/utils/projectDir";
 import { updateUserData } from "../utils";
 import { useIPCListener } from "./useIPC";
+import { useAtomValue } from "jotai";
+import { workspaceModalAtom } from "../modalAtoms";
 
 type ModuleStatus = "uninspected" | "ready" | "failed";
 
@@ -22,7 +24,6 @@ type ModuleEntry = {
 
 type UseWorkspaceModulesArgs = {
   workspacePath: string | null;
-  isWorkspaceModalOpen: boolean;
   sendToProjector: (type: string, props: Record<string, unknown>) => void;
   userData: unknown;
   setUserData: Parameters<typeof updateUserData>[0];
@@ -39,7 +40,6 @@ type UseWorkspaceModulesArgs = {
 
 export const useWorkspaceModules = ({
   workspacePath,
-  isWorkspaceModalOpen,
   sendToProjector,
   userData,
   setUserData,
@@ -53,6 +53,7 @@ export const useWorkspaceModules = ({
   didMigrateWorkspaceModuleTypesRef,
   loadModulesRunIdRef,
 }: UseWorkspaceModulesArgs) => {
+  const isWorkspaceModalOpen = useAtomValue(workspaceModalAtom)
   const loadModules = useCallback(async () => {
     const runId = ++loadModulesRunIdRef.current;
     const isStale = () => runId !== loadModulesRunIdRef.current;

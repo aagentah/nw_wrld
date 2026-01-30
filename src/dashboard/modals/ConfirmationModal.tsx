@@ -3,23 +3,22 @@ import { Modal } from "../shared/Modal";
 import { ModalHeader } from "../components/ModalHeader";
 import { ModalFooter } from "../components/ModalFooter";
 import { Button } from "../components/Button";
+import { useAtom } from "jotai";
+import { confirmationModalAtom } from "../core/modalAtoms";
 
-type ConfirmationModalProps = {
-  isOpen: boolean;
-  onClose: () => void;
+export interface Confirmation {
   message: string | null;
   onConfirm?: (() => void) | null;
   type?: "confirm" | "alert";
 };
 
-export const ConfirmationModal = ({
-  isOpen,
-  onClose,
-  message,
-  onConfirm,
-  type = "confirm",
-}: ConfirmationModalProps) => {
+export const ConfirmationModal = () => {
+  const [confirmationData, setConfirmation] = useAtom(confirmationModalAtom)
+  const isOpen = !!confirmationData
+  const onClose = () => setConfirmation(null)
+
   if (!isOpen) return null;
+  const {message, onConfirm, type} = confirmationData
 
   const handleConfirm = () => {
     if (onConfirm) {

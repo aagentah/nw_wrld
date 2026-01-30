@@ -3,6 +3,8 @@ import { Modal } from "../shared/Modal";
 import { ModalHeader } from "../components/ModalHeader";
 import { ModalFooter } from "../components/ModalFooter";
 import { Button } from "../components/Button";
+import { useAtom } from "jotai";
+import { releaseNotesModalAtom } from "../core/modalAtoms";
 
 const REQUEST_TIMEOUT_MS = 6000;
 
@@ -62,12 +64,7 @@ type Release = {
 
 type Status = "idle" | "loading" | "ready" | "error";
 
-type ReleaseNotesModalProps = {
-  isOpen: boolean;
-  onClose: () => void;
-};
-
-export const ReleaseNotesModal = ({ isOpen, onClose }: ReleaseNotesModalProps) => {
+export const ReleaseNotesModal = () => {
   const repoInfo = useMemo(() => {
     const bridge = getBridge();
     const repoUrl =
@@ -82,6 +79,8 @@ export const ReleaseNotesModal = ({ isOpen, onClose }: ReleaseNotesModalProps) =
     return bridge?.app?.getVersion ? bridge.app.getVersion() : null;
   }, []);
 
+  const [isOpen, setIsOpen] = useAtom(releaseNotesModalAtom)
+  const onClose = () => setIsOpen(false)
   const [status, setStatus] = useState<Status>("idle");
   const [releases, setReleases] = useState<Release[]>([]);
 

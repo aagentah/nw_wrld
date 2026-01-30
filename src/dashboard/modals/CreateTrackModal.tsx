@@ -13,6 +13,7 @@ import { HELP_TEXT } from "../../shared/helpText";
 import { useNameValidation } from "../core/hooks/useNameValidation";
 import { useTrackSlots } from "../core/hooks/useTrackSlots";
 import { parsePitchClass, pitchClassToName } from "../../shared/midi/midiUtils";
+import { createTrackModalAtom } from "../core/modalAtoms";
 
 type InputConfigLike = {
   type?: unknown;
@@ -20,13 +21,13 @@ type InputConfigLike = {
 };
 
 type CreateTrackModalProps = {
-  isOpen: boolean;
-  onClose: () => void;
   inputConfig?: InputConfigLike | null;
   onAlert?: ((message: string) => void) | null;
 };
 
-export const CreateTrackModal = ({ isOpen, onClose, inputConfig, onAlert }: CreateTrackModalProps) => {
+export const CreateTrackModal = ({ inputConfig, onAlert }: CreateTrackModalProps) => {
+  const [isOpen, setIsOpen] = useAtom(createTrackModalAtom)
+  const onClose = () => setIsOpen(false)
   const [userData, setUserData] = useAtom(userDataAtom);
   const [, setActiveTrackId] = useAtom(activeTrackIdAtom as unknown as PrimitiveAtom<string | null>);
   const [activeSetId] = useAtom(activeSetIdAtom);

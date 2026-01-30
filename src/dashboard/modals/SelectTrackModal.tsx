@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { FaPlus, FaEdit, FaTrash } from "react-icons/fa";
 import { Modal } from "../shared/Modal";
 import { SortableWrapper } from "../shared/SortableWrapper";
@@ -16,6 +15,8 @@ import {
   pitchClassToName,
   resolveTrackTrigger,
 } from "../../shared/midi/midiUtils";
+import { useAtom, useSetAtom } from "jotai";
+import { confirmationModalAtom, createTrackModalAtom, editTrackModalAtom, selectTrackModalAtom } from "../core/modalAtoms";
 
 type Track = {
   id: string | number;
@@ -29,7 +30,6 @@ type SortableTrackItemProps = {
   inputType: string;
   globalMappings: Record<string, unknown>;
   onTrackSelect: (id: string | number) => void;
-  onEdit: (index: number) => void;
   onDelete: (index: number) => void;
 };
 
@@ -40,9 +40,9 @@ const SortableTrackItem = ({
   inputType,
   globalMappings,
   onTrackSelect,
-  onEdit,
   onDelete,
 }: SortableTrackItemProps) => {
+  const setEditTrack = useSetAtom(editTrackModalAtom)
   return (
     <SortableWrapper id={track.id}>
       {({ dragHandleProps, isDragging: _isDragging }) => (
@@ -90,7 +90,7 @@ const SortableTrackItem = ({
             })()}
           </label>
           <button
-            onClick={() => onEdit(trackIndex)}
+            onClick={() => setEditTrack({isOpen: true, trackIndex})}
             className="text-neutral-500 hover:text-neutral-300 text-[11px]"
           >
             <FaEdit />
@@ -118,8 +118,6 @@ type UserData = {
 };
 
 type SelectTrackModalProps = {
-  isOpen: boolean;
-  onClose: () => void;
   userData: UserData;
   setUserData: (updater: unknown) => void;
   activeTrackId: string | number | null;
@@ -127,13 +125,9 @@ type SelectTrackModalProps = {
   activeSetId: string | null;
   recordingData: Record<string, unknown>;
   setRecordingData: (updater: (prev: Record<string, unknown>) => Record<string, unknown>) => void;
-  onCreateTrack: () => void;
-  onConfirmDelete: (message: string, onConfirm: () => void) => void;
 };
 
 export const SelectTrackModal = ({
-  isOpen,
-  onClose,
   userData,
   setUserData,
   activeTrackId,
@@ -141,10 +135,11 @@ export const SelectTrackModal = ({
   activeSetId,
   recordingData: _recordingData,
   setRecordingData,
-  onCreateTrack,
-  onConfirmDelete,
 }: SelectTrackModalProps) => {
-  const [editingTrackIndex, setEditingTrackIndex] = useState<number | null>(null);
+  const [isOpen, setIsOpen] = useAtom(selectTrackModalAtom)
+  const [_, setCreateTrackIsOpen] = useAtom(createTrackModalAtom)
+  const setConfirmationModal = useSetAtom(confirmationModalAtom)
+  const onClose = () => setIsOpen(false)
 
   const tracks = getActiveSetTracks(userData, activeSetId);
   const _activeSet = getActiveSet(userData, activeSetId);
@@ -156,11 +151,16 @@ export const SelectTrackModal = ({
     onClose();
   };
 
+  const handleCreateTrack = () => {
+    onClose()
+    setCreateTrackIsOpen(true);
+  }
+
   const handleDeleteTrack = (trackIndex: number) => {
     const track = tracks[trackIndex];
     if (!track) return;
 
-    onConfirmDelete(`Are you sure you want to delete track "${track.name}"?`, () => {
+    const onConfirm = () => {
       updateActiveSet(setUserData, activeSetId, (activeSet) => {
         const tracksUnknown = (activeSet as Record<string, unknown>).tracks;
         if (Array.isArray(tracksUnknown)) {
@@ -178,6 +178,10 @@ export const SelectTrackModal = ({
           setActiveTrackId(null);
         }
       }
+    }
+    setConfirmationModal({
+      message: `Are you sure you want to delete track "${track.name}"?`,
+      onConfirm
     });
   };
 
@@ -219,7 +223,6 @@ export const SelectTrackModal = ({
                       inputType={String(inputType)}
                       globalMappings={globalMappings}
                       onTrackSelect={handleTrackSelect}
-                      onEdit={setEditingTrackIndex}
                       onDelete={handleDeleteTrack}
                     />
                   ))}
@@ -230,20 +233,13 @@ export const SelectTrackModal = ({
         </div>
 
         <ModalFooter>
-          <Button onClick={onCreateTrack} icon={<FaPlus />}>
+          <Button onClick={handleCreateTrack} icon={<FaPlus />}>
             Create Track
           </Button>
         </ModalFooter>
       </Modal>
 
-      {editingTrackIndex !== null && (
-        <EditTrackModal
-          isOpen={true}
-          onClose={() => setEditingTrackIndex(null)}
-          trackIndex={editingTrackIndex}
-          inputConfig={userData.config?.input || {}}
-        />
-      )}
+      <EditTrackModal inputConfig={userData.config?.input || {}} />
     </>
   );
 };

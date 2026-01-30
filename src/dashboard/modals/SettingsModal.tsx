@@ -11,6 +11,8 @@ import {
 } from "../components/FormInputs";
 import { HelpIcon } from "../components/HelpIcon";
 import { HELP_TEXT } from "../../shared/helpText";
+import { useAtom } from "jotai";
+import { inputMappingsModalAtom, settingsModalAtom } from "../core/modalAtoms";
 
 const isValidHexColor = (value: string): boolean => /^#([0-9A-F]{3}){1,2}$/i.test(value);
 
@@ -301,8 +303,6 @@ type Config = {
 };
 
 type SettingsModalProps = {
-  isOpen: boolean;
-  onClose: () => void;
   aspectRatio: string;
   setAspectRatio: (ratio: string) => void;
   bgColor: string;
@@ -314,7 +314,6 @@ type SettingsModalProps = {
   inputConfig: InputConfig;
   setInputConfig: (config: InputConfig) => void;
   availableMidiDevices: MidiDevice[];
-  onOpenMappings: () => void;
   config: Config;
   updateConfig: (updates: Partial<Config>) => void;
   workspacePath: string | null;
@@ -322,8 +321,6 @@ type SettingsModalProps = {
 };
 
 export const SettingsModal = ({
-  isOpen,
-  onClose,
   aspectRatio,
   setAspectRatio,
   bgColor,
@@ -332,18 +329,27 @@ export const SettingsModal = ({
   inputConfig,
   setInputConfig,
   availableMidiDevices,
-  onOpenMappings,
   config,
   updateConfig,
   workspacePath,
   onSelectWorkspace,
 }: SettingsModalProps) => {
+  const [isOpen, setIsOpen] = useAtom(settingsModalAtom)
+  const onClose = () => setIsOpen(false)
+
+  const [_, setIsInputMappingsModalOpen] = useAtom(inputMappingsModalAtom)
+
   const normalizedInputType = inputConfig?.type === "osc" ? "osc" : "midi";
   const signalSourceValue = config.sequencerMode
     ? "sequencer"
     : normalizedInputType === "osc"
       ? "external-osc"
       : "external-midi";
+
+  const handleOpenMappings = () => {
+    onClose()
+    setIsInputMappingsModalOpen(true);
+  }
 
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
@@ -568,7 +574,7 @@ export const SettingsModal = ({
 
               <div className="pl-12">
                 <div className="opacity-50 mb-1 text-[11px]">Global Input Mappings:</div>
-                <Button onClick={onOpenMappings} className="w-full">
+                <Button onClick={handleOpenMappings} className="w-full">
                   CONFIGURE MAPPINGS
                 </Button>
               </div>

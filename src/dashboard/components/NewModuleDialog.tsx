@@ -3,6 +3,8 @@ import { Button } from "./Button";
 import { ModalHeader } from "./ModalHeader";
 import { ModalFooter } from "./ModalFooter";
 import { TextInput, Select, Label } from "./FormInputs";
+import { useAtom } from "jotai";
+import { newModuleDialogAtom } from "../core/modalAtoms";
 
 type ModalProps = {
   isOpen: boolean;
@@ -28,18 +30,16 @@ const Modal = ({ isOpen, children, size = "small" }: ModalProps) => {
 };
 
 type NewModuleDialogProps = {
-  isOpen: boolean;
-  onClose: () => void;
   onCreateModule: (moduleName: string, templateType: string) => void;
   workspacePath?: string | null;
 };
 
 export const NewModuleDialog = ({
-  isOpen,
-  onClose,
   onCreateModule,
   workspacePath = null,
 }: NewModuleDialogProps) => {
+  const [isOpen, setIsOpen] = useAtom(newModuleDialogAtom)
+  const onClose = () => setIsOpen(false)
   const [moduleName, setModuleName] = useState("");
   const [templateType, setTemplateType] = useState("basic");
   const [error, setError] = useState("");

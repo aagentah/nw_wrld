@@ -7,16 +7,14 @@ import { userDataAtom } from "../core/state";
 import { updateUserData } from "../core/utils";
 import { DEFAULT_GLOBAL_MAPPINGS } from "../../shared/config/defaultConfig";
 import { parsePitchClass, pitchClassToName } from "../../shared/midi/midiUtils";
+import { inputMappingsModalAtom } from "../core/modalAtoms";
 
 type ActiveTab = "midi-pitchClass" | "midi-exactNote" | "osc";
 
-type InputMappingsModalProps = {
-  isOpen: boolean;
-  onClose: () => void;
-};
-
-export const InputMappingsModal = ({ isOpen, onClose }: InputMappingsModalProps) => {
+export const InputMappingsModal = () => {
   const [userData, setUserData] = useAtom(userDataAtom);
+  const [isOpen, setIsOpen] = useAtom(inputMappingsModalAtom)
+  const onClose = () => setIsOpen(false)
   const [activeTab, setActiveTab] = useState<ActiveTab>("midi-pitchClass");
   const wasOpenRef = useRef(false);
 

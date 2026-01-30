@@ -13,30 +13,11 @@ import { ConfirmationModal } from "../modals/ConfirmationModal";
 import { ModuleEditorModal } from "./ModuleEditorModal";
 import { NewModuleDialog } from "./NewModuleDialog";
 
-type Confirmation = { message: string; onConfirm?: () => void; type?: "confirm" | "alert" } | null;
-
 type UserData = Parameters<typeof SelectSetModal>[0]["userData"];
 type ProjectorSettings = Parameters<typeof SettingsModal>[0]["settings"];
 type PredefinedModules = Parameters<typeof AddModuleModal>[0]["predefinedModules"];
 
 type DashboardModalLayerProps = {
-  isCreateTrackOpen: boolean;
-  setIsCreateTrackOpen: (next: boolean) => void;
-  isSelectTrackModalOpen: boolean;
-  setIsSelectTrackModalOpen: (next: boolean) => void;
-  isSettingsModalOpen: boolean;
-  setIsSettingsModalOpen: (next: boolean) => void;
-  isInputMappingsModalOpen: boolean;
-  setIsInputMappingsModalOpen: (next: boolean) => void;
-  isReleaseNotesOpen: boolean;
-  setIsReleaseNotesOpen: (next: boolean) => void;
-  isAddModuleModalOpen: boolean;
-  setIsAddModuleModalOpen: (next: boolean) => void;
-  isManageModulesModalOpen: boolean;
-  setIsManageModulesModalOpen: (next: boolean) => void;
-  isDebugOverlayOpen: boolean;
-  setIsDebugOverlayOpen: (next: boolean) => void;
-
   userData: UserData;
   setUserData: (
     updater: ((prev: Record<string, unknown>) => Record<string, unknown>) | Record<string, unknown>
@@ -61,8 +42,6 @@ type DashboardModalLayerProps = {
   onSelectWorkspace: () => void;
 
   predefinedModules: PredefinedModules;
-  selectedTrackForModuleMenu: number | null;
-  setSelectedTrackForModuleMenu: (next: number | null) => void;
   onCreateNewModule: () => void;
   onEditModule: (moduleName: string) => void;
   isModuleEditorOpen: boolean;
@@ -76,44 +55,15 @@ type DashboardModalLayerProps = {
   debugLogs: string[];
   perfStats: { fps: number; frameMsAvg: number; longFramePct: number; at: number } | null;
 
-  selectedChannel: unknown;
-  setSelectedChannel: (next: unknown) => void;
-  onEditChannel: (channelNumber: number) => void;
   onDeleteChannel: (channelNumber: number) => void;
   workspaceModuleFiles: string[];
   workspaceModuleLoadFailures: string[];
   workspaceModuleSkipped: Array<{ file: string; reason: string }>;
 
-  editChannelModalState: { isOpen: boolean; trackIndex: number | null; channelNumber: number | null };
-  setEditChannelModalState: (next: {
-    isOpen: boolean;
-    trackIndex: number | null;
-    channelNumber: number | null;
-  }) => void;
-
-  confirmationModal: Confirmation;
-  setConfirmationModal: (next: Confirmation) => void;
   openAlertModal: (message: string) => void;
-  openConfirmationModal: (message: string, onConfirm: () => void) => void;
 };
 
 export const DashboardModalLayer = ({
-  isCreateTrackOpen,
-  setIsCreateTrackOpen,
-  isSelectTrackModalOpen,
-  setIsSelectTrackModalOpen,
-  isSettingsModalOpen,
-  setIsSettingsModalOpen,
-  isInputMappingsModalOpen,
-  setIsInputMappingsModalOpen,
-  isReleaseNotesOpen,
-  setIsReleaseNotesOpen,
-  isAddModuleModalOpen,
-  setIsAddModuleModalOpen,
-  isManageModulesModalOpen,
-  setIsManageModulesModalOpen,
-  isDebugOverlayOpen,
-  setIsDebugOverlayOpen,
   userData,
   setUserData,
   recordingData,
@@ -134,38 +84,22 @@ export const DashboardModalLayer = ({
   workspacePath,
   onSelectWorkspace,
   predefinedModules,
-  selectedTrackForModuleMenu,
-  setSelectedTrackForModuleMenu,
   onCreateNewModule,
   onEditModule,
-  isModuleEditorOpen,
-  onCloseModuleEditor,
   editingModuleName,
   editingTemplateType,
-  isNewModuleDialogOpen,
-  onCloseNewModuleDialog,
   onCreateModule,
   debugLogs,
   perfStats,
-  selectedChannel,
-  setSelectedChannel,
-  onEditChannel,
   onDeleteChannel,
   workspaceModuleFiles,
   workspaceModuleLoadFailures,
   workspaceModuleSkipped,
-  editChannelModalState,
-  setEditChannelModalState,
-  confirmationModal,
-  setConfirmationModal,
   openAlertModal,
-  openConfirmationModal,
 }: DashboardModalLayerProps) => {
   return (
     <>
       <CreateTrackModal
-        isOpen={isCreateTrackOpen}
-        onClose={() => setIsCreateTrackOpen(false)}
         inputConfig={inputConfig}
         onAlert={openAlertModal}
       />
@@ -173,8 +107,6 @@ export const DashboardModalLayer = ({
         onAlert={openAlertModal}
       />
       <SelectTrackModal
-        isOpen={isSelectTrackModalOpen}
-        onClose={() => setIsSelectTrackModalOpen(false)}
         userData={userData}
         setUserData={setUserData}
         activeTrackId={activeTrackId}
@@ -182,11 +114,6 @@ export const DashboardModalLayer = ({
         activeSetId={activeSetId}
         recordingData={recordingData}
         setRecordingData={setRecordingData}
-        onCreateTrack={() => {
-          setIsSelectTrackModalOpen(false);
-          setIsCreateTrackOpen(true);
-        }}
-        onConfirmDelete={openConfirmationModal}
       />
       <SelectSetModal
         userData={userData}
@@ -197,11 +124,8 @@ export const DashboardModalLayer = ({
         setActiveSetId={setActiveSetId}
         recordingData={recordingData}
         setRecordingData={setRecordingData}
-        onConfirmDelete={openConfirmationModal}
       />
       <SettingsModal
-        isOpen={isSettingsModalOpen}
-        onClose={() => setIsSettingsModalOpen(false)}
         aspectRatio={aspectRatio}
         setAspectRatio={setAspectRatio}
         bgColor={bgColor}
@@ -210,50 +134,22 @@ export const DashboardModalLayer = ({
         inputConfig={inputConfig}
         setInputConfig={setInputConfig}
         availableMidiDevices={availableMidiDevices}
-        onOpenMappings={() => {
-          setIsSettingsModalOpen(false);
-          setIsInputMappingsModalOpen(true);
-        }}
         config={userData?.config}
         updateConfig={updateConfig}
         workspacePath={workspacePath}
         onSelectWorkspace={onSelectWorkspace}
       />
-      <InputMappingsModal
-        isOpen={isInputMappingsModalOpen}
-        onClose={() => setIsInputMappingsModalOpen(false)}
-      />
-      <ReleaseNotesModal isOpen={isReleaseNotesOpen} onClose={() => setIsReleaseNotesOpen(false)} />
+      <InputMappingsModal />
+      <ReleaseNotesModal />
       <AddModuleModal
-        isOpen={isAddModuleModalOpen}
-        onClose={() => {
-          setIsAddModuleModalOpen(false);
-          setSelectedTrackForModuleMenu(null);
-        }}
-        trackIndex={selectedTrackForModuleMenu}
         userData={userData}
         setUserData={setUserData}
         predefinedModules={predefinedModules}
         onCreateNewModule={onCreateNewModule}
         onEditModule={onEditModule}
         skippedWorkspaceModules={workspaceModuleSkipped}
-        mode="add-to-track"
-      />
-      <AddModuleModal
-        isOpen={isManageModulesModalOpen}
-        onClose={() => setIsManageModulesModalOpen(false)}
-        trackIndex={null}
-        userData={userData}
-        setUserData={setUserData}
-        predefinedModules={predefinedModules}
-        onCreateNewModule={onCreateNewModule}
-        onEditModule={onEditModule}
-        skippedWorkspaceModules={workspaceModuleSkipped}
-        mode="manage-modules"
       />
       <ModuleEditorModal
-        isOpen={isModuleEditorOpen}
-        onClose={onCloseModuleEditor}
         moduleName={editingModuleName}
         templateType={editingTemplateType}
         onModuleSaved={null}
@@ -261,48 +157,25 @@ export const DashboardModalLayer = ({
         workspacePath={workspacePath}
       />
       <NewModuleDialog
-        isOpen={isNewModuleDialogOpen}
-        onClose={onCloseNewModuleDialog}
         onCreateModule={onCreateModule}
         workspacePath={workspacePath}
       />
       <DebugOverlayModal
-        isOpen={isDebugOverlayOpen}
-        onClose={() => setIsDebugOverlayOpen(false)}
         debugLogs={debugLogs}
         perfStats={perfStats}
       />
       <MethodConfiguratorModal
-        isOpen={!!selectedChannel}
-        onClose={() => setSelectedChannel(null)}
         predefinedModules={predefinedModules}
-        onEditChannel={onEditChannel}
         onDeleteChannel={onDeleteChannel}
         workspacePath={workspacePath}
         workspaceModuleFiles={workspaceModuleFiles}
         workspaceModuleLoadFailures={workspaceModuleLoadFailures}
       />
       <EditChannelModal
-        isOpen={editChannelModalState.isOpen}
-        onClose={() =>
-          setEditChannelModalState({
-            isOpen: false,
-            trackIndex: null,
-            channelNumber: null,
-          })
-        }
-        trackIndex={editChannelModalState.trackIndex}
-        channelNumber={editChannelModalState.channelNumber}
         inputConfig={inputConfig}
         config={userData?.config}
       />
-      <ConfirmationModal
-        isOpen={!!confirmationModal}
-        onClose={() => setConfirmationModal(null)}
-        message={confirmationModal?.message || ""}
-        onConfirm={confirmationModal?.onConfirm}
-        type={confirmationModal?.type || "confirm"}
-      />
+      <ConfirmationModal />
     </>
   );
 };

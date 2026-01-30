@@ -6,8 +6,6 @@ type DashboardBodyProps = {
   activeSetId: unknown;
   activeTrackId: string | number | null;
   predefinedModules: unknown[];
-  openAddModuleModal: (trackIndex: number) => void;
-  openConfirmationModal: (message: string, onConfirm: () => void) => void;
   setActiveTrackId: (id: string | number | null) => void;
   inputConfig: unknown;
   config: Record<string, unknown> | null;
@@ -24,8 +22,6 @@ export const DashboardBody = ({
   activeSetId,
   activeTrackId,
   predefinedModules,
-  openAddModuleModal,
-  openConfirmationModal,
   setActiveTrackId,
   inputConfig,
   config,
@@ -55,8 +51,6 @@ export const DashboardBody = ({
               track={track}
               trackIndex={trackIndex}
               predefinedModules={predefinedModules}
-              openRightMenu={openAddModuleModal}
-              onConfirmDelete={openConfirmationModal}
               setActiveTrackId={setActiveTrackId}
               inputConfig={inputConfig}
               config={config}

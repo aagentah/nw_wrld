@@ -2,6 +2,8 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { FaTimes } from "react-icons/fa";
 import { Button } from "./Button";
 import { getBaseMethodNames } from "../utils/moduleUtils";
+import { useAtom } from "jotai";
+import { moduleEditorModalAtom } from "../core/modalAtoms";
 
 const getBridge = () => globalThis.nwWrldBridge;
 
@@ -30,8 +32,6 @@ type MethodWithValues = {
 };
 
 type ModuleEditorModalProps = {
-  isOpen: boolean;
-  onClose: () => void;
   moduleName: string | null;
   templateType?: TemplateType | null;
   onModuleSaved?: ((moduleName: string) => void) | null;
@@ -229,14 +229,14 @@ export default ${moduleName};
 };
 
 export const ModuleEditorModal = ({
-  isOpen,
-  onClose,
   moduleName,
   templateType = null,
   onModuleSaved: _onModuleSaved,
   predefinedModules = [],
   workspacePath = null,
 }: ModuleEditorModalProps) => {
+  const [isOpen, setIsOpen] = useAtom(moduleEditorModalAtom)
+  const onClose = () => setIsOpen(false)
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
