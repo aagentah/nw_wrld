@@ -70,6 +70,54 @@ const getWebMidiProvider = () => {
   return WebMidi as unknown as WebMidiProvider;
 };
 
+const webMidiEnableInFlightByProvider: WeakMap<object, Promise<void>> = new WeakMap();
+
+const enableWebMidi = (webMidi: WebMidiProvider): Promise<void> => {
+  try {
+    if (webMidi.enabled) return Promise.resolve();
+  } catch {}
+
+  const key = webMidi as unknown as object;
+  const inFlight = webMidiEnableInFlightByProvider.get(key);
+  if (inFlight) return inFlight;
+
+  const promise = new Promise<void>((resolve, reject) => {
+    let settled = false;
+    const envTimeoutRaw = process.env.NW_WRLD_WEBMIDI_ENABLE_TIMEOUT_MS;
+    const envTimeoutParsed = typeof envTimeoutRaw === "string" ? parseInt(envTimeoutRaw, 10) : NaN;
+    const ENABLE_TIMEOUT_MS = Number.isFinite(envTimeoutParsed) && envTimeoutParsed > 0 ? envTimeoutParsed : 8000;
+
+    const t = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      webMidiEnableInFlightByProvider.delete(key);
+      reject(new Error("WebMIDI enable timed out"));
+    }, ENABLE_TIMEOUT_MS);
+
+    const callback = (err: Error | null | undefined) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(t);
+      webMidiEnableInFlightByProvider.delete(key);
+      if (err) return reject(err);
+      resolve();
+    };
+    try {
+      webMidi.enable({ callback });
+    } catch (e) {
+      if (!settled) {
+        settled = true;
+        clearTimeout(t);
+      }
+      webMidiEnableInFlightByProvider.delete(key);
+      reject(e);
+    }
+  });
+
+  webMidiEnableInFlightByProvider.set(key, promise);
+  return promise;
+};
+
 class InputManager {
   dashboard: WindowLike | null;
   projector: WindowLike | null;
@@ -266,6 +314,8 @@ class InputManager {
           const deviceId = midiConfig?.deviceId?.trim() || "";
           const deviceName = midiConfig?.deviceName?.trim() || "";
 
+          this.installMidiWebMidiListeners(webMidi, deviceId, deviceName);
+
           let input: WebMidiInput | undefined;
           try {
             if (deviceId) {
@@ -349,19 +399,15 @@ class InputManager {
       if (webMidi.enabled) {
         setupMIDI();
       } else {
-        const callback = (err: Error | null | undefined) => {
-          if (err) {
-            console.error("[InputManager] MIDI enable failed:", err);
+        enableWebMidi(webMidi)
+          .then(() => setupMIDI())
+          .catch((err) => {
+            const e = err instanceof Error ? err : new Error(String(err));
+            console.error("[InputManager] MIDI enable failed:", e);
             this.currentSource = null;
-            this.broadcastStatus(
-              INPUT_STATUS.ERROR,
-              `Failed to enable MIDI: ${err.message}`
-            );
-            return reject(err);
-          }
-          setupMIDI();
-        };
-        webMidi.enable({ callback });
+            this.broadcastStatus(INPUT_STATUS.ERROR, `Failed to enable MIDI: ${e.message}`);
+            return reject(e);
+          });
       }
     });
   }
@@ -487,19 +533,31 @@ class InputManager {
   static getAvailableMIDIDevices() {
     return new Promise<MidiDeviceInfo[]>((resolve) => {
       const webMidi = getWebMidiProvider();
-      const callback = (err: Error | null | undefined) => {
-        if (err) {
-          console.error("[InputManager] Failed to enable WebMIDI:", err);
-          return resolve([]);
+      const resolveDevices = () => {
+        try {
+          const devices = webMidi.inputs.map((input) => ({
+            id: input.id,
+            name: input.name,
+            manufacturer: input.manufacturer,
+          }));
+          resolve(devices);
+        } catch (e) {
+          console.error("[InputManager] Failed to read WebMIDI inputs:", e);
+          resolve([]);
         }
-        const devices = webMidi.inputs.map((input) => ({
-          id: input.id,
-          name: input.name,
-          manufacturer: input.manufacturer
-        }));
-        resolve(devices);
       };
-      webMidi.enable({ callback });
+
+      if (webMidi.enabled) {
+        resolveDevices();
+        return;
+      }
+
+      enableWebMidi(webMidi)
+        .then(() => resolveDevices())
+        .catch((err) => {
+          console.error("[InputManager] Failed to enable WebMIDI:", err);
+          resolve([]);
+        });
     });
   }
 }
