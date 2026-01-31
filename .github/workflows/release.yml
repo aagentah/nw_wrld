@@ -1,6 +1,12 @@
 name: Release (Windows + macOS)
 
 on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Optional tag to build (e.g. v0.4.0-beta). If empty, builds the selected branch ref."
+        required: false
+        type: string
   push:
     tags:
       - "v*"
@@ -14,6 +20,8 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag != '' && format('refs/tags/{0}', github.event.inputs.tag) || github.ref }}
       - uses: actions/setup-node@v4
         with:
           node-version: 20.19.5
@@ -59,6 +67,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag != '' && format('refs/tags/{0}', github.event.inputs.tag) || github.ref }}
       - uses: actions/setup-node@v4
         with:
           node-version: 20.19.5
@@ -87,6 +97,7 @@ jobs:
     name: Publish GitHub Release
     needs: [mac, win]
     runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
     steps:
       - uses: actions/download-artifact@v4
         with:
