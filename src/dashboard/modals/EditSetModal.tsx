@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { useAtom } from "jotai";
+import { useState, useEffect } from "react";
+import { useAtom, useSetAtom } from "jotai";
 import { Modal } from "../shared/Modal";
 import { ModalHeader } from "../components/ModalHeader";
 import { ModalFooter } from "../components/ModalFooter";
@@ -8,12 +8,12 @@ import { TextInput, Label, ValidationError } from "../components/FormInputs";
 import { userDataAtom } from "../core/state";
 import { updateUserData } from "../core/utils";
 import { useNameValidation } from "../core/hooks/useNameValidation";
+import { confirmationModalAtom } from "../core/modalAtoms";
 
 type EditSetModalProps = {
   isOpen: boolean;
   onClose: () => void;
   setId: string | null;
-  onAlert?: ((message: string) => void) | null;
 };
 
 type SetLike = {
@@ -21,8 +21,9 @@ type SetLike = {
   name?: unknown;
 };
 
-export const EditSetModal = ({ isOpen, onClose, setId, onAlert }: EditSetModalProps) => {
+export const EditSetModal = ({ isOpen, onClose, setId }: EditSetModalProps) => {
   const [userData, setUserData] = useAtom(userDataAtom);
+  const setConfirmationModal = useSetAtom(confirmationModalAtom)
   const [setName, setSetName] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -65,7 +66,10 @@ export const EditSetModal = ({ isOpen, onClose, setId, onAlert }: EditSetModalPr
       onClose();
     } catch (e) {
       console.error("Error updating set:", e);
-      if (onAlert) onAlert("Failed to update set.");
+      setConfirmationModal({
+        message: "Failed to update set.",
+        type: 'alert'
+      });
     } finally {
       setSubmitting(false);
     }

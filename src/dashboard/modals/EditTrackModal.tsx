@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAtom } from "jotai";
 import { Modal } from "../shared/Modal";
 import { ModalHeader } from "../components/ModalHeader";
@@ -13,6 +13,7 @@ import { HELP_TEXT } from "../../shared/helpText";
 import { useNameValidation } from "../core/hooks/useNameValidation";
 import { useTrackSlots } from "../core/hooks/useTrackSlots";
 import { parsePitchClass, pitchClassToName } from "../../shared/midi/midiUtils";
+import { editTrackModalAtom } from "../core/modalAtoms";
 
 type InputConfigLike = {
   type?: unknown;
@@ -20,14 +21,14 @@ type InputConfigLike = {
 };
 
 type EditTrackModalProps = {
-  isOpen: boolean;
-  onClose: () => void;
-  trackIndex: number;
   inputConfig?: InputConfigLike | null;
 };
 
-export const EditTrackModal = ({ isOpen, onClose, trackIndex, inputConfig }: EditTrackModalProps) => {
+export const EditTrackModal = ({ inputConfig }: EditTrackModalProps) => {
   const [userData, setUserData] = useAtom(userDataAtom);
+  const [editTrackData, dispatch] = useAtom(editTrackModalAtom)
+  const {isOpen, trackIndex} = editTrackData
+  const onClose = () => dispatch({isOpen: false, trackIndex: null})
   const [activeSetId] = useAtom(activeSetIdAtom);
   const [trackName, setTrackName] = useState("");
   const [trackSlot, setTrackSlot] = useState(1);
@@ -83,7 +84,7 @@ export const EditTrackModal = ({ isOpen, onClose, trackIndex, inputConfig }: Edi
     }
   }, [isOpen, track]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !trackIndex) return null;
 
   const canSubmit = validation.isValid && trackSlot && availableSlots.includes(trackSlot);
 

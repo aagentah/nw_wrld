@@ -1,5 +1,5 @@
 import { memo, useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { useAtom } from "jotai";
+import { useAtom, useSetAtom } from "jotai";
 import { remove } from "lodash";
 import { FaPlus } from "react-icons/fa";
 import { SortableList, arrayMove } from "../../shared/SortableList";
@@ -10,6 +10,7 @@ import {
   activeSetIdAtom,
   flashingConstructorsAtom,
   useFlashingChannels,
+  selectedTrackForModuleMenuAtom,
 } from "../../core/state";
 import { updateActiveSet } from "../../core/utils";
 import { getRecordingForTrack } from "../../../shared/json/recordingUtils";
@@ -17,6 +18,7 @@ import MidiPlayback from "../../../shared/midi/midiPlayback";
 import { Button } from "../Button";
 import { TrackDataModal } from "../../modals/TrackDataModal";
 import { ModuleSelector, SortableModuleItem } from "./ModuleComponents";
+import { addModuleModalAtom, confirmationModalAtom } from "../../core/modalAtoms";
 
 type ModuleInstance = { id: string; type: string };
 
@@ -42,8 +44,6 @@ type TrackItemProps = {
   track: Track;
   trackIndex: number;
   predefinedModules: unknown[];
-  openRightMenu: (trackIndex: number) => void;
-  onConfirmDelete: (message: string, onConfirm: () => void) => void;
   setActiveTrackId: (id: string | null) => void;
   inputConfig: unknown;
   config: Record<string, unknown> | null;
@@ -60,8 +60,6 @@ export const TrackItem = memo(
     track,
     trackIndex,
     predefinedModules,
-    openRightMenu,
-    onConfirmDelete,
     setActiveTrackId: _setActiveTrackId,
     inputConfig,
     config: _config,
@@ -74,6 +72,13 @@ export const TrackItem = memo(
   }: TrackItemProps) => {
     const [_userData, setUserData] = useAtom(userDataAtom);
     const [recordingData] = useAtom(recordingDataAtom);
+    const setSelectedTrackForModuleMenu = useSetAtom(selectedTrackForModuleMenuAtom)
+    const setIsAddModuleModalOpen = useSetAtom(addModuleModalAtom)
+    const setConfirmationModal = useSetAtom(confirmationModalAtom)
+    const openRightMenu = (trackIndex: number) => {
+      setSelectedTrackForModuleMenu(trackIndex)
+      setIsAddModuleModalOpen('add-to-track')
+    }
     const [activeSetId] = useAtom(activeSetIdAtom);
     const [_flashingChannels, flashChannel] = useFlashingChannels();
     const [_flashingConstructors, setFlashingConstructors] = useAtom(flashingConstructorsAtom);
@@ -131,7 +136,7 @@ export const TrackItem = memo(
         const module = track.modules.find((m) => m.id === instanceId);
         if (!module) return;
 
-        onConfirmDelete(`Are you sure you want to delete the ${module.type} module?`, () => {
+        const onConfirm = () => {
           updateActiveSet(setUserData, activeSetId, (activeSet) => {
             if (!isPlainObject(activeSet)) return;
             const tracksUnknown = (activeSet as Record<string, unknown>).tracks;
@@ -147,9 +152,14 @@ export const TrackItem = memo(
               delete (modulesDataUnknown as Record<string, unknown>)[instanceId];
             }
           });
+        }
+        setConfirmationModal({
+          message: `Are you sure you want to delete the ${module.type} module?`,
+          onConfirm,
+          type: 'confirm'
         });
       },
-      [setUserData, trackIndex, track.modules, onConfirmDelete, activeSetId]
+      [setUserData, trackIndex, track.modules, setConfirmationModal, activeSetId]
     );
 
     const _handlePlayPause = useCallback(async () => {

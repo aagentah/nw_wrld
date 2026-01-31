@@ -1,8 +1,9 @@
-import { useAtom } from "jotai";
+import { useAtom, useSetAtom } from "jotai";
 import { FaPlay, FaStop } from "react-icons/fa";
 import { recordingDataAtom } from "../core/state";
 import { Checkbox } from "./FormInputs";
 import { Button } from "./Button";
+import { settingsModalAtom } from "../core/modalAtoms";
 
 type InputConfig = {
   type?: string;
@@ -25,7 +26,6 @@ type DashboardFooterProps = {
   onStop: () => void;
   inputStatus: InputStatus;
   inputConfig: InputConfig | null;
-  onSettingsClick: () => void;
   config: DashboardConfig | null;
   isMuted: boolean;
   onMuteChange: (next: boolean) => void;
@@ -39,13 +39,13 @@ export const DashboardFooter = ({
   onStop,
   inputStatus,
   inputConfig,
-  onSettingsClick,
   config,
   isMuted,
   onMuteChange,
   isProjectorReady,
 }: DashboardFooterProps) => {
   const [_recordingData] = useAtom(recordingDataAtom);
+  const setSettingsModalIsOpen = useSetAtom(settingsModalAtom)
 
   const getStatusColor = () => {
     switch (inputStatus.status) {
@@ -103,7 +103,7 @@ export const DashboardFooter = ({
           <div className="text-neutral-300/30 text-[11px]">No track selected</div>
           {!config?.sequencerMode && (
             <button
-              onClick={onSettingsClick}
+              onClick={() => setSettingsModalIsOpen(true)}
               className={`text-[10px] font-mono flex items-center gap-2 cursor-pointer hover:opacity-70 transition-opacity ${getStatusColor()}`}
               title={`${inputStatus.status}: ${getStatusText()}`}
             >
@@ -169,7 +169,7 @@ export const DashboardFooter = ({
             </>
           ) : (
             <button
-              onClick={onSettingsClick}
+              onClick={() => setSettingsModalIsOpen(true)}
               className={`text-[10px] font-mono flex items-center gap-2 cursor-pointer hover:opacity-70 transition-opacity ${getStatusColor()}`}
               title={`${inputStatus.status}: ${getStatusText()}`}
             >

@@ -1,4 +1,3 @@
-import React from "react";
 import { Modal } from "../shared/Modal";
 import { ModalHeader } from "../components/ModalHeader";
 

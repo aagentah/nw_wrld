@@ -9,7 +9,6 @@ import {
   recordingDataAtom,
   activeTrackIdAtom,
   activeSetIdAtom,
-  selectedChannelAtom,
   flashingConstructorsAtom,
   recordingStateAtom,
   useFlashingChannels,
@@ -39,7 +38,6 @@ const Dashboard = () => {
   const [activeTrackId, setActiveTrackId] = useAtom(activeTrackIdAtom);
   const [activeSetId, setActiveSetId] = useAtom(activeSetIdAtom);
   const [predefinedModules, setPredefinedModules] = useState([]);
-  const [selectedChannel, setSelectedChannel] = useAtom(selectedChannelAtom);
   const [, flashChannel] = useFlashingChannels();
   const [, setFlashingConstructors] = useAtom(flashingConstructorsAtom);
 
@@ -49,35 +47,12 @@ const Dashboard = () => {
   const {
     workspacePath,
     setWorkspacePath,
-    isWorkspaceModalOpen,
-    setIsWorkspaceModalOpen,
     workspaceModalMode,
     setWorkspaceModalMode,
     workspaceModalPath,
     setWorkspaceModalPath,
-    isCreateTrackOpen,
-    setIsCreateTrackOpen,
-    isCreateSetOpen,
-    setIsCreateSetOpen,
-    isSelectTrackModalOpen,
-    setIsSelectTrackModalOpen,
-    isSelectSetModalOpen,
-    setIsSelectSetModalOpen,
-    isSettingsModalOpen,
-    setIsSettingsModalOpen,
-    isInputMappingsModalOpen,
-    setIsInputMappingsModalOpen,
-    isReleaseNotesOpen,
-    setIsReleaseNotesOpen,
-    isAddModuleModalOpen,
-    setIsAddModuleModalOpen,
-    isManageModulesModalOpen,
-    setIsManageModulesModalOpen,
-    isDebugOverlayOpen,
-    setIsDebugOverlayOpen,
     selectedTrackForModuleMenu,
     setSelectedTrackForModuleMenu,
-    openAddModuleModal,
     handleCreateNewModule,
     handleCreateModule,
     handleEditModule,
@@ -87,10 +62,7 @@ const Dashboard = () => {
     editingTemplateType,
     isNewModuleDialogOpen,
     setIsNewModuleDialogOpen,
-    confirmationModal,
-    setConfirmationModal,
     openAlertModal,
-    openConfirmationModal,
     debugLogs,
     setDebugLogs,
     isSequencerMuted,
@@ -99,11 +71,8 @@ const Dashboard = () => {
     setIsProjectorReady,
     perfStats,
     setPerfStats,
-    editChannelModalState,
-    setEditChannelModalState,
-    handleEditChannel,
     handleDeleteChannel,
-  } = useDashboardUiState({ selectedChannel, setUserData, activeSetId });
+  } = useDashboardUiState({ setUserData, activeSetId });
 
   const userDataRef = useLatestRef(userData);
   const recordingDataRef = useLatestRef(recordingData);
@@ -167,7 +136,6 @@ const Dashboard = () => {
     setInputStatus,
     setDebugLogs,
     sendToProjector,
-    isDebugOverlayOpen,
     setIsProjectorReady,
   });
 
@@ -200,7 +168,6 @@ const Dashboard = () => {
 
   useWorkspaceModules({
     workspacePath,
-    isWorkspaceModalOpen,
     sendToProjector,
     userData,
     setUserData,
@@ -236,7 +203,6 @@ const Dashboard = () => {
     setWorkspacePath,
     setWorkspaceModalMode,
     setWorkspaceModalPath,
-    setIsWorkspaceModalOpen,
   });
 
   const handleSelectWorkspace = useCallback(async () => {
@@ -293,14 +259,7 @@ const Dashboard = () => {
 
   return (
     <div className="relative bg-[#101010] font-mono h-screen flex flex-col">
-      <DashboardHeader
-        onSets={() => setIsSelectSetModalOpen(true)}
-        onTracks={() => setIsSelectTrackModalOpen(true)}
-        onModules={() => setIsManageModulesModalOpen(true)}
-        onSettings={() => setIsSettingsModalOpen(true)}
-        onDebugOverlay={() => setIsDebugOverlayOpen(true)}
-        onReleases={() => setIsReleaseNotesOpen(true)}
-      />
+      <DashboardHeader />
 
       <div className="flex-1 overflow-y-auto pt-12 pb-32">
         <div className="bg-[#101010] p-6 font-mono">
@@ -309,8 +268,6 @@ const Dashboard = () => {
             activeSetId={activeSetId}
             activeTrackId={activeTrackId}
             predefinedModules={predefinedModules}
-            openAddModuleModal={openAddModuleModal}
-            openConfirmationModal={openConfirmationModal}
             setActiveTrackId={setActiveTrackId}
             inputConfig={inputConfig}
             config={userData.config}
@@ -338,33 +295,12 @@ const Dashboard = () => {
         inputStatus={inputStatus}
         inputConfig={inputConfig}
         config={userData.config}
-        onSettingsClick={() => setIsSettingsModalOpen(true)}
         isMuted={isSequencerMuted}
         onMuteChange={setIsSequencerMuted}
         isProjectorReady={isProjectorReady}
       />
 
       <DashboardModalLayer
-        isCreateTrackOpen={isCreateTrackOpen}
-        setIsCreateTrackOpen={setIsCreateTrackOpen}
-        isCreateSetOpen={isCreateSetOpen}
-        setIsCreateSetOpen={setIsCreateSetOpen}
-        isSelectTrackModalOpen={isSelectTrackModalOpen}
-        setIsSelectTrackModalOpen={setIsSelectTrackModalOpen}
-        isSelectSetModalOpen={isSelectSetModalOpen}
-        setIsSelectSetModalOpen={setIsSelectSetModalOpen}
-        isSettingsModalOpen={isSettingsModalOpen}
-        setIsSettingsModalOpen={setIsSettingsModalOpen}
-        isInputMappingsModalOpen={isInputMappingsModalOpen}
-        setIsInputMappingsModalOpen={setIsInputMappingsModalOpen}
-        isReleaseNotesOpen={isReleaseNotesOpen}
-        setIsReleaseNotesOpen={setIsReleaseNotesOpen}
-        isAddModuleModalOpen={isAddModuleModalOpen}
-        setIsAddModuleModalOpen={setIsAddModuleModalOpen}
-        isManageModulesModalOpen={isManageModulesModalOpen}
-        setIsManageModulesModalOpen={setIsManageModulesModalOpen}
-        isDebugOverlayOpen={isDebugOverlayOpen}
-        setIsDebugOverlayOpen={setIsDebugOverlayOpen}
         userData={userData}
         setUserData={setUserData}
         recordingData={recordingData}
@@ -398,23 +334,14 @@ const Dashboard = () => {
         onCreateModule={handleCreateModule}
         debugLogs={debugLogs}
         perfStats={perfStats}
-        selectedChannel={selectedChannel}
-        setSelectedChannel={setSelectedChannel}
-        onEditChannel={handleEditChannel}
         onDeleteChannel={handleDeleteChannel}
         workspaceModuleFiles={workspaceModuleFiles}
         workspaceModuleLoadFailures={workspaceModuleLoadFailures}
         workspaceModuleSkipped={workspaceModuleSkipped}
-        editChannelModalState={editChannelModalState}
-        setEditChannelModalState={setEditChannelModalState}
-        confirmationModal={confirmationModal}
-        setConfirmationModal={setConfirmationModal}
         openAlertModal={openAlertModal}
-        openConfirmationModal={openConfirmationModal}
       />
 
       <WorkspaceGateModal
-        isOpen={isWorkspaceModalOpen}
         mode={workspaceModalMode}
         workspacePath={workspacePath}
         workspaceModalPath={workspaceModalPath}

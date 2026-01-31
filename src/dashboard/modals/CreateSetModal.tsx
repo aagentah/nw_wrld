@@ -8,14 +8,15 @@ import { TextInput, Label, ValidationError } from "../components/FormInputs";
 import { useNameValidation } from "../core/hooks/useNameValidation";
 import { userDataAtom, activeTrackIdAtom, activeSetIdAtom } from "../core/state";
 import { updateUserData } from "../core/utils";
+import { createSetModalAtom } from "../core/modalAtoms";
 
 type CreateSetModalProps = {
-  isOpen: boolean;
-  onClose: () => void;
   onAlert?: ((message: string) => void) | null;
 };
 
-export const CreateSetModal = ({ isOpen, onClose, onAlert }: CreateSetModalProps) => {
+export const CreateSetModal = ({ onAlert }: CreateSetModalProps) => {
+  const [isOpen, setIsOpen] = useAtom(createSetModalAtom)
+  const onClose = () => setIsOpen(false)
   const [userData, setUserData] = useAtom(userDataAtom);
   const [, setActiveTrackId] = useAtom(activeTrackIdAtom as unknown as PrimitiveAtom<string | null>);
   const [, setActiveSetId] = useAtom(activeSetIdAtom as unknown as PrimitiveAtom<string | null>);

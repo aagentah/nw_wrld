@@ -7,10 +7,11 @@ import { ModalHeader } from "../components/ModalHeader";
 import { Button } from "../components/Button";
 import { HelpIcon } from "../components/HelpIcon";
 import { Tooltip } from "../components/Tooltip";
-import { activeSetIdAtom, activeTrackIdAtom } from "../core/state";
+import { activeSetIdAtom, activeTrackIdAtom, selectedTrackForModuleMenuAtom } from "../core/state";
 import { updateActiveSet } from "../core/utils";
 import { getActiveSetTracks } from "../../shared/utils/setUtils";
 import { HELP_TEXT } from "../../shared/helpText";
+import { addModuleModalAtom } from "../core/modalAtoms";
 
 type ModuleMethod = {
   name: string;
@@ -41,29 +42,21 @@ type UserData = {
 };
 
 type AddModuleModalProps = {
-  isOpen: boolean;
-  onClose: () => void;
-  trackIndex: number | null;
   userData: UserData;
   setUserData: (updater: unknown) => void;
   predefinedModules: PredefinedModule[];
   skippedWorkspaceModules?: Array<{ file: string; reason: string }>;
   onCreateNewModule?: () => void;
   onEditModule: (moduleId: string) => void;
-  mode?: "add-to-track" | "manage-modules";
 };
 
 export const AddModuleModal = ({
-  isOpen,
-  onClose,
-  trackIndex,
   userData,
   setUserData,
   predefinedModules,
   skippedWorkspaceModules,
   onCreateNewModule: _onCreateNewModule,
   onEditModule,
-  mode = "add-to-track",
 }: AddModuleModalProps) => {
   const sendToProjector = useIPCSend("dashboard-to-projector");
   const [hoveredPreviewModuleId, setHoveredPreviewModuleId] = useState<string | null>(null);
@@ -73,6 +66,13 @@ export const AddModuleModal = ({
     requestId: null,
   });
   const lastAutoPreviewSentRef = useRef<string | null>(null);
+  const [mode, setMode] = useAtom(addModuleModalAtom)
+  const [trackIndex, setSelectedTrackForModuleMenu] = useAtom(selectedTrackForModuleMenuAtom)
+  const isOpen = !!mode
+  const onClose = () => {
+    setMode(false);
+    if (mode === "add-to-track") setSelectedTrackForModuleMenu(null);
+  }
 
   const handleClose = () => {
     setHoveredPreviewModuleId(null);

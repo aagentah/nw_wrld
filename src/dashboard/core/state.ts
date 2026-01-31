@@ -1,5 +1,6 @@
 import { atom, useAtom } from "jotai";
 import { useRef, useCallback, useEffect } from "react";
+import { SelectedChannel } from "../modals/MethodConfiguratorModal";
 
 export const userDataAtom = atom<{ config: Record<string, unknown>; sets: unknown[] }>({
   config: {},
@@ -8,13 +9,14 @@ export const userDataAtom = atom<{ config: Record<string, unknown>; sets: unknow
 export const recordingDataAtom = atom<Record<string, unknown>>({});
 export const activeTrackIdAtom = atom<string | number | null>(null);
 export const activeSetIdAtom = atom<string | null>(null);
-export const selectedChannelAtom = atom<unknown>(null);
+export const selectedChannelAtom = atom<SelectedChannel>();
 export const flashingChannelsAtom = atom<Set<string>>(new Set<string>());
 export const flashingConstructorsAtom = atom<Set<string>>(new Set<string>());
 export const recordingStateAtom = atom<Record<string, { startTime: number; isRecording: boolean }>>(
   {}
 );
 export const helpTextAtom = atom<string>("");
+export const selectedTrackForModuleMenuAtom = atom<number>()
 
 export const useFlashingChannels = (): [
   Set<string>,

@@ -1,5 +1,5 @@
 import { memo, Fragment, useState, useMemo, useCallback, useEffect, useRef, type ChangeEvent } from "react";
-import { useAtom } from "jotai";
+import { useAtom, useSetAtom } from "jotai";
 import { remove } from "lodash";
 import { useIPCSend } from "../core/hooks/useIPC";
 import { Modal } from "../shared/Modal";
@@ -20,6 +20,7 @@ import { getActiveSetTracks } from "../../shared/utils/setUtils";
 import { getBaseMethodNames } from "../utils/moduleUtils";
 import { HELP_TEXT } from "../../shared/helpText";
 import { MethodCodeModal } from "./MethodCodeModal";
+import { editChannelModalAtom } from "../core/modalAtoms";
 
 type MethodOption = {
   name: string;
@@ -262,7 +263,7 @@ const SortableItem = memo(
 
 SortableItem.displayName = "SortableItem";
 
-type SelectedChannel = {
+export type SelectedChannel = {
   trackIndex: number;
   instanceId: string;
   moduleType: string;
@@ -271,10 +272,7 @@ type SelectedChannel = {
 };
 
 type MethodConfiguratorModalProps = {
-  isOpen: boolean;
-  onClose: () => void;
   predefinedModules: PredefinedModule[];
-  onEditChannel?: (channelNumber: number) => void;
   onDeleteChannel?: (channelNumber: number) => void;
   workspacePath?: string | null;
   workspaceModuleFiles?: string[];
@@ -282,17 +280,25 @@ type MethodConfiguratorModalProps = {
 };
 
 export const MethodConfiguratorModal = ({
-  isOpen,
-  onClose,
   predefinedModules,
-  onEditChannel,
   onDeleteChannel,
   workspacePath = null,
   workspaceModuleFiles = [],
   workspaceModuleLoadFailures = [],
 }: MethodConfiguratorModalProps) => {
   const [userData, setUserData] = useAtom(userDataAtom);
-  const [selectedChannel] = useAtom(selectedChannelAtom);
+  const [selectedChannel, setSelectedChannel] = useAtom(selectedChannelAtom);
+  const setEditChannelModal = useSetAtom(editChannelModalAtom);
+  const isOpen = !!selectedChannel
+  const onClose = () => setSelectedChannel(null)
+  const onEditChannel = (channelNumber: number) => {
+    if (!selectedChannel) return;
+    setEditChannelModal({
+      isOpen: true,
+      trackIndex: (selectedChannel as unknown as { trackIndex: number }).trackIndex,
+      channelNumber,
+    });
+  }
   const [selectedMethodForCode, setSelectedMethodForCode] = useState<{
     moduleName: string | null;
     methodName: string;

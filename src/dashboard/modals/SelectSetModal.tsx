@@ -9,8 +9,9 @@ import { Button } from "../components/Button";
 import { RadioButton, Label } from "../components/FormInputs";
 import { updateUserData } from "../core/utils";
 import { EditSetModal } from "./EditSetModal";
-import { ConfirmationModal } from "./ConfirmationModal";
 import { deleteRecordingsForTracks } from "../../shared/json/recordingUtils";
+import { confirmationModalAtom, createSetModalAtom, selectSetModalAtom } from "../core/modalAtoms";
+import { useAtom, useSetAtom } from "jotai";
 
 type Set = {
   id: string;
@@ -89,8 +90,6 @@ type UserData = {
 };
 
 type SelectSetModalProps = {
-  isOpen: boolean;
-  onClose: () => void;
   userData: UserData;
   setUserData: (updater: unknown) => void;
   activeTrackId: string | number | null;
@@ -99,13 +98,9 @@ type SelectSetModalProps = {
   setActiveSetId: (id: string | null) => void;
   recordingData: Record<string, unknown>;
   setRecordingData: (updater: (prev: Record<string, unknown>) => Record<string, unknown>) => void;
-  onCreateSet: () => void;
-  onConfirmDelete: (message: string, onConfirm: () => void) => void;
 };
 
 export const SelectSetModal = ({
-  isOpen,
-  onClose,
   userData,
   setUserData,
   activeTrackId: _activeTrackId,
@@ -114,13 +109,19 @@ export const SelectSetModal = ({
   setActiveSetId,
   recordingData: _recordingData,
   setRecordingData,
-  onCreateSet,
-  onConfirmDelete,
 }: SelectSetModalProps) => {
+  const [isOpen, setIsOpen] = useAtom(selectSetModalAtom)
+  const onClose = () => setIsOpen(false)
+  const toggleCreateSet = useSetAtom(createSetModalAtom)
   const [editingSetId, setEditingSetId] = useState<string | null>(null);
-  const [alertMessage, setAlertMessage] = useState<string | null>(null);
+  const setConfirmationModal = useSetAtom(confirmationModalAtom)
 
   const sets = userData.sets || [];
+
+  const handleCreateSet = () => {
+    onClose();
+    toggleCreateSet(true)
+  }
 
   const handleSetSelect = (setId: string) => {
     setActiveSetId(setId);
@@ -139,47 +140,52 @@ export const SelectSetModal = ({
 
   const handleDeleteSet = (setId: string) => {
     if (sets.length <= 1) {
-      setAlertMessage("Cannot delete the last set.");
+      setConfirmationModal({
+        message: "Cannot delete the last set.",
+        type: 'alert'
+      });
       return;
     }
 
     const setToDelete = sets.find((s) => s.id === setId);
     if (!setToDelete) return;
 
-    onConfirmDelete(
-      `Are you sure you want to delete "${setToDelete.name}"?`,
-      () => {
-        const trackIdsToDelete = setToDelete.tracks.map((t) => t.id);
+    const onConfirm = () => {
+      const trackIdsToDelete = setToDelete.tracks.map((t) => t.id);
 
-        updateUserData(setUserData, (draft) => {
-          const d = draft as unknown as UserData;
-          d.sets = d.sets.filter((s) => s.id !== setId);
-        });
+      updateUserData(setUserData, (draft) => {
+        const d = draft as unknown as UserData;
+        d.sets = d.sets.filter((s) => s.id !== setId);
+      });
 
-        if (trackIdsToDelete.length > 0) {
-          setRecordingData((prev) =>
-            deleteRecordingsForTracks(prev, trackIdsToDelete.map(String))
-          );
-        }
+      if (trackIdsToDelete.length > 0) {
+        setRecordingData((prev) =>
+          deleteRecordingsForTracks(prev, trackIdsToDelete.map(String))
+        );
+      }
 
-        if (activeSetId === setId) {
-          const newSet = sets.find((s) => s.id !== setId);
-          if (newSet) {
-            setActiveSetId(newSet.id);
-            if (newSet.tracks.length > 0) {
-              const firstTrack =
-                newSet.tracks.find((t) => t.isVisible) || newSet.tracks[0];
-              setActiveTrackId(firstTrack.id);
-            } else {
-              setActiveTrackId(null);
-            }
+      if (activeSetId === setId) {
+        const newSet = sets.find((s) => s.id !== setId);
+        if (newSet) {
+          setActiveSetId(newSet.id);
+          if (newSet.tracks.length > 0) {
+            const firstTrack =
+              newSet.tracks.find((t) => t.isVisible) || newSet.tracks[0];
+            setActiveTrackId(firstTrack.id);
           } else {
-            setActiveSetId(null);
             setActiveTrackId(null);
           }
+        } else {
+          setActiveSetId(null);
+          setActiveTrackId(null);
         }
       }
-    );
+    }
+    setConfirmationModal({
+      message: `Are you sure you want to delete "${setToDelete.name}"?`,
+      onConfirm,
+      type: 'confirm'
+    });
   };
 
   return (
@@ -217,7 +223,7 @@ export const SelectSetModal = ({
         </div>
 
         <ModalFooter>
-          <Button onClick={onCreateSet} icon={<FaPlus />}>
+          <Button onClick={handleCreateSet} icon={<FaPlus />}>
             Create Set
           </Button>
         </ModalFooter>
@@ -227,14 +233,6 @@ export const SelectSetModal = ({
         isOpen={!!editingSetId}
         onClose={() => setEditingSetId(null)}
         setId={editingSetId}
-        onAlert={setAlertMessage}
-      />
-
-      <ConfirmationModal
-        isOpen={!!alertMessage}
-        onClose={() => setAlertMessage(null)}
-        message={alertMessage}
-        type="alert"
       />
     </>
   );

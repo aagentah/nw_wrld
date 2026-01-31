@@ -2,6 +2,8 @@ import React, { memo, useRef, useEffect, useMemo } from "react";
 import { Button } from "../components/Button";
 import { HelpIcon } from "../components/HelpIcon";
 import { HELP_TEXT } from "../../shared/helpText";
+import { debugOverlayModalAtom } from "../core/modalAtoms";
+import { useAtom } from "jotai";
 
 const renderColoredLog = (log: string) => {
   const lines = log.split("\n");
@@ -209,16 +211,16 @@ const LogItem = memo(({ log }: LogItemProps) => {
 LogItem.displayName = "LogItem";
 
 type DebugOverlayModalProps = {
-  isOpen: boolean;
-  onClose: () => void;
   debugLogs: string[];
   perfStats?: { fps: number; frameMsAvg: number; longFramePct: number; at: number } | null;
 };
 
 export const DebugOverlayModal = memo(
-  ({ isOpen, onClose, debugLogs, perfStats }: DebugOverlayModalProps) => {
+  ({ debugLogs, perfStats }: DebugOverlayModalProps) => {
   const logContainerRef = useRef<HTMLDivElement | null>(null);
   const scrollTimeoutRef = useRef<number | null>(null);
+  const [isOpen, setIsOpen] = useAtom(debugOverlayModalAtom)
+  const onClose = () => setIsOpen(false)
 
   const visibleLogs = useMemo(() => {
     return debugLogs.slice(-200);

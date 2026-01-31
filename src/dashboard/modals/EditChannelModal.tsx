@@ -11,6 +11,7 @@ import { updateActiveSet, updateUserData } from "../core/utils";
 import { getActiveSetTracks } from "../../shared/utils/setUtils";
 import { HELP_TEXT } from "../../shared/helpText";
 import { parsePitchClass, pitchClassToName, resolveChannelTrigger } from "../../shared/midi/midiUtils";
+import { editChannelModalAtom } from "../core/modalAtoms";
 
 const asPlainObject = (value: unknown): Record<string, unknown> | null => {
   if (!value) return null;
@@ -37,23 +38,18 @@ type AppConfigLike = {
 };
 
 type EditChannelModalProps = {
-  isOpen: boolean;
-  onClose: () => void;
-  trackIndex: number;
-  channelNumber: number;
   inputConfig?: InputConfigLike | null;
   config?: AppConfigLike | null;
 };
 
 export const EditChannelModal = ({
-  isOpen,
-  onClose,
-  trackIndex,
-  channelNumber,
   inputConfig,
   config,
 }: EditChannelModalProps) => {
   const [userData, setUserData] = useAtom(userDataAtom);
+  const [editChannelData, dispatch] = useAtom(editChannelModalAtom)
+  const onClose = () => dispatch({isOpen: false, channelNumber: null, trackIndex: null})
+  const {channelNumber, trackIndex, isOpen} = editChannelData
   const [activeSetId] = useAtom(activeSetIdAtom);
   const [newChannelNumber, setNewChannelNumber] = useState(1);
 

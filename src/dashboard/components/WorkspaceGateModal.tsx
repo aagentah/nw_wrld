@@ -2,9 +2,10 @@ import { Modal } from "../shared/Modal";
 import { ModalHeader } from "./ModalHeader";
 import { ModalFooter } from "./ModalFooter";
 import { Button } from "./Button";
+import { useAtomValue } from "jotai";
+import { workspaceModalAtom } from "../core/modalAtoms";
 
 type WorkspaceGateModalProps = {
-  isOpen: boolean;
   mode: "initial" | "lostSync";
   workspacePath: string | null;
   workspaceModalPath: string | null;
@@ -12,12 +13,12 @@ type WorkspaceGateModalProps = {
 };
 
 export const WorkspaceGateModal = ({
-  isOpen,
   mode,
   workspacePath,
   workspaceModalPath,
   onSelectWorkspace,
 }: WorkspaceGateModalProps) => {
+  const isOpen = useAtomValue(workspaceModalAtom)
   return (
     <Modal isOpen={isOpen} onClose={() => {}}>
       <ModalHeader
