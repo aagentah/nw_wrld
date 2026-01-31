@@ -13,6 +13,7 @@ type MethodOptionDef = {
   values?: string[];
   min?: number;
   max?: number;
+  unit?: string;
   assetBaseDir?: string;
   assetExtensions?: string[];
   allowCustom?: boolean;
@@ -776,7 +777,10 @@ export const MethodBlock = memo(
                   className="flex flex-col gap-1 text-[11px] text-neutral-300 font-mono"
                 >
                   <div className="inline-flex items-center font-mono">
-                    {option.name}:
+                    {option.name}
+                    {option.unit && (
+                      <span className="text-neutral-300/50 ml-1">({option.unit})</span>
+                    )}:
                     {mode === "dashboard" && showDice && (
                       <FaDice
                         className={`ml-1.5 cursor-pointer text-[10px] ${

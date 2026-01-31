@@ -333,6 +333,7 @@ static methods = [
         type: "text",              // UI control type
         min: 0,                    // (optional) for numbers
         max: 100,                  // (optional) for numbers
+        unit: "ms",                // (optional) UI-only unit label
         values: ["a", "b"],        // (optional) for selects
         allowRandomization: true,  // (optional) add randomize button
       },
@@ -340,6 +341,33 @@ static methods = [
   },
 ];
 ```
+
+### Option Schema (what the Dashboard understands)
+
+Each entry in `static methods[].options[]` is an **option definition** that drives:
+
+- What input control the Dashboard shows
+- How values are saved in track/channel method configs
+- What keys exist in the object passed to your method at runtime
+
+Supported option fields:
+
+- **`name`** (string, required): must match the property name your method reads (e.g. `pulse({ duration })`)
+- **`type`** (string, required): one of the option types listed below
+- **`defaultVal`** (optional): the value used when a method is first created in the UI
+- **`min` / `max`** (optional, number): numeric bounds for number inputs (the UI clamps values to these bounds)
+- **`unit`** (optional, string): UI-only display suffix (for example `ms`, `%`, `×`). This does not change runtime behavior.
+- **`values`** (optional, string[]): required for `select` options; `defaultVal` should be one of these values
+- **`allowRandomization`** (optional, boolean): enables the dice/random UI for this option
+- **`assetBaseDir`** (optional, string): for `assetFile` / `assetDir` options (e.g. `"images"`, `"models"`, `"json"`, `"fonts"`)
+- **`assetExtensions`** (optional, string[]): for `assetFile` options (e.g. `[".png", ".jpg"]`)
+- **`allowCustom`** (optional, boolean): for asset options; when true, users can type a custom path/list instead of picking
+
+### Units and numeric conventions (recommended)
+
+- **Durations**: use **milliseconds** and label with `unit: "ms"`.
+- **Percent values**: label with `unit: "%"`.
+- **Multipliers**: label with `unit: "×"`.
 
 ### executeOnLoad Explained
 
@@ -367,6 +395,8 @@ static methods = [
 | `boolean` | Toggle switch      | `{ name: "enabled", defaultVal: true, type: "boolean" }`                                    |
 | `select`  | Dropdown menu      | `{ name: "mode", defaultVal: "bounce", type: "select", values: ["bounce", "slide"] }`       |
 | `matrix`  | Grid position      | `{ name: "position", defaultVal: { rows: 1, cols: 1, excludedCells: [] }, type: "matrix" }` |
+| `assetFile` | Asset file picker (from workspace `assets/`) | `{ name: "imagePath", defaultVal: "images/blueprint.png", type: "assetFile", assetBaseDir: "images", assetExtensions: [".png", ".jpg"], allowCustom: true }` |
+| `assetDir` | Asset directory picker (from workspace `assets/`) | `{ name: "directory", defaultVal: "images", type: "assetDir", assetBaseDir: "images", allowCustom: true }` |
 
 All options create UI controls in the Dashboard and pass values to your methods.
 
@@ -427,9 +457,12 @@ class MyModule extends ModuleBase {
 - `offset({ x, y })` - Reposition module
 - `scale({ scale })` - Scale module
 - `opacity({ opacity })` - Set opacity
-- `rotate({ degrees })` - Rotate module
-- `randomZoom()` - Random zoom effect
-- `matrix({ position })` - Position using matrix grid
+- `rotate({ direction, speed, duration })` - Rotate module (duration is milliseconds)
+- `randomZoom({ scaleFrom, scaleTo, position })` - Random zoom effect
+- `matrix({ matrix, border })` - Position using matrix grid
+- `viewportLine({ x, y, length, opacity })` - Draw a viewport line (x/y/length are percentages)
+- `background({ color })` - Set background color
+- `invert({ duration })` - Invert colors (duration is milliseconds)
 
 #### BaseThreeJsModule
 
@@ -591,7 +624,10 @@ class ImageModule extends ModuleBase {
         {
           name: "path",
           defaultVal: "images/blueprint.png",
-          type: "text",
+          type: "assetFile",
+          assetBaseDir: "images",
+          assetExtensions: [".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"],
+          allowCustom: true,
         },
       ],
     },
