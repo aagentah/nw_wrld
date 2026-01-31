@@ -149,6 +149,9 @@ export function useDashboardAudioCapture({
         }
         const ctx = new (Ctx as unknown as new () => AudioContext)();
         audioContextRef.current = ctx;
+        try {
+          await ctx.resume();
+        } catch {}
         const source = ctx.createMediaStreamSource(stream);
         const analyser = ctx.createAnalyser();
         analyser.fftSize = AUDIO_ANALYSER_CONFIG.fftSize;

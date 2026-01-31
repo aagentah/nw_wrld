@@ -474,8 +474,10 @@ export const SettingsModal = ({
         : "external-midi";
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [fileUploadError, setFileUploadError] = useState<string | null>(null);
   const uploadFileToAssets = useCallback(
     async (file: File) => {
+      setFileUploadError(null);
       const bridge = (globalThis as unknown as { nwWrldBridge?: unknown }).nwWrldBridge;
       const bridgeObj = bridge && typeof bridge === "object" ? (bridge as Record<string, unknown>) : null;
       const workspace = bridgeObj && typeof bridgeObj.workspace === "object" ? (bridgeObj.workspace as Record<string, unknown>) : null;
@@ -483,18 +485,31 @@ export const SettingsModal = ({
         workspace && typeof workspace.writeAudioAsset === "function"
           ? (workspace.writeAudioAsset as (payload: unknown) => Promise<unknown>)
           : null;
-      if (!write) return;
-      const bytes = await file.arrayBuffer();
-      const res = await write({ filename: file.name, bytes });
-      const r = res && typeof res === "object" ? (res as Record<string, unknown>) : null;
-      const ok = Boolean(r && r.ok === true);
-      const relPath = r && typeof r.relPath === "string" ? r.relPath : "";
-      if (!ok || !relPath) return;
-      setInputConfig({
-        ...inputConfig,
-        fileAssetRelPath: relPath,
-        fileAssetName: file.name,
-      });
+      if (!write) {
+        setFileUploadError("Upload not available.");
+        return;
+      }
+      try {
+        const bytes = await file.arrayBuffer();
+        const res = await write({ filename: file.name, bytes });
+        const r = res && typeof res === "object" ? (res as Record<string, unknown>) : null;
+        const ok = Boolean(r && r.ok === true);
+        const relPath = r && typeof r.relPath === "string" ? r.relPath : "";
+        if (!ok || !relPath) {
+          const reason = r && typeof r.reason === "string" ? r.reason : "";
+          setFileUploadError(reason ? `Upload failed: ${reason}` : "Upload failed.");
+          return;
+        }
+        setInputConfig({
+          ...inputConfig,
+          fileAssetRelPath: relPath,
+          fileAssetName: file.name,
+        });
+        setFileUploadError(null);
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        setFileUploadError(message || "Upload failed.");
+      }
     },
     [inputConfig, setInputConfig]
   );
@@ -945,7 +960,7 @@ export const SettingsModal = ({
                     <input
                       ref={fileInputRef}
                       type="file"
-                      accept=".mp3,.wav,audio/*"
+                      accept=".mp3,.wav"
                       data-testid="file-upload-input"
                       style={{ display: "none" }}
                       onChange={(e: ChangeEvent<HTMLInputElement>) => {
@@ -972,6 +987,7 @@ export const SettingsModal = ({
                             fileAssetRelPath: "",
                             fileAssetName: "",
                           });
+                          setFileUploadError(null);
                         }}
                         className="px-3"
                       >
@@ -994,6 +1010,9 @@ export const SettingsModal = ({
                         ? `Error: ${fileAudioState.message}`
                         : fileAudioState.status}
                     </div>
+                    {fileUploadError && (
+                      <div className="text-[10px] text-red-400 mt-1">Upload: {fileUploadError}</div>
+                    )}
                     <div className="mt-3 flex flex-col gap-3">
                       <div>
                         <div className="text-[10px] opacity-50 mb-1">Trigger Cooldown (ms)</div>

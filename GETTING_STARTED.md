@@ -294,7 +294,7 @@ Once you're comfortable with the sequencer, you can connect external hardware (o
 ### Switch to External Mode
 
 1. Open Dashboard → **Settings**
-2. **Signal Source** → Select **External MIDI**, **External OSC**, or **External Audio (Low / Medium / High)**
+2. **Signal Source** → Select **External MIDI**, **External OSC**, **External Audio (Low / Medium / High)**, or **File Upload (Low / Medium / High)**
 3. Configure your MIDI device / OSC port / audio input device
 4. Go to **Settings → Configure Mappings** to customize trigger mappings
 5. Your DAW now controls the visuals in real-time
