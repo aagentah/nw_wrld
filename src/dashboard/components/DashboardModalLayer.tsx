@@ -19,6 +19,7 @@ type Confirmation = { message: string; onConfirm?: () => void; type?: "confirm" 
 type UserData = Parameters<typeof SelectSetModal>[0]["userData"];
 type ProjectorSettings = Parameters<typeof SettingsModal>[0]["settings"];
 type PredefinedModules = Parameters<typeof AddModuleModal>[0]["predefinedModules"];
+type AudioCaptureState = Parameters<typeof SettingsModal>[0]["audioCaptureState"];
 
 type DashboardModalLayerProps = {
   isCreateTrackOpen: boolean;
@@ -58,12 +59,7 @@ type DashboardModalLayerProps = {
   availableMidiDevices: Array<{ id: string; name: string }>;
   availableAudioDevices: Array<{ id: string; label: string }>;
   refreshAudioDevices: () => Promise<void>;
-  audioCaptureState:
-    | { status: "idle" }
-    | { status: "starting" }
-    | { status: "running" }
-    | { status: "error"; message: string }
-    | { status: "mock" };
+  audioCaptureState: AudioCaptureState;
   fileAudioState: FileAudioState;
   settings: ProjectorSettings;
   aspectRatio: string;
