@@ -1,32 +1,19 @@
-name: Release
+name: Release (Windows + macOS)
 
 on:
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: "Tag to build and publish (e.g. v0.2.0-beta)"
-        required: true
-        type: string
-  # Temporarily disabled: do not auto-build/publish binaries on tag pushes.
-  # push:
-  #   tags:
-  #     - "v*"
+  push:
+    tags:
+      - "v*"
 
 permissions:
   contents: write
 
 jobs:
   mac:
-    name: macOS (${{ matrix.arch }})
+    name: macOS DMG
     runs-on: macos-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        arch: [arm64, x64]
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/tags/{0}', inputs.tag) || github.ref }}
       - uses: actions/setup-node@v4
         with:
           node-version: 20.19.5
@@ -53,7 +40,8 @@ jobs:
           p = pathlib.Path("AuthKey.p8")
           p.write_bytes(base64.b64decode(os.environ["APPLE_API_KEY_BASE64"]))
           PY
-      - run: npm run dist:mac:${{ matrix.arch }}
+      - name: Build DMG
+        run: npm run dist:mac
         env:
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
@@ -62,17 +50,15 @@ jobs:
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
       - uses: actions/upload-artifact@v4
         with:
-          name: nw_wrld-mac-${{ matrix.arch }}
+          name: nw_wrld-mac-dmg
           path: |
-            release/**/*.dmg
+            release/*.dmg
 
   win:
     name: Windows
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/tags/{0}', inputs.tag) || github.ref }}
       - uses: actions/setup-node@v4
         with:
           node-version: 20.19.5
@@ -109,7 +95,7 @@ jobs:
         run: ls -R artifacts
       - uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+          tag_name: ${{ github.ref_name }}
           files: |
             artifacts/**/*.dmg
             artifacts/**/nw_wrld*.exe
