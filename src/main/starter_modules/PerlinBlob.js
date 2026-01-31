@@ -72,6 +72,7 @@ class PerlinBlob extends ModuleBase {
           type: "number",
           min: 10,
           max: 5000,
+          allowRandomization: true,
         },
       ],
     },

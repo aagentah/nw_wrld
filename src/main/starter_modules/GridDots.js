@@ -10,12 +10,14 @@ class GridDots extends ModuleBase {
       name: "size",
       executeOnLoad: true,
       options: [
-        { name: "x", defaultVal: 10, type: "number", allowRandomization: true },
+        { name: "x", defaultVal: 10, type: "number", allowRandomization: true, min: 1, max: 100 },
         {
           name: "y",
           defaultVal: 10,
           type: "number",
-          allowRandomization: false,
+          allowRandomization: true,
+          min: 1,
+          max: 100,
         },
       ],
     },

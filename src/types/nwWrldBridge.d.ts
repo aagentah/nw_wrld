@@ -40,6 +40,7 @@ declare global {
               reset?: (devices: unknown) => Promise<unknown>;
               disconnect?: (deviceId: unknown) => Promise<unknown>;
               reconnect?: (device: unknown) => Promise<unknown>;
+              noteOn?: (payload: unknown) => Promise<unknown>;
             };
             file?: {
               emitBand?: (payload: unknown) => Promise<unknown>;

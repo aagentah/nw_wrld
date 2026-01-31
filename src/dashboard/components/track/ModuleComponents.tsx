@@ -9,18 +9,18 @@ import {
   selectedChannelAtom,
   flashingChannelsAtom,
   flashingConstructorsAtom,
-} from "../../core/state.ts";
+} from "../../core/state";
 import { updateActiveSet } from "../../core/utils";
-import { TERMINAL_STYLES } from "../../core/constants.ts";
-import { getActiveSetTracks } from "../../../shared/utils/setUtils.ts";
-import { getRecordingForTrack, getSequencerForTrack } from "../../../shared/json/recordingUtils.ts";
+import { TERMINAL_STYLES } from "../../core/constants";
+import { getActiveSetTracks } from "../../../shared/utils/setUtils";
+import { getRecordingForTrack, getSequencerForTrack } from "../../../shared/json/recordingUtils";
 import {
   resolveTrackTrigger,
   resolveChannelTrigger,
   parsePitchClass,
   pitchClassToName,
-} from "../../../shared/midi/midiUtils.ts";
-import { FaExclamationTriangle } from "react-icons/fa";
+} from "../../../shared/midi/midiUtils";
+import { FaExclamationTriangle, FaEye, FaEyeSlash } from "react-icons/fa";
 import { Tooltip } from "../Tooltip";
 
 type Track = {
@@ -130,6 +130,7 @@ type NoteSelectorProps = {
   trackIndex: number;
   instanceId: string;
   moduleType: string;
+  moduleInstance: { id: string; type: string; disabled?: boolean };
   predefinedModules: unknown[];
   onRemoveModule?: ((instanceId: string) => void) | null;
   dragHandleProps?: Record<string, unknown> | null;
@@ -148,6 +149,7 @@ export const NoteSelector = memo(
     trackIndex,
     instanceId,
     moduleType,
+    moduleInstance,
     onRemoveModule,
     dragHandleProps,
     inputConfig,
@@ -389,10 +391,38 @@ export const NoteSelector = memo(
         .attr("fill", "transparent");
     }, []);
 
+    const isDisabled = moduleInstance?.disabled === true;
+    const toggleDisabled = useCallback(() => {
+      updateActiveSet(setUserData, activeSetId, (activeSet) => {
+        if (!isPlainObject(activeSet)) return;
+        const tracksUnknown = (activeSet as Record<string, unknown>).tracks;
+        if (!Array.isArray(tracksUnknown)) return;
+        const trackDraft = tracksUnknown[trackIndex];
+        if (!isPlainObject(trackDraft)) return;
+        const modulesUnknown = (trackDraft as Record<string, unknown>).modules;
+        if (!Array.isArray(modulesUnknown)) return;
+        const module = modulesUnknown.find(
+          (m) => isPlainObject(m) && String((m as Record<string, unknown>).id ?? "") === instanceId
+        );
+        if (!module || !isPlainObject(module)) return;
+        if (isDisabled) {
+          delete (module as Record<string, unknown>).disabled;
+        } else {
+          (module as Record<string, unknown>).disabled = true;
+        }
+      });
+    }, [setUserData, activeSetId, trackIndex, instanceId, isDisabled]);
+    
     return (
-      <div className="px-12 font-mono">
+      <div className={`px-12 font-mono ${isDisabled ? "opacity-50" : ""}`}>
         <div className="mb-2 flex flex-wrap items-center justify-between">
-          <span className="text-neutral-500 text-sm">
+          <span
+            className={`text-sm ${
+              moduleInstance.disabled === true
+                ? "text-neutral-500/50 line-through"
+                : "text-neutral-500"
+            }`}
+          >
             <span>[MODULE]</span> {moduleType}
             {moduleWarningText ? (
               <span className="ml-2 inline-flex items-center">
@@ -432,6 +462,30 @@ export const NoteSelector = memo(
                 <span className="text-md text-neutral-300">{"\u2261 "}</span>
               </span>
             )}
+            <button
+              type="button"
+              className="cursor-pointer text-[11px] text-neutral-400 hover:text-neutral-300 transition-colors focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0"
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleDisabled();
+                if (typeof (e as unknown as { detail?: number }).detail === "number" && (e as unknown as { detail?: number }).detail > 0) {
+                  e.currentTarget.blur();
+                }
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+              onKeyDown={(e) => {
+                if (e.code === "Space") {
+                  e.preventDefault();
+                }
+              }}
+              title={isDisabled ? "Enable Module" : "Disable Module"}
+              aria-pressed={isDisabled}
+              aria-label={isDisabled ? "Enable Module" : "Disable Module"}
+              data-testid="module-visibility-toggle"
+              data-module-instance-id={instanceId}
+            >
+              {isDisabled ? <FaEyeSlash /> : <FaEye />}
+            </button>
             {onRemoveModule && (
               <div className="flex items-center gap-2">
                 <div
@@ -672,6 +726,7 @@ export const SortableModuleItem = memo(
                 trackIndex={trackIndex}
                 instanceId={moduleInstance.id}
                 moduleType={moduleInstance.type}
+                moduleInstance={moduleInstance}
                 predefinedModules={predefinedModules}
                 onRemoveModule={onRemoveModule}
                 dragHandleProps={dragHandleProps as unknown as Record<string, unknown>}

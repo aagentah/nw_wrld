@@ -6,13 +6,13 @@ import { ModalFooter } from "../components/ModalFooter";
 import { Button } from "../components/Button";
 import { TextInput, Select, Label, ValidationError } from "../components/FormInputs";
 import { HelpIcon } from "../components/HelpIcon";
-import { userDataAtom, activeSetIdAtom } from "../core/state.ts";
+import { userDataAtom, activeSetIdAtom } from "../core/state";
 import { updateActiveSet } from "../core/utils";
-import { getActiveSetTracks } from "../../shared/utils/setUtils.ts";
-import { HELP_TEXT } from "../../shared/helpText.ts";
+import { getActiveSetTracks } from "../../shared/utils/setUtils";
+import { HELP_TEXT } from "../../shared/helpText";
 import { useNameValidation } from "../core/hooks/useNameValidation";
-import { useTrackSlots } from "../core/hooks/useTrackSlots.ts";
-import { parsePitchClass, pitchClassToName } from "../../shared/midi/midiUtils.ts";
+import { useTrackSlots } from "../core/hooks/useTrackSlots";
+import { parsePitchClass, pitchClassToName } from "../../shared/midi/midiUtils";
 
 type InputConfigLike = {
   type?: unknown;

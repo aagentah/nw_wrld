@@ -1,39 +1,3 @@
-declare module "webmidi" {
-  export interface MidiNote {
-    number: number;
-  }
-
-  export interface MidiMessage {
-    channel: number;
-  }
-
-  export interface NoteOnEvent {
-    note: MidiNote;
-    message: MidiMessage;
-    velocity: number;
-  }
-
-  export interface MidiInput {
-    id: string;
-    name: string;
-    manufacturer?: string;
-    addListener(event: "noteon", handler: (e: NoteOnEvent) => void): void;
-    removeListener(): void;
-    removeListener(event: "noteon"): void;
-  }
-
-  export interface WebMidiStatic {
-    enabled: boolean;
-    inputs: MidiInput[];
-    enable(callback: (err: Error | null) => void): void;
-    disable(): void | Promise<void>;
-    getInputById?(id: string): MidiInput | null;
-    getInputByName(name: string): MidiInput | null;
-  }
-
-  export const WebMidi: WebMidiStatic;
-}
-
 declare module "osc" {
   export interface OscArg {
     value: number | string | boolean | null;

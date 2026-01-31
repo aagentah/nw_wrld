@@ -10,6 +10,9 @@ out/
 build/*
 !build/logo.icns
 !build/logo.png
+!build/logo.ico
+!build/entitlements.mac.plist
+!build/entitlements.mac.inherit.plist
 
 # Packaged app artifacts (generated)
 release/

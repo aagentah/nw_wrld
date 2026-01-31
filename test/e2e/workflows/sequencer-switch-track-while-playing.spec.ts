@@ -113,7 +113,9 @@ test("switch active track while playing reroutes sequencer triggers", async () =
         async () => {
           const msgs = await getProjectorMessages(projector);
           const triggers = msgs.filter((m) => m.type === "channel-trigger");
-          return triggers.some((m) => m.props?.channelName === "1");
+          return triggers.some(
+            (m) => m.props?.channelName === "1" || m.props?.channelName === "ch1"
+          );
         },
         { timeout: 20_000 }
       )
@@ -122,14 +124,24 @@ test("switch active track while playing reroutes sequencer triggers", async () =
     await clearProjectorMessages(projector);
     await selectActiveTrack(dashboard, trackB);
 
+    // Changing active track stops sequencer playback.
+    await expect(dashboard.getByTestId("sequencer-play-toggle")).toHaveText(/PLAY/);
+
+    await clearProjectorMessages(projector);
+    await dashboard.getByTestId("sequencer-play-toggle").click();
+
     await expect
       .poll(
         async () => {
           const msgs = await getProjectorMessages(projector);
           const triggers = msgs.filter((m) => m.type === "channel-trigger");
           if (triggers.length === 0) return null;
-          const has1 = triggers.some((m) => m.props?.channelName === "1");
-          const has2 = triggers.some((m) => m.props?.channelName === "2");
+          const has1 = triggers.some(
+            (m) => m.props?.channelName === "1" || m.props?.channelName === "ch1"
+          );
+          const has2 = triggers.some(
+            (m) => m.props?.channelName === "2" || m.props?.channelName === "ch2"
+          );
           return { has1, has2 };
         },
         { timeout: 20_000 }

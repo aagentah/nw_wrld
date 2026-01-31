@@ -10,10 +10,10 @@ import {
   activeSetIdAtom,
   flashingConstructorsAtom,
   useFlashingChannels,
-} from "../../core/state.ts";
+} from "../../core/state";
 import { updateActiveSet } from "../../core/utils";
-import { getRecordingForTrack } from "../../../shared/json/recordingUtils.ts";
-import MidiPlayback from "../../../shared/midi/midiPlayback.ts";
+import { getRecordingForTrack } from "../../../shared/json/recordingUtils";
+import MidiPlayback from "../../../shared/midi/midiPlayback";
 import { Button } from "../Button";
 import { TrackDataModal } from "../../modals/TrackDataModal";
 import { ModuleSelector, SortableModuleItem } from "./ModuleComponents";

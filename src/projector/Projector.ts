@@ -1,7 +1,7 @@
-import { loadJsonFileSync } from "../shared/json/jsonFileBase.ts";
-import { loadSettingsSync } from "../shared/json/configUtils.ts";
-import { getActiveSetTracks, migrateToSets } from "../shared/utils/setUtils.ts";
-import { getProjectDir } from "../shared/utils/projectDir.ts";
+import { loadJsonFileSync } from "../shared/json/jsonFileBase";
+import { loadSettingsSync } from "../shared/json/configUtils";
+import { getActiveSetTracks, migrateToSets } from "../shared/utils/setUtils";
+import { getProjectDir } from "../shared/utils/projectDir";
 import logger from "./helpers/logger";
 
 import { getMessaging } from "./internal/bridge";

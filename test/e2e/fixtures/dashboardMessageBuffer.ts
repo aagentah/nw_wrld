@@ -7,6 +7,16 @@ type BufferedMessage = {
 };
 
 export async function installDashboardMessageBuffer(page: Page): Promise<void> {
+  await page.waitForFunction(
+    () => {
+      const bridge = globalThis.nwWrldBridge as unknown as {
+        messaging?: { onFromProjector?: unknown };
+      } | null;
+      return Boolean(bridge?.messaging && typeof bridge.messaging.onFromProjector === "function");
+    },
+    undefined,
+    { timeout: 15_000 }
+  );
   await page.evaluate(() => {
     const bridge = globalThis.nwWrldBridge;
     const messaging = bridge?.messaging;

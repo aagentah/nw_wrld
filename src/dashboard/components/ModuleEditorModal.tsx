@@ -663,7 +663,7 @@ export const ModuleEditorModal = ({
                     e.preventDefault();
                     handleOpenInFileExplorer();
                   }}
-                  className="text-red-500/50 font-mono text-[10px] underline cursor-pointer"
+                  className="selectable-text text-red-500/50 font-mono text-[10px] underline cursor-pointer"
                   title="Open in File Explorer"
                 >
                   {filePath}

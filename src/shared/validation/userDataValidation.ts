@@ -24,17 +24,39 @@ function defaultUserData(defaultValue: Jsonish): Record<string, Jsonish> {
   return { config: {}, sets: [] };
 }
 
-function normalizeModules(value: Jsonish): Jsonish[] {
+function normalizeModules(value: Jsonish): { modules: Jsonish[]; changed: boolean } {
   const list = isArray(value) ? value : [];
   const out: Jsonish[] = [];
+  let changed = !isArray(value);
   for (const m of list) {
-    if (!isPlainObject(m)) continue;
+    if (!isPlainObject(m)) {
+      changed = true;
+      continue;
+    }
     const id = asNonEmptyString(m.id);
     const type = asNonEmptyString(m.type);
-    if (!id || !type) continue;
-    out.push({ ...m, id, type });
+    if (!id || !type) {
+      changed = true;
+      continue;
+    }
+
+    const hasDisabledKey = Object.prototype.hasOwnProperty.call(m, "disabled");
+    const disabledIsTrue = (m as Record<string, Jsonish>).disabled === true;
+
+    const needsIdType = m.id !== id || m.type !== type;
+    const needsDisabled = hasDisabledKey && !disabledIsTrue;
+
+    if (!needsIdType && !needsDisabled) {
+      out.push(m);
+      continue;
+    }
+
+    changed = true;
+    const next: Record<string, Jsonish> = { ...m, id, type };
+    if (!disabledIsTrue) delete next.disabled;
+    out.push(next);
   }
-  return out;
+  return { modules: out, changed };
 }
 
 function normalizeTrack(value: Jsonish): Jsonish | null {
@@ -46,11 +68,8 @@ function normalizeTrack(value: Jsonish): Jsonish | null {
     changed = true;
   };
 
-  const modules = normalizeModules(out.modules);
-  if (
-    !isArray(out.modules) ||
-    modules.length !== (out.modules as Jsonish[]).length
-  ) {
+  const { modules, changed: modulesChanged } = normalizeModules(out.modules);
+  if (modulesChanged) {
     ensure();
     out.modules = modules;
   }

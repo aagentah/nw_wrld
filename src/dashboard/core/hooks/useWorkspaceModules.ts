@@ -294,7 +294,7 @@ export const useWorkspaceModules = ({
           });
         } catch {}
         try {
-          maybeHot.accept("../../../projector/helpers/threeBase.js", () => {
+          maybeHot.accept("../../../projector/helpers/threeBase", () => {
             loadModules();
           });
         } catch {}

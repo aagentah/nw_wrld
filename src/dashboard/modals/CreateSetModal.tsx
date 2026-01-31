@@ -6,7 +6,7 @@ import { ModalFooter } from "../components/ModalFooter";
 import { Button } from "../components/Button";
 import { TextInput, Label, ValidationError } from "../components/FormInputs";
 import { useNameValidation } from "../core/hooks/useNameValidation";
-import { userDataAtom, activeTrackIdAtom, activeSetIdAtom } from "../core/state.ts";
+import { userDataAtom, activeTrackIdAtom, activeSetIdAtom } from "../core/state";
 import { updateUserData } from "../core/utils";
 
 type CreateSetModalProps = {

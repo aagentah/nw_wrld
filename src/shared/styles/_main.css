@@ -121,6 +121,8 @@ html {
 .code-viewer *,
 .debug-log-viewer,
 .debug-log-viewer *,
+.selectable-text,
+.selectable-text *,
 input,
 textarea,
 select,

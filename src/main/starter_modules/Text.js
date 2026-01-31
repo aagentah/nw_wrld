@@ -32,7 +32,7 @@ class Text extends ModuleBase {
       name: "randomText",
       executeOnLoad: false,
       options: [
-        { name: "length", defaultVal: 8, type: "number" },
+        { name: "length", defaultVal: 8, type: "number", min: 1, max: 1000, allowRandomization: true },
         {
           name: "characters",
           defaultVal:
@@ -64,7 +64,7 @@ class Text extends ModuleBase {
     {
       name: "size",
       executeOnLoad: true,
-      options: [{ name: "percentage", defaultVal: 100, type: "number" }],
+      options: [{ name: "percentage", defaultVal: 100, type: "number", unit: "%", min: 1, max: 1000, allowRandomization: true }],
     },
   ];
 

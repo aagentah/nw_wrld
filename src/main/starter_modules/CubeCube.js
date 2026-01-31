@@ -19,7 +19,8 @@ class CubeCube extends BaseThreeJsModule {
           name: "duration",
           defaultVal: 0,
           type: "number",
-          description: "Duration for appendCube method animations in seconds",
+          unit: "ms",
+          min: 0,
         },
       ],
     },
@@ -224,7 +225,7 @@ class CubeCube extends BaseThreeJsModule {
             if (child.geometry) child.geometry.dispose();
             if (child.material) child.material.dispose();
           });
-        }, duration * 1000);
+        }, duration);
       }
     }
   }

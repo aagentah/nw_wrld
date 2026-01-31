@@ -69,8 +69,8 @@
     "noisejs": "^2.1.0",
     "osc": "^2.4.4",
     "p5": "^1.9.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "react-icons": "^5.3.0",
     "three": "^0.159.0",
     "tone": "^15.1.22",
@@ -83,8 +83,8 @@
     "@babel/preset-typescript": "^7.28.5",
     "@playwright/test": "1.57.0",
     "@types/node": "^25.0.3",
-    "@types/react": "^19.2.7",
-    "@types/react-dom": "^19.2.3",
+    "@types/react": "^18.3.27",
+    "@types/react-dom": "^18.3.7",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",
     "autoprefixer": "^10.4.19",
@@ -134,13 +134,29 @@
       "src/assets/**",
       "!**/node_modules/**/prebuilds/android-*/**",
       "!**/node_modules/**/prebuilds/linux-*/**",
-      "!**/node_modules/**/prebuilds/win32-*/**"
+      "!**/node_modules/**/prebuilds/win32-ia32/**"
     ],
     "mac": {
       "target": [
         "dmg"
       ],
       "icon": "build/logo.icns",
+      "files": [
+        "index.js",
+        "package.json",
+        "dist/**",
+        "src/index.js",
+        "src/main/**",
+        "src/projector/helpers/**",
+        "src/projector/views/**",
+        "src/dashboard/views/**",
+        "src/dashboard/assets/audio/**",
+        "src/shared/**",
+        "src/assets/**",
+        "!**/node_modules/**/prebuilds/android-*/**",
+        "!**/node_modules/**/prebuilds/linux-*/**",
+        "!**/node_modules/**/prebuilds/win32-*/**"
+      ],
       "hardenedRuntime": true,
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.inherit.plist",

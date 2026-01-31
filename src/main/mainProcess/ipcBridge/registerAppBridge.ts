@@ -14,7 +14,7 @@ export function registerAppBridge(): void {
   ipcMain.on("bridge:app:getBaseMethodNames", (event) => {
     try {
       const moduleBasePath = path.join(srcDir, "projector", "helpers", "moduleBase.ts");
-      const threeBasePath = path.join(srcDir, "projector", "helpers", "threeBase.js");
+      const threeBasePath = path.join(srcDir, "projector", "helpers", "threeBase.ts");
       const moduleBaseContent = fs.readFileSync(moduleBasePath, "utf-8");
       const threeBaseContent = fs.readFileSync(threeBasePath, "utf-8");
       const methodRegex = /{\s*name:\s*"([^"]+)",\s*executeOnLoad:/g;
@@ -136,7 +136,7 @@ export function registerAppBridge(): void {
       const methodNameEscaped = escapeRegExpLiteral(safeMethodName);
 
       const moduleBasePath = path.join(srcDir, "projector", "helpers", "moduleBase.ts");
-      const threeBasePath = path.join(srcDir, "projector", "helpers", "threeBase.js");
+      const threeBasePath = path.join(srcDir, "projector", "helpers", "threeBase.ts");
 
       let filePath: string | null = null;
       let fileContent: string | null = null;

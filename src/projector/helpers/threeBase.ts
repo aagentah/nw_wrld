@@ -1,28 +1,48 @@
-// src/helpers/threeBase.js
-
-/**
- * Important info: The `BaseThreeJsModule` class extends from `ModuleBase`.
- *
- * - `ModuleBase` provides essential lifecycle management for containers (HTML elements).
- *   It handles the initialization of the container, sets up transformation states (like position, scale, and opacity),
- *   and applies the necessary styles to prepare the element for manipulation.
- *
- * - In the constructor, it stores the reference to the container (`this.elem`) and initializes core properties such as
- *   `currentX`, `currentY`, `currentScale`, and `currentOpacity`. It also ensures that the element is hidden and has
- *   the correct opacity and transformation applied from the start. If an overlay image is required, this can be added
- *   later through the overlay method.
- *
- * - The `destroy` method ensures proper cleanup of the element by removing it from the DOM and any associated overlays.
- *   It also clears any references to the DOM element (`this.elem`), avoiding memory leaks and ensuring that the module
- *   is completely destroyed when no longer needed.
- */
-
-import ModuleBase from "./moduleBase"; // Ensure correct casing
-import * as THREE from "three"; // "three": "^0.159.0"
-import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import ModuleBase from "./moduleBase";
+import * as THREE from "three";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { animationManager } from "./animationManager";
 
 export class BaseThreeJsModule extends ModuleBase {
+  scene: THREE.Scene;
+  renderer: THREE.WebGLRenderer;
+  camera: THREE.PerspectiveCamera;
+  controls: OrbitControls;
+
+  cameraSettings: {
+    zoomLevel: number;
+    viewDirection: "front" | "top" | "right" | "back" | "bottom" | "left";
+    cameraAnimation: string | null;
+    cameraSpeed: number;
+  };
+
+  currentAnimation: string | null;
+  animationSpeed: number;
+  animationDirection: number;
+
+  isInitialized: boolean;
+  customAnimate: (() => void) | null;
+  randomRotateDirection: THREE.Vector2;
+
+  model: THREE.Object3D | null;
+  modelBoundingBox: THREE.Box3 | null;
+  modelCenter: THREE.Vector3 | null;
+  modelSize: number;
+
+  displacement: {
+    enabled: boolean;
+    amplitude: number;
+    vector: THREE.Vector3;
+  };
+
+  displacementTime: { t: number; speed: number };
+
+  lastDisplacementNow: number | null;
+
+  animationFrameId: number | null;
+  intervalId: ReturnType<typeof setInterval> | null;
+  destroyed: boolean;
+
   static methods = [
     ...ModuleBase.methods,
     {
@@ -34,6 +54,9 @@ export class BaseThreeJsModule extends ModuleBase {
           defaultVal: 75,
           type: "number",
           allowRandomization: true,
+          min: 0,
+          max: 100,
+          unit: "%",
         },
       ],
     },
@@ -86,15 +109,63 @@ export class BaseThreeJsModule extends ModuleBase {
           type: "number",
           min: 0.01,
           max: 10,
+          unit: "×",
         },
       ],
     },
+    
+    {
+      name: "displacementParams",
+      executeOnLoad: false,
+      options: [
+        {
+          name: "amplitude",
+          defaultVal: 1,
+          type: "number",
+          min: 0,
+          max: 50,
+          allowRandomization: true,
+        },
+        {
+          name: "oscTime",
+          defaultVal: 1.0,
+          type: "number",
+          min: 0.01,
+          max: 10,
+          allowRandomization: true,
+        },
+        {
+          name: "x",
+          defaultVal: 1,
+          type: "number",
+          min: -5,
+          max: 5,
+          allowRandomization: true,
+        },
+        {
+          name: "y",
+          defaultVal: 1,
+          type: "number",
+          min: -5,
+          max: 5,
+          allowRandomization: true,
+        },
+        {
+          name: "z",
+          defaultVal: 1,
+          type: "number",
+          min: -5,
+          max: 5,
+          allowRandomization: true,
+        },
+      ],
+    },
+
   ];
 
-  constructor(container) {
+  constructor(container: HTMLElement | null) {
     super(container);
 
-    // Bind methods early to ensure 'this' context is correct
     this.render = this.render.bind(this);
     this.animate = this.animate.bind(this);
     this.onWindowResize = this.onWindowResize.bind(this);
@@ -151,10 +222,28 @@ export class BaseThreeJsModule extends ModuleBase {
     // Initialize flag for animation loop
     this.isInitialized = false;
 
+    this.animationFrameId = null;
+    this.intervalId = null;
+    this.destroyed = false;
+
     // Placeholder for custom animation
     this.customAnimate = null;
 
     this.randomRotateDirection = new THREE.Vector2(1, 1); // Default directions
+
+    // Initialize Displacement parameter
+    this.displacement = {
+      enabled: false,
+      amplitude: 0,
+      vector: new THREE.Vector3(1, 1, 1),
+    };
+
+    this.displacementTime = {
+      t: 0,
+      speed: 1.0,
+    };
+
+    this.lastDisplacementNow = null;
   }
 
   /**
@@ -168,6 +257,7 @@ export class BaseThreeJsModule extends ModuleBase {
     }
 
     // Add the model to the scene
+    this.model = model;
     this.scene.add(model);
 
     // Compute bounding box, center, and size
@@ -231,6 +321,24 @@ export class BaseThreeJsModule extends ModuleBase {
     // Update camera animation if any
     this.updateCameraAnimation();
 
+    // Advance displacement-local time once per animation frame
+    const now = performance.now();
+    if (this.lastDisplacementNow === null) this.lastDisplacementNow = now;
+    const dt = (now - this.lastDisplacementNow) / 1000;
+    this.lastDisplacementNow = now;
+    const safeDt = Math.min(Math.max(dt, 0), 0.1);
+    this.displacementTime.t += safeDt * this.displacementTime.speed;
+
+    // Applies geometry displacement each frame for all geometries contained in the current model.
+    if (this.model) {
+      this.model.traverse((obj) => {
+        if (obj.geometry && obj.geometry.isBufferGeometry) {
+          this.saveBaseGeometry(obj.geometry);
+          this.applyDisplacement(obj.geometry);
+        }
+      });
+    }
+
     // Update controls (for damping and autoRotate)
     this.controls.update();
 
@@ -264,6 +372,98 @@ export class BaseThreeJsModule extends ModuleBase {
    */
   setCustomAnimate(callback) {
     this.customAnimate = callback;
+  }
+
+  /**
+   * Saves the original vertex positions of a geometry.
+   * This allows displacement to be applied non-destructively and reversed.
+   * @param {THREE.BufferGeometry} geometry - Geometry whose base positions should be stored.
+   */
+  saveBaseGeometry(geometry) {
+    const pos = geometry?.attributes?.position;
+    if (!pos) return;
+
+    if (pos.isInterleavedBufferAttribute) return;
+
+    if (!geometry.userData.basePositions || geometry.userData.basePositions.length !== pos.array.length) {
+      geometry.userData.basePositions = pos.array.slice();
+    }
+
+    if (
+      !geometry.userData.displacementNoise ||
+      geometry.userData.displacementNoise.length !== pos.count
+    ) {
+      const noise = new Float32Array(pos.count);
+      for (let i = 0; i < pos.count; i++) {
+        noise[i] = this.deterministicGaussian(i);
+      }
+      geometry.userData.displacementNoise = noise;
+    }
+  }
+
+  hash01(i) {
+    // deterministic 0..1 from an integer
+    const x = Math.sin(i * 127.1 + 311.7) * 43758.5453123;
+    return x - Math.floor(x);
+  }
+
+  deterministicGaussian(i) {
+    // approx gaussian by summing uniforms (deterministic)
+    // 6 uniforms -> roughly normal(0,1) after centering
+    let s = 0;
+    s += this.hash01(i * 1 + 17);
+    s += this.hash01(i * 2 + 29);
+    s += this.hash01(i * 3 + 43);
+    s += this.hash01(i * 4 + 61);
+    s += this.hash01(i * 5 + 83);
+    s += this.hash01(i * 6 + 101);
+    return s - 3.0;
+  }
+
+  /**
+   * Applies displacement to a geometry based on the current displacement state.
+   * Uses saved base positions to prevent cumulative distortion.
+   * @param {THREE.BufferGeometry} geometry - Geometry to displace.
+   */
+  applyDisplacement(geometry) {
+    if (!this.displacement.enabled) return;
+
+    const pos = geometry?.attributes?.position;
+    const base = geometry?.userData?.basePositions;
+    const noise = geometry?.userData?.displacementNoise;
+    if (!pos || !base) return;
+    if (pos.isInterleavedBufferAttribute) return;
+    if (!noise || noise.length !== pos.count) return;
+
+    const amp = Number(this.displacement.amplitude) || 0;
+    const v = this.displacement.vector;
+
+    // Convert time into a smooth 0..1 blend factor controlling interpolation between A and B
+    const blend =
+      (Math.sin(this.displacementTime.t) * 0.5) + 0.5;
+
+    // If amp is zero, restore exactly (same behavior as DisplaceGeometry)
+    if (!amp) {
+      pos.array.set(base);
+      pos.needsUpdate = true;
+      return;
+    }
+
+    for (let i = 0; i < pos.count; i++) {
+      const i3 = i * 3;
+
+      // per-vertex deterministic "gaussian-like" offset
+      const g = noise[i] * amp;
+
+      // replicate DisplaceGeometry’s “add same g to x,y,z” warp,
+      // but keep your vector as a directional scaler
+      // Interpolate between base (A) and displaced (B) positions using time-based blend
+      pos.array[i3]     = base[i3]     + (g * v.x) * blend;
+      pos.array[i3 + 1] = base[i3 + 1] + (g * v.y) * blend;
+      pos.array[i3 + 2] = base[i3 + 2] + (g * v.z) * blend;
+    }
+
+    pos.needsUpdate = true;
   }
 
   /**
@@ -516,6 +716,63 @@ export class BaseThreeJsModule extends ModuleBase {
   }
 
   /**
+   * Implements the 'displacementAmplitude' method.
+   * Controls the strength of geometry displacement.
+   * @param {Object} options - Configuration options.
+   */
+  displacementAmplitude({ amplitude = 0 } = {}) {
+    const amp = Number(amplitude) || 0;
+    this.displacement.amplitude = amp;
+    this.displacement.enabled = amp !== 0;
+
+    // Reset displacement time when effect is disabled to avoid phase jumps
+    if (amplitude === 0 && this.displacementTime) {
+      this.displacementTime.t = 0;
+    }
+  }
+
+  /**
+   * Controls per-axis amplitude multipliers for geometry displacement.
+   * These values scale the global amplitude independently on X, Y, and Z.
+   */
+  displacementVector({ x = 1, y = 1, z = 1 } = {}) {
+    this.displacement.vector.set(
+      Number(x) || 1,
+      Number(y) || 1,
+      Number(z) || 1
+    );
+  }
+
+  /**
+   * Controls global displacement amplitude, oscillation speed,
+   * and per-axis amplitude multipliers in one call.
+   */
+  displacementParams({ amplitude = 0, oscTime = 1.0, x = 1, y = 1, z = 1 } = {}) {
+    // amplitude + enable
+    const amp = Number(amplitude) || 0;
+    this.displacement.amplitude = amp;
+    this.displacement.enabled = amp !== 0;
+
+    // direction
+    this.displacement.vector.set(
+      Number(x) || 1,
+      Number(y) || 1,
+      Number(z) || 1
+    );
+
+    // oscillate speed (time factor)
+    if (this.displacementTime) {
+      const safeSpeed = Number(oscTime);
+      this.displacementTime.speed = Number.isFinite(safeSpeed) ? safeSpeed : 1.0;
+    }
+
+    // reset time when disabled
+    if (amp === 0 && this.displacementTime) {
+      this.displacementTime.t = 0;
+    }
+  }
+
+  /**
    * Updates the camera's zoom based on the provided percentage.
    * @param {number} percentage - The zoom level percentage.
    */
@@ -744,7 +1001,7 @@ export class BaseThreeJsModule extends ModuleBase {
         }
 
         // Nullify properties to help with garbage collection
-        for (let propName in object) {
+        for (const propName in object) {
           if (
             typeof object[propName] === "object" &&
             object[propName] !== null
@@ -752,7 +1009,7 @@ export class BaseThreeJsModule extends ModuleBase {
             object[propName] = null;
           }
         }
-      } catch (e) {
+      } catch {
         return;
       }
     };
@@ -809,7 +1066,7 @@ export class BaseThreeJsModule extends ModuleBase {
     super.destroy();
 
     // Special case for properties not covered by standard removal
-    for (let propName in this) {
+    for (const propName in this) {
       if (this[propName] && typeof this[propName] === "object") {
         disposeObject(this[propName]);
         this[propName] = null;

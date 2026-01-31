@@ -7,10 +7,10 @@ import { ModalHeader } from "../components/ModalHeader";
 import { Button } from "../components/Button";
 import { HelpIcon } from "../components/HelpIcon";
 import { Tooltip } from "../components/Tooltip";
-import { activeSetIdAtom, activeTrackIdAtom } from "../core/state.ts";
+import { activeSetIdAtom, activeTrackIdAtom } from "../core/state";
 import { updateActiveSet } from "../core/utils";
-import { getActiveSetTracks } from "../../shared/utils/setUtils.ts";
-import { HELP_TEXT } from "../../shared/helpText.ts";
+import { getActiveSetTracks } from "../../shared/utils/setUtils";
+import { HELP_TEXT } from "../../shared/helpText";
 
 type ModuleMethod = {
   name: string;

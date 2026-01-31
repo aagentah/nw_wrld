@@ -6,11 +6,6 @@ import {
   clearDashboardMessages,
   getDashboardMessages,
 } from "../fixtures/dashboardMessageBuffer";
-import {
-  installProjectorMessageBuffer,
-  clearProjectorMessages,
-  getProjectorMessages,
-} from "../fixtures/projectorMessageBuffer";
 
 test("dashboard shows perf indicator after sandbox starts emitting stats", async () => {
   const { dir, cleanup } = await createTestWorkspace();
@@ -49,9 +44,7 @@ test("dashboard shows perf indicator after sandbox starts emitting stats", async
     await waitForProjectReady(projector);
 
     await installDashboardMessageBuffer(dashboard);
-    await installProjectorMessageBuffer(projector);
     await clearDashboardMessages(dashboard);
-    await clearProjectorMessages(projector);
 
     await dashboard.getByText("SETS", { exact: true }).click();
     await dashboard.getByText("Create Set", { exact: true }).click();
@@ -84,6 +77,13 @@ test("dashboard shows perf indicator after sandbox starts emitting stats", async
     await expect(addTextModule).toBeVisible();
     await addTextModule.click();
     await expect(addTextModule).toBeHidden();
+
+    const ensureRes = await projector.evaluate(async () => {
+      const ensure = globalThis.nwWrldBridge?.sandbox?.ensure;
+      if (typeof ensure !== "function") return null;
+      return await ensure();
+    });
+    expect((ensureRes as { ok?: unknown } | null)?.ok).toBe(true);
 
     await expect
       .poll(
