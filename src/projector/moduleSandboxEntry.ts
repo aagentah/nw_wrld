@@ -563,6 +563,7 @@ const perfToken = typeof TOKEN === "string" ? TOKEN : null;
 if (perfToken) {
   let lastFrameAt = performance.now();
   let reportStartedAt = lastFrameAt;
+  let lastPostedAt = lastFrameAt;
   let frames = 0;
   let sumDt = 0;
   let longFrames = 0;
@@ -597,6 +598,7 @@ if (perfToken) {
         },
       });
       reportStartedAt = now;
+      lastPostedAt = now;
       frames = 0;
       sumDt = 0;
       longFrames = 0;
@@ -604,6 +606,25 @@ if (perfToken) {
 
     requestAnimationFrame(tick);
   };
+
+  setInterval(() => {
+    const now = performance.now();
+    if (now - lastPostedAt < REPORT_MS * 2) return;
+    if (frames > 0) return;
+    postToHost({
+      "__nwWrldSandboxPerf": true,
+      token: perfToken,
+      stats: {
+        fps: 0,
+        frameMsAvg: 0,
+        longFramePct: 0,
+        at: Date.now(),
+      },
+    });
+    lastFrameAt = now;
+    reportStartedAt = now;
+    lastPostedAt = now;
+  }, REPORT_MS);
 
   requestAnimationFrame(tick);
 }
