@@ -4,6 +4,7 @@ import { app, nativeImage, protocol } from "electron";
 
 import { state, srcDir } from "./state";
 import { isExistingDirectory, resolveWithinDir } from "./pathSafety";
+import { decodeUrlPathSegment, decodeUrlPathSegmentNoSeparators } from "../../shared/validation/urlPathValidation";
 
 export function registerProtocols() {
   try {
@@ -38,14 +39,13 @@ export function registerProtocols() {
         const pathname = u.pathname || "/";
         const raw = pathname.startsWith("/") ? pathname.slice(1) : pathname;
         const parts = raw.split("/").filter(Boolean);
-        const token = parts.length ? decodeURIComponent(parts[0]) : null;
-        const relPath =
-          parts.length > 1
-            ? parts
-                .slice(1)
-                .map((p) => decodeURIComponent(p))
-                .join("/")
-            : "";
+        const token = parts.length ? decodeUrlPathSegment(parts[0]) : null;
+        const relSegments =
+          parts.length > 1 ? parts.slice(1).map((p) => decodeUrlPathSegmentNoSeparators(p)) : [];
+        if (relSegments.some((s) => !s)) {
+          return callback({ error: -6 });
+        }
+        const relPath = relSegments.join("/");
 
         if (!token || !state.sandboxTokenToProjectDir.has(token)) {
           return callback({ error: -6 });

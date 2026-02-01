@@ -1,12 +1,6 @@
 import { find, isEqual } from "lodash";
 import { getMessaging } from "./bridge";
-
-type IpcMessage = {
-  type?: unknown;
-  props?: unknown;
-};
-
-type IpcProps = Record<string, unknown>;
+import { normalizeDashboardProjectorMessage } from "../../shared/validation/dashboardProjectorIpcValidation";
 
 type DashboardIpcContext = {
   introspectModule: (moduleId: unknown) => Promise<unknown>;
@@ -42,21 +36,13 @@ export function initDashboardIpc(this: DashboardIpcContext) {
   if (messaging && typeof messaging.onFromDashboard === "function") {
     messaging.onFromDashboard((event: unknown, data: unknown) => {
       try {
-        if (!data || typeof data !== "object") {
+        const msg = normalizeDashboardProjectorMessage(data);
+        if (!msg) {
           console.error("❌ [PROJECTOR-IPC] Invalid IPC message received:", data);
           return;
         }
-
-        const msg = data as IpcMessage;
         const type = msg.type;
-        const propsRaw = msg.props;
-        const props =
-          propsRaw && typeof propsRaw === "object" ? (propsRaw as IpcProps) : ({} as IpcProps);
-
-        if (!type) {
-          console.error("❌ [PROJECTOR-IPC] Message missing type field:", data);
-          return;
-        }
+        const props = msg.props;
 
         if (type === "module-introspect") {
           const moduleId = (props as { moduleId?: unknown } | null)?.moduleId || null;

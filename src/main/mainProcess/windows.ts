@@ -4,6 +4,7 @@ import * as path from "node:path";
 import InputManager from "../InputManager";
 import { DEFAULT_INPUT_CONFIG, DEFAULT_USER_DATA } from "../../shared/config/defaultConfig";
 import { sanitizeJsonForBridge } from "../../shared/validation/jsonBridgeValidation";
+import { normalizeDashboardProjectorMessage } from "../../shared/validation/dashboardProjectorIpcValidation";
 import { srcDir, state } from "./state";
 import { getProjectJsonDirForMain, startWorkspaceWatcher } from "./workspace";
 import { destroySandboxView, updateSandboxViewBounds } from "./sandbox";
@@ -202,13 +203,11 @@ export function loadConfig(projectDir: string | null): unknown {
 export function registerMessagingIpc({ ipcMain }: { ipcMain: Electron.IpcMain }): void {
   const messageChannels: Record<string, (data: unknown) => void> = {
     "dashboard-to-projector": (data) => {
+      const msg = normalizeDashboardProjectorMessage(data);
+      if (!msg) return;
       try {
-        if (
-          data &&
-          typeof data === "object" &&
-          (data as { type?: unknown }).type === "toggleAspectRatioStyle"
-        ) {
-          applyProjectorWindowAspectRatio((data as { props?: { name?: unknown } }).props?.name);
+        if (msg.type === "toggleAspectRatioStyle") {
+          applyProjectorWindowAspectRatio((msg.props as { name?: unknown } | null)?.name);
         }
       } catch {}
       const projector = state.projector1Window as {
@@ -224,7 +223,7 @@ export function registerMessagingIpc({ ipcMain }: { ipcMain: Electron.IpcMain })
         !projector.webContents.isDestroyed() &&
         typeof projector.webContents.send === "function"
       ) {
-        projector.webContents.send("from-dashboard", data);
+        projector.webContents.send("from-dashboard", msg);
       }
     },
     "projector-to-dashboard": (data) => {
