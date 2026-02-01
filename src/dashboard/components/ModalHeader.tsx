@@ -4,6 +4,7 @@ import { Button } from "./Button";
 type ModalHeaderProps = {
   title: ReactNode;
   onClose: () => void;
+  closeLabel?: ReactNode;
   isBottomAligned?: boolean;
   showClose?: boolean;
   uppercase?: boolean;
@@ -14,6 +15,7 @@ type ModalHeaderProps = {
 export const ModalHeader = ({
   title,
   onClose,
+  closeLabel = "CLOSE",
   isBottomAligned,
   showClose = true,
   uppercase = true,
@@ -35,8 +37,8 @@ export const ModalHeader = ({
           {title}
         </span>
         {showClose ? (
-          <Button onClick={onClose} type="secondary">
-            CLOSE
+          <Button as="button" onClick={onClose} type="secondary">
+            {closeLabel}
           </Button>
         ) : null}
       </div>

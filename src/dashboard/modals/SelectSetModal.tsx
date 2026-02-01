@@ -6,7 +6,7 @@ import { SortableList, arrayMove } from "../shared/SortableList";
 import { ModalHeader } from "../components/ModalHeader";
 import { ModalFooter } from "../components/ModalFooter";
 import { Button } from "../components/Button";
-import { RadioButton, Label } from "../components/FormInputs";
+import { RadioButton } from "../components/FormInputs";
 import { updateUserData } from "../core/utils";
 import { EditSetModal } from "./EditSetModal";
 import { ConfirmationModal } from "./ConfirmationModal";
@@ -189,30 +189,36 @@ export const SelectSetModal = ({
 
         <div className="px-6 flex flex-col gap-4">
           <div>
-            <Label>Select Active Set:</Label>
-            <SortableList
-              items={sets}
-              onReorder={(oldIndex: number, newIndex: number) => {
-                updateUserData(setUserData, (draft) => {
-                  const d = draft as unknown as UserData;
-                  d.sets = arrayMove(d.sets, oldIndex, newIndex);
-                });
-              }}
-            >
-              <div className="flex flex-col gap-2">
-                {sets.map((set) => (
-                  <SortableSetItem
-                    key={set.id}
-                    set={set}
-                    activeSetId={activeSetId}
-                    onSetSelect={handleSetSelect}
-                    onEdit={setEditingSetId}
-                    onDelete={handleDeleteSet}
-                    canDelete={sets.length > 1}
-                  />
-                ))}
+            <div className="pl-6">
+              <div className="opacity-50 text-[11px] mb-1 font-mono">Select Active Set:</div>
+            </div>
+            <div className="pl-6">
+              <div className="pl-6">
+                <SortableList
+                  items={sets}
+                  onReorder={(oldIndex: number, newIndex: number) => {
+                    updateUserData(setUserData, (draft) => {
+                      const d = draft as unknown as UserData;
+                      d.sets = arrayMove(d.sets, oldIndex, newIndex);
+                    });
+                  }}
+                >
+                  <div className="flex flex-col gap-2">
+                    {sets.map((set) => (
+                      <SortableSetItem
+                        key={set.id}
+                        set={set}
+                        activeSetId={activeSetId}
+                        onSetSelect={handleSetSelect}
+                        onEdit={setEditingSetId}
+                        onDelete={handleDeleteSet}
+                        canDelete={sets.length > 1}
+                      />
+                    ))}
+                  </div>
+                </SortableList>
               </div>
-            </SortableList>
+            </div>
           </div>
         </div>
 

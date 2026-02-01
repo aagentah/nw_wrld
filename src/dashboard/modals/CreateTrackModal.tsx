@@ -4,7 +4,7 @@ import { Modal } from "../shared/Modal";
 import { ModalHeader } from "../components/ModalHeader";
 import { ModalFooter } from "../components/ModalFooter";
 import { Button } from "../components/Button";
-import { TextInput, Select, Label, ValidationError } from "../components/FormInputs";
+import { TextInput, Select, ValidationError } from "../components/FormInputs";
 import { HelpIcon } from "../components/HelpIcon";
 import { userDataAtom, activeTrackIdAtom, activeSetIdAtom } from "../core/state";
 import { updateActiveSet } from "../core/utils";
@@ -125,71 +125,85 @@ export const CreateTrackModal = ({ isOpen, onClose, inputConfig, onAlert }: Crea
     <Modal isOpen={isOpen} onClose={onClose}>
       <ModalHeader title="CREATE TRACK" onClose={onClose} />
 
-      <div className="px-6 flex flex-col gap-4">
-        <div>
-          <Label>Track Name</Label>
-          <TextInput
-            value={trackName}
-            onChange={(e) => setTrackName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && canSubmit) {
-                handleSubmit();
-              }
-            }}
-            className="w-full"
-            placeholder="My Performance Track"
-            autoFocus
-          />
-          <ValidationError value={trackName} validation={validation} />
-        </div>
-
-        <div>
-          <div className="relative inline-block">
-            <Label>Track Number</Label>
-            <HelpIcon helpText={HELP_TEXT.trackSlot} />
+      <div className="px-6">
+        <div className="flex flex-col gap-8 font-mono">
+          <div>
+            <div className="pl-6">
+              <div className="opacity-50 text-[11px] mb-1">Track Name</div>
+            </div>
+            <div className="pl-6">
+              <div className="pl-6">
+                <TextInput
+                  value={trackName}
+                  onChange={(e) => setTrackName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && canSubmit) {
+                      handleSubmit();
+                    }
+                  }}
+                  className="w-full"
+                  placeholder="My Performance Track"
+                  autoFocus
+                />
+                <ValidationError value={trackName} validation={validation} />
+              </div>
+            </div>
           </div>
-          <Select
-            value={trackSlot}
-            onChange={(e) => setTrackSlot(parseInt(e.target.value, 10))}
-            className="w-full py-1 font-mono"
-          >
-            {availableSlots.length === 0 && (
-              <option value="">No tracks available (max {maxTrackSlots} tracks)</option>
-            )}
-            {Array.from({ length: maxTrackSlots }, (_, i) => i + 1).map((slot) => {
-              const rawTrigger = getTrigger(slot);
-              const trigger =
-                inputType === "midi"
-                  ? noteMatchMode === "pitchClass"
-                    ? (() => {
-                        const pc =
-                          typeof rawTrigger === "number"
-                            ? rawTrigger
-                            : parsePitchClass(rawTrigger);
-                        if (pc === null) return String(rawTrigger || "").trim();
-                        return pitchClassToName(pc) || String(pc);
-                      })()
-                    : String(rawTrigger || "").trim()
-                  : rawTrigger;
-              const takenBy = takenSlotToTrackName.get(slot) || "";
-              const isTaken = Boolean(takenBy);
-              return (
-                <option key={slot} value={slot} className="bg-[#101010]" disabled={isTaken}>
-                  Track {slot} ({trigger || "not configured"})
-                  {isTaken ? ` — used by ${takenBy}` : ""}
-                </option>
-              );
-            })}
-          </Select>
-          {inputType === "midi" && resolvedNoteName ? (
-            <div className="text-blue-500 text-[11px] mt-1 font-mono">
-              ✓ Will use trigger: <span className="text-blue-500">{resolvedNoteName}</span>
+
+          <div>
+            <div className="pl-6">
+              <div className="mb-1 text-[11px] relative inline-block">
+                <span className="opacity-50">Track Number</span>
+                <HelpIcon helpText={HELP_TEXT.trackSlot} />
+              </div>
             </div>
-          ) : resolvedTrigger ? (
-            <div className="text-blue-500 text-[11px] mt-1 font-mono">
-              ✓ Will use trigger: {resolvedTrigger}
+            <div className="pl-6">
+              <div className="pl-6">
+                <Select
+                  value={trackSlot}
+                  onChange={(e) => setTrackSlot(parseInt(e.target.value, 10))}
+                  className="w-full py-1 font-mono"
+                >
+                  {availableSlots.length === 0 && (
+                    <option value="">No tracks available (max {maxTrackSlots} tracks)</option>
+                  )}
+                  {Array.from({ length: maxTrackSlots }, (_, i) => i + 1).map((slot) => {
+                    const rawTrigger = getTrigger(slot);
+                    const trigger =
+                      inputType === "midi"
+                        ? noteMatchMode === "pitchClass"
+                          ? (() => {
+                              const pc =
+                                typeof rawTrigger === "number"
+                                  ? rawTrigger
+                                  : parsePitchClass(rawTrigger);
+                              if (pc === null) return String(rawTrigger || "").trim();
+                              return pitchClassToName(pc) || String(pc);
+                            })()
+                          : String(rawTrigger || "").trim()
+                        : rawTrigger;
+                    const takenBy = takenSlotToTrackName.get(slot) || "";
+                    const isTaken = Boolean(takenBy);
+                    return (
+                      <option key={slot} value={slot} className="bg-[#101010]" disabled={isTaken}>
+                        Track {slot} ({trigger || "not configured"})
+                        {isTaken ? ` — used by ${takenBy}` : ""}
+                      </option>
+                    );
+                  })}
+                </Select>
+                {inputType === "midi" && resolvedNoteName ? (
+                  <div className="text-blue-500 text-[11px] mt-1 font-mono">
+                    ✓ Will use trigger: <span className="text-blue-500">{resolvedNoteName}</span>
+                  </div>
+                ) : resolvedTrigger ? (
+                  <div className="text-blue-500 text-[11px] mt-1 font-mono">
+                    ✓ Will use trigger: {resolvedTrigger}
+                  </div>
+                ) : null}
+              </div>
             </div>
-          ) : null}
+          </div>
         </div>
       </div>
 

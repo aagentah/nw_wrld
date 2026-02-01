@@ -4,7 +4,7 @@ import { Modal } from "../shared/Modal";
 import { ModalHeader } from "../components/ModalHeader";
 import { ModalFooter } from "../components/ModalFooter";
 import { Button } from "../components/Button";
-import { TextInput, Label, ValidationError } from "../components/FormInputs";
+import { TextInput, ValidationError } from "../components/FormInputs";
 import { useNameValidation } from "../core/hooks/useNameValidation";
 import { userDataAtom, activeTrackIdAtom, activeSetIdAtom } from "../core/state";
 import { updateUserData } from "../core/utils";
@@ -74,22 +74,30 @@ export const CreateSetModal = ({ isOpen, onClose, onAlert }: CreateSetModalProps
     <Modal isOpen={isOpen} onClose={onClose}>
       <ModalHeader title="CREATE SET" onClose={onClose} />
 
-      <div className="flex flex-col gap-4 p-6">
-        <div>
-          <Label htmlFor="set-name">Set Name</Label>
-          <TextInput
-            id="set-name"
-            value={setName}
-            onChange={(e) => setSetName(e.target.value)}
-            placeholder="Enter set name"
-            autoFocus
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && canSubmit) {
-                handleSubmit();
-              }
-            }}
-          />
-          <ValidationError value={setName} validation={validation} />
+      <div className="px-6">
+        <div className="flex flex-col gap-2 font-mono">
+          <div>
+            <div className="pl-6">
+              <div className="opacity-50 text-[11px] mb-1">Set Name</div>
+            </div>
+            <div className="pl-6">
+              <div className="pl-6">
+                <TextInput
+                  id="set-name"
+                  value={setName}
+                  onChange={(e) => setSetName(e.target.value)}
+                  placeholder="Enter set name"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && canSubmit) {
+                      handleSubmit();
+                    }
+                  }}
+                />
+                <ValidationError value={setName} validation={validation} />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 

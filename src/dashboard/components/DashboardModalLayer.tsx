@@ -252,6 +252,10 @@ export const DashboardModalLayer = ({
       <InputMappingsModal
         isOpen={isInputMappingsModalOpen}
         onClose={() => setIsInputMappingsModalOpen(false)}
+        onBackToSettings={() => {
+          setIsInputMappingsModalOpen(false);
+          setIsSettingsModalOpen(true);
+        }}
       />
       <ReleaseNotesModal isOpen={isReleaseNotesOpen} onClose={() => setIsReleaseNotesOpen(false)} />
       <AddModuleModal
