@@ -5,10 +5,10 @@ import * as path from "node:path";
 import { createTestWorkspace } from "../fixtures/testWorkspace";
 import { launchNwWrld } from "../fixtures/launchElectron";
 import {
-  installProjectorMessageBuffer,
-  clearProjectorMessages,
-  getProjectorMessages,
-} from "../fixtures/projectorMessageBuffer";
+  installDashboardMessageBuffer,
+  clearDashboardMessages,
+  getDashboardMessages,
+} from "../fixtures/dashboardMessageBuffer";
 
 const waitForProjectReady = async (page: import("playwright").Page) => {
   await page.waitForLoadState("domcontentloaded");
@@ -19,11 +19,15 @@ const waitForProjectReady = async (page: import("playwright").Page) => {
   );
 };
 
-test("workspace watcher: module change triggers dashboard -> projector refresh-projector", async () => {
+test("workspace watcher: module change re-initializes active track (no projector page reload)", async () => {
   const { dir, cleanup } = await createTestWorkspace();
   const app = await launchNwWrld({ projectDir: dir });
 
   try {
+    const suffix = String(Date.now());
+    const setName = `E2E Set ${suffix}`;
+    const trackName = `E2E Track ${suffix}`;
+
     await app.firstWindow();
 
     let windows = app.windows();
@@ -44,29 +48,56 @@ test("workspace watcher: module change triggers dashboard -> projector refresh-p
 
     await expect(dashboard.getByText("SETS", { exact: true })).toBeVisible({ timeout: 15_000 });
 
+    await installDashboardMessageBuffer(dashboard);
+
+    await dashboard.getByText("SETS", { exact: true }).click();
+    await dashboard.getByText("Create Set", { exact: true }).click();
+    await dashboard.locator("#set-name").fill(setName);
+    await dashboard.getByText("Create Set", { exact: true }).click();
+    await expect(dashboard.locator("#set-name")).toBeHidden();
+
+    await dashboard.getByText("TRACKS", { exact: true }).click();
+    await dashboard.getByText("Create Track", { exact: true }).click();
+    await dashboard.locator('input[placeholder="My Performance Track"]').fill(trackName);
+    await dashboard.getByText("Create Track", { exact: true }).click();
+    await expect(dashboard.locator('input[placeholder="My Performance Track"]')).toBeHidden();
+
+    await dashboard.getByText("TRACKS", { exact: true }).click();
+    const trackLabel = dashboard.locator("label").filter({ hasText: trackName }).first();
+    await expect(trackLabel).toBeVisible();
+    await trackLabel.click();
+    {
+      const tracksModal = dashboard
+        .locator("div.fixed")
+        .filter({ hasText: "Select Active Track:" })
+        .first();
+      if (await tracksModal.isVisible()) {
+        await tracksModal.getByText("CLOSE", { exact: true }).click();
+      }
+      await expect(dashboard.locator("text=Select Active Track:")).toBeHidden();
+    }
+
+    await dashboard.getByTestId("track-add-module").click();
+    const addTextModule = dashboard.locator(
+      `[data-testid="add-module-to-track"][data-module-name="Text"]`
+    );
+    await expect(addTextModule).toBeVisible({ timeout: 15_000 });
+    await addTextModule.click();
+    await expect(addTextModule).toBeHidden();
+
     await expect
       .poll(
         async () => {
-          await installProjectorMessageBuffer(projector);
-          return await projector.evaluate(() => {
-            const anyGlobal = globalThis as unknown as {
-              __nwWrldE2EProjector?: { installed?: unknown };
-            };
-            return anyGlobal.__nwWrldE2EProjector?.installed === true;
-          });
+          const msgs = await getDashboardMessages(dashboard);
+          return msgs.some(
+            (m) => m.type === "workspace-modules-loaded" && m.props?.trackName === trackName
+          );
         },
-        { timeout: 15_000 }
+        { timeout: 20_000 }
       )
       .toBe(true);
 
-    await clearProjectorMessages(projector);
-
-    await dashboard.getByTestId("track-add-module").click();
-    await expect(dashboard.getByTestId("add-module-to-track").first()).toBeVisible({
-      timeout: 15_000,
-    });
-
-    await clearProjectorMessages(projector);
+    await clearDashboardMessages(dashboard);
 
     const moduleId = `E2EHotRefresh${String(Date.now())}`;
     const modulePath = path.join(dir, "modules", `${moduleId}.js`);
@@ -96,8 +127,10 @@ export default ${moduleId};
     await expect
       .poll(
         async () => {
-          const msgs = await getProjectorMessages(projector);
-          return msgs.some((m) => m.type === "refresh-projector");
+          const msgs = await getDashboardMessages(dashboard);
+          return msgs.some(
+            (m) => m.type === "workspace-modules-loaded" && m.props?.trackName === trackName
+          );
         },
         { timeout: 20_000 }
       )

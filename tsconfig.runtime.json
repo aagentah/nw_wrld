@@ -72,6 +72,7 @@
     "src/projector/helpers/logger.ts",
     "src/projector/helpers/animationManager.ts",
     "src/projector/internal/bridge.ts",
+    "src/projector/internal/workspaceEvents.ts",
     "src/projector/internal/workspaceModules.ts",
     "src/projector/internal/sandbox/TrackSandboxHost.ts",
     "src/projector/internal/introspection.ts"
