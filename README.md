@@ -117,7 +117,7 @@ Projects are completely portable - copy the folder to share with others, work ac
 
 ### Lost Project?
 
-If your project folder is deleted, moved, or disconnected (e.g., external drive unplugged), nw_wrld will detect the issue and prompt you to reselect or choose a different project.
+If your project folder is deleted, moved, or disconnected, nw_wrld will prompt you to reselect it (see [Getting Started](GETTING_STARTED.md#if-your-project-folder-goes-missing)).
 
 ---
 
@@ -151,31 +151,13 @@ Signal Sources:
 └──────────────┘
 ```
 
-### Dashboard Window
-
-- Create tracks and add visual modules
-- Program patterns with the 16-step sequencer
-- Configure module methods and parameters
-- (Optional) Connect external MIDI/OSC sources
-
-### Projector Window
-
-- Displays active visual modules
-- Responds to sequencer or external triggers in real-time
-- Can be full-screened on external displays
+Dashboard is where you compose and map triggers; Projector is where visuals render and respond.
 
 ---
 
 ## Your First Workflow (Sequencer Mode)
 
 Follow the [Getting Started Guide](GETTING_STARTED.md) for detailed step-by-step instructions.
-
-**Quick overview:**
-
-1. Create a track and add visual modules
-2. Add channels and program patterns in the 16-step grid
-3. Assign methods to channels (color, scale, rotate, etc.)
-4. Click PLAY to see your patterns trigger visuals in real-time
 
 The built-in sequencer is perfect for testing modules and creating standalone audiovisual pieces without external hardware.
 
@@ -185,35 +167,7 @@ The built-in sequencer is perfect for testing modules and creating standalone au
 
 For live performance with external hardware, you can connect MIDI controllers or DAWs.
 
-### Optional Prerequisites
-
-- **A DAW** that outputs MIDI (Ableton Live, FL Studio, Logic Pro, etc.)
-- **MIDI routing** setup:
-  - **Mac**: IAC Driver (built-in) - [Setup Guide](https://help.ableton.com/hc/en-us/articles/209774225-Using-virtual-MIDI-buses)
-  - **Windows**: loopMIDI or similar virtual MIDI port
-
-### Step 1: Configure MIDI Routing
-
-**Mac:**
-
-1. Open **Audio MIDI Setup** → Show MIDI Studio
-2. Enable **IAC Driver**
-
-**Windows:**
-
-1. Install [loopMIDI](https://www.tobias-erichsen.de/software/loopmidi.html)
-
-**In Ableton:**
-
-1. Preferences → MIDI
-2. Enable your virtual port for Track/Remote output
-
-### Step 2: Switch Mode
-
-1. Dashboard → **Settings** → **Signal Source**
-2. Select **External (MIDI/OSC)**
-3. Configure MIDI device or OSC port
-4. Go to **Settings → Configure Mappings** to customize trigger mappings (MIDI Pitch Class or MIDI Exact Note / OSC addresses)
+To set up MIDI routing and switch to external mode, see [Getting Started](GETTING_STARTED.md#advanced-connect-external-midiosc).
 
 ### DAW Quickstart (Ableton / FL Studio / Logic / etc.)
 
@@ -234,13 +188,6 @@ Most DAW setups send notes on **MIDI Channel 1** unless you explicitly route or 
     - **Method Triggers MIDI Channel**: `1`
     - **Track Select MIDI Channel**: `2`
 
-### Step 3: Perform Live
-
-1. Play your DAW
-2. Track activation note loads modules
-3. MIDI Pitch Class or Exact Note triggers mapped methods
-4. Real-time audiovisual performance
-
 ---
 
 ## Creating Visual Modules
@@ -249,10 +196,7 @@ Modules are JavaScript files in your **project's `modules/` folder**. Edit them 
 
 ### Quick Module Creation
 
-1. Navigate to your project folder
-2. Open the `modules/` directory
-3. Create or edit a `.js` file
-4. Save → nw_wrld detects changes and reloads
+Create or edit a `.js` file in your project’s `modules/` folder and save — nw_wrld hot-reloads it automatically.
 
 ### Module File Contract (Docblock + Default Export)
 
@@ -277,10 +221,7 @@ Allowed `@nwWrld imports`:
 
 class MyModule extends ModuleBase {
   async init() {
-    // Load images from project assets/
     const imgUrl = assetUrl("images/blueprint.png");
-
-    // Load JSON data from project assets/
     const data = await loadJson("json/meteor.json");
   }
 }
