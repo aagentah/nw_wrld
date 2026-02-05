@@ -13,6 +13,8 @@ type WebContentsWithId = { id?: unknown };
 type SenderEvent = { sender?: WebContentsWithId };
 type Jsonish = string | number | boolean | null | undefined | object;
 
+const isTestHeadless = process.env.NW_WRLD_TEST_HEADLESS === "1";
+
 const getProjectorAspectRatioValue = (aspectRatioId: unknown): number => {
   const id = String(aspectRatioId || "").trim();
   if (!id || id === "default" || id === "landscape") return 0;
@@ -302,7 +304,9 @@ export function createWindow(projectDir: string | null): void {
     const win = state.projector1Window as { once?: unknown; show?: unknown };
     if (typeof win.once === "function" && typeof win.show === "function") {
       win.once("ready-to-show", () => {
-        (state.projector1Window as { show: () => void }).show();
+        if (!isTestHeadless) {
+          (state.projector1Window as { show: () => void }).show();
+        }
       });
     }
   } catch {}
@@ -334,13 +338,16 @@ export function createWindow(projectDir: string | null): void {
     height: screenHeight,
     title: "nw_wrld",
     show: false,
+    paintWhenInitiallyHidden: true,
   });
 
   try {
     const win = state.dashboardWindow as { once?: unknown; show?: unknown };
     if (typeof win.once === "function" && typeof win.show === "function") {
       win.once("ready-to-show", () => {
-        (state.dashboardWindow as { show: () => void }).show();
+        if (!isTestHeadless) {
+          (state.dashboardWindow as { show: () => void }).show();
+        }
       });
     }
   } catch {}
