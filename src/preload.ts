@@ -123,6 +123,12 @@ const nwWrldBridge = {
       ipcRenderer.on("workspace:lostSync", wrapped);
       return () => ipcRenderer.removeListener("workspace:lostSync", wrapped);
     },
+    onMenuOpenSettings: (handler: IpcHandler) => {
+      if (typeof handler !== "function") return undefined;
+      const wrapped = (event: IpcRendererEvent, data: unknown) => handler(event, data);
+      ipcRenderer.on("menu:openSettings", wrapped);
+      return () => ipcRenderer.removeListener("menu:openSettings", wrapped);
+    },
     configureInput: (payload: unknown) => ipcRenderer.invoke("input:configure", payload),
     getMidiDevices: () => ipcRenderer.invoke("input:get-midi-devices"),
     emitAudioBand: (payload: unknown) => ipcRenderer.invoke("input:audio:emitBand", payload),
