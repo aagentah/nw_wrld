@@ -105,7 +105,7 @@ function normalizeTrack(value: Jsonish): Jsonish | null {
     out.channelMappings = {};
   }
 
-  const cm = out.channelMappings as Record<string, Jsonish>;
+  let cm = out.channelMappings as Record<string, Jsonish>;
   const valid = new Set<number>();
   for (const k of Object.keys(cm)) {
     const n = parseInt(k, 10);
@@ -117,6 +117,8 @@ function normalizeTrack(value: Jsonish): Jsonish | null {
 
   if (valid.size < 3) {
     ensure();
+    cm = { ...cm };
+    out.channelMappings = cm;
     for (let slot = 1; slot <= 12 && valid.size < 3; slot++) {
       if (valid.has(slot)) continue;
       const key = String(slot);
@@ -162,7 +164,7 @@ function normalizeTrack(value: Jsonish): Jsonish | null {
     },
   };
 
-  const existingSignal = signalObj ? (signalObj as unknown) : null;
+  const _existingSignal = signalObj ? (signalObj as unknown) : null;
   const needsSignal =
     !signalObj ||
     !isPlainObject(rawAudio) ||
@@ -257,7 +259,18 @@ export function sanitizeUserDataForBridge(value: Jsonish, defaultValue: Jsonish)
     out.config = isPlainObject(fallback.config) ? fallback.config : {};
   }
 
-  const cfg = out.config as Record<string, Jsonish>;
+  let cfg = out.config as Record<string, Jsonish>;
+  const ensureConfig = () => {
+    const originalCfg =
+      value && typeof value === "object"
+        ? ((value as Record<string, Jsonish>).config as unknown)
+        : null;
+    if (cfg === originalCfg) {
+      ensure();
+      cfg = { ...cfg };
+      out.config = cfg;
+    }
+  };
   const fallbackCfg = isPlainObject(fallback.config)
     ? (fallback.config as Record<string, Jsonish>)
     : {};
@@ -266,16 +279,19 @@ export function sanitizeUserDataForBridge(value: Jsonish, defaultValue: Jsonish)
     ? (fallbackCfg.trackMappings as Record<string, Jsonish>)
     : {};
   if (!isPlainObject(cfg.trackMappings)) {
+    ensureConfig();
     ensure();
     cfg.trackMappings = fallbackTrackMappings;
   } else {
     const tm = cfg.trackMappings as Record<string, Jsonish>;
     if (!isPlainObject(tm.audio)) {
+      ensureConfig();
       ensure();
       cfg.trackMappings = { ...tm, audio: {} };
     }
     if (!isPlainObject((cfg.trackMappings as Record<string, Jsonish>).file)) {
       const tm2 = cfg.trackMappings as Record<string, Jsonish>;
+      ensureConfig();
       ensure();
       cfg.trackMappings = { ...tm2, file: {} };
     }
@@ -285,6 +301,7 @@ export function sanitizeUserDataForBridge(value: Jsonish, defaultValue: Jsonish)
     ? (fallbackCfg.channelMappings as Record<string, Jsonish>)
     : {};
   if (!isPlainObject(cfg.channelMappings)) {
+    ensureConfig();
     ensure();
     cfg.channelMappings = fallbackChannelMappings;
   } else {
@@ -293,6 +310,7 @@ export function sanitizeUserDataForBridge(value: Jsonish, defaultValue: Jsonish)
       const fallbackAudio = isPlainObject(fallbackChannelMappings.audio)
         ? (fallbackChannelMappings.audio as Record<string, Jsonish>)
         : {};
+      ensureConfig();
       ensure();
       cfg.channelMappings = { ...cm, audio: fallbackAudio };
     }
@@ -301,6 +319,7 @@ export function sanitizeUserDataForBridge(value: Jsonish, defaultValue: Jsonish)
       const fallbackFile = isPlainObject(fallbackChannelMappings.file)
         ? (fallbackChannelMappings.file as Record<string, Jsonish>)
         : {};
+      ensureConfig();
       ensure();
       cfg.channelMappings = { ...cm2, file: fallbackFile };
     }

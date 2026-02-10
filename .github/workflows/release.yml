@@ -160,8 +160,7 @@ jobs:
               with p.open("rb") as f:
                   for chunk in iter(lambda: f.read(1024 * 1024), b""):
                       h.update(chunk)
-              rel = p.relative_to(artifacts_dir).as_posix()
-              lines.append(f"{h.hexdigest()}  {rel}")
+              lines.append(f"{h.hexdigest()}  {p.name}")
 
           pathlib.Path("SHA256SUMS").write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
           print(pathlib.Path("SHA256SUMS").read_text(encoding="utf-8"))

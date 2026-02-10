@@ -91,6 +91,36 @@ test("userData.json sanitize ensures each track has at least 3 channelMappings k
   assert.ok(keys.includes("3"));
 });
 
+test("userData.json sanitize does not mutate input when filling missing channelMappings keys", () => {
+  const defaultValue = { config: {}, sets: [] };
+  const input = {
+    config: {},
+    sets: [
+      {
+        id: "set_1",
+        name: "Set 1",
+        tracks: [
+          {
+            id: 1,
+            name: "T",
+            modules: [],
+            modulesData: {},
+            channelMappings: { 1: 1 },
+          },
+        ],
+      },
+    ],
+  };
+  const before = JSON.parse(JSON.stringify(input));
+  const res = sanitizeJsonForBridge("userData.json", input, defaultValue);
+  assert.deepEqual(input, before);
+  const cm = res.sets[0].tracks[0].channelMappings;
+  const keys = Object.keys(cm);
+  assert.ok(keys.includes("1"));
+  assert.ok(keys.includes("2"));
+  assert.ok(keys.includes("3"));
+});
+
 test("userData.json sanitize ensures each track has signal.audio and signal.file defaults", () => {
   const defaultValue = { config: {}, sets: [] };
   const input = {

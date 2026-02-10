@@ -113,7 +113,7 @@ export class BaseThreeJsModule extends ModuleBase {
         },
       ],
     },
-    
+
     {
       name: "displacementParams",
       executeOnLoad: false,
@@ -160,7 +160,6 @@ export class BaseThreeJsModule extends ModuleBase {
         },
       ],
     },
-
   ];
 
   constructor(container: HTMLElement | null) {
@@ -385,7 +384,10 @@ export class BaseThreeJsModule extends ModuleBase {
 
     if (pos.isInterleavedBufferAttribute) return;
 
-    if (!geometry.userData.basePositions || geometry.userData.basePositions.length !== pos.array.length) {
+    if (
+      !geometry.userData.basePositions ||
+      geometry.userData.basePositions.length !== pos.array.length
+    ) {
       geometry.userData.basePositions = pos.array.slice();
     }
 
@@ -439,8 +441,7 @@ export class BaseThreeJsModule extends ModuleBase {
     const v = this.displacement.vector;
 
     // Convert time into a smooth 0..1 blend factor controlling interpolation between A and B
-    const blend =
-      (Math.sin(this.displacementTime.t) * 0.5) + 0.5;
+    const blend = Math.sin(this.displacementTime.t) * 0.5 + 0.5;
 
     // If amp is zero, restore exactly (same behavior as DisplaceGeometry)
     if (!amp) {
@@ -458,9 +459,9 @@ export class BaseThreeJsModule extends ModuleBase {
       // replicate DisplaceGeometry’s “add same g to x,y,z” warp,
       // but keep your vector as a directional scaler
       // Interpolate between base (A) and displaced (B) positions using time-based blend
-      pos.array[i3]     = base[i3]     + (g * v.x) * blend;
-      pos.array[i3 + 1] = base[i3 + 1] + (g * v.y) * blend;
-      pos.array[i3 + 2] = base[i3 + 2] + (g * v.z) * blend;
+      pos.array[i3] = base[i3] + g * v.x * blend;
+      pos.array[i3 + 1] = base[i3 + 1] + g * v.y * blend;
+      pos.array[i3 + 2] = base[i3 + 2] + g * v.z * blend;
     }
 
     pos.needsUpdate = true;
@@ -519,12 +520,8 @@ export class BaseThreeJsModule extends ModuleBase {
       case "rotate-random":
         // Apply rotation based on random directions
         this.orbitCamera(
-          this.randomRotateDirection.x *
-            this.animationSpeed *
-            rotateDeltaMultiplier,
-          this.randomRotateDirection.y *
-            this.animationSpeed *
-            rotateDeltaMultiplier
+          this.randomRotateDirection.x * this.animationSpeed * rotateDeltaMultiplier,
+          this.randomRotateDirection.y * this.animationSpeed * rotateDeltaMultiplier
         );
         break;
       default:
@@ -549,10 +546,7 @@ export class BaseThreeJsModule extends ModuleBase {
     const spherical = new THREE.Spherical();
 
     // Calculate current distance from the target
-    const offset = new THREE.Vector3().subVectors(
-      this.camera.position,
-      this.controls.target
-    );
+    const offset = new THREE.Vector3().subVectors(this.camera.position, this.controls.target);
     spherical.setFromVector3(offset);
 
     // Generate random theta (azimuthal angle) and phi (polar angle)
@@ -560,9 +554,7 @@ export class BaseThreeJsModule extends ModuleBase {
     spherical.phi = THREE.MathUtils.randFloat(0.1, Math.PI - 0.1); // Avoid poles for better view
 
     // Convert spherical coordinates back to Cartesian coordinates
-    const newPosition = new THREE.Vector3()
-      .setFromSpherical(spherical)
-      .add(this.controls.target);
+    const newPosition = new THREE.Vector3().setFromSpherical(spherical).add(this.controls.target);
 
     // Update camera position and look at the target
     this.camera.position.copy(newPosition);
@@ -663,9 +655,7 @@ export class BaseThreeJsModule extends ModuleBase {
 
     const validDirections = ["front", "top", "right", "back", "bottom", "left"];
     if (!validDirections.includes(viewDirection)) {
-      console.warn(
-        `Invalid view direction: ${viewDirection}. Using default 'front'.`
-      );
+      console.warn(`Invalid view direction: ${viewDirection}. Using default 'front'.`);
       this.cameraSettings.viewDirection = "front";
     } else {
       this.cameraSettings.viewDirection = viewDirection;
@@ -685,10 +675,7 @@ export class BaseThreeJsModule extends ModuleBase {
 
     this.cameraSettings.cameraAnimation = cameraAnimation;
 
-    this.startCameraAnimation(
-      this.cameraSettings.cameraAnimation,
-      this.cameraSettings.cameraSpeed
-    );
+    this.startCameraAnimation(this.cameraSettings.cameraAnimation, this.cameraSettings.cameraSpeed);
   }
 
   /**
@@ -700,18 +687,11 @@ export class BaseThreeJsModule extends ModuleBase {
 
     const { cameraSpeed = this.cameraSettings.cameraSpeed } = options;
 
-    this.cameraSettings.cameraSpeed = THREE.MathUtils.clamp(
-      cameraSpeed,
-      0.01,
-      10
-    );
+    this.cameraSettings.cameraSpeed = THREE.MathUtils.clamp(cameraSpeed, 0.01, 10);
     this.animationSpeed = this.cameraSettings.cameraSpeed;
 
     if (this.currentAnimation) {
-      this.startCameraAnimation(
-        this.currentAnimation,
-        this.cameraSettings.cameraSpeed
-      );
+      this.startCameraAnimation(this.currentAnimation, this.cameraSettings.cameraSpeed);
     }
   }
 
@@ -736,11 +716,12 @@ export class BaseThreeJsModule extends ModuleBase {
    * These values scale the global amplitude independently on X, Y, and Z.
    */
   displacementVector({ x = 1, y = 1, z = 1 } = {}) {
-    this.displacement.vector.set(
-      Number(x) || 1,
-      Number(y) || 1,
-      Number(z) || 1
-    );
+    const parseAxis = (v: unknown, fallback: number) => {
+      if (v === "" || v == null) return fallback;
+      const n = Number(v);
+      return Number.isFinite(n) ? n : fallback;
+    };
+    this.displacement.vector.set(parseAxis(x, 1), parseAxis(y, 1), parseAxis(z, 1));
   }
 
   /**
@@ -754,11 +735,12 @@ export class BaseThreeJsModule extends ModuleBase {
     this.displacement.enabled = amp !== 0;
 
     // direction
-    this.displacement.vector.set(
-      Number(x) || 1,
-      Number(y) || 1,
-      Number(z) || 1
-    );
+    const parseAxis = (v: unknown, fallback: number) => {
+      if (v === "" || v == null) return fallback;
+      const n = Number(v);
+      return Number.isFinite(n) ? n : fallback;
+    };
+    this.displacement.vector.set(parseAxis(x, 1), parseAxis(y, 1), parseAxis(z, 1));
 
     // oscillate speed (time factor)
     if (this.displacementTime) {
@@ -795,19 +777,13 @@ export class BaseThreeJsModule extends ModuleBase {
 
     const clampedPercentage = THREE.MathUtils.clamp(percentage, 0, 100);
 
-    const targetDistance = THREE.MathUtils.lerp(
-      minDistance,
-      maxDistance,
-      clampedPercentage / 100
-    );
+    const targetDistance = THREE.MathUtils.lerp(minDistance, maxDistance, clampedPercentage / 100);
 
     const direction = new THREE.Vector3()
       .subVectors(this.camera.position, this.controls.target)
       .normalize();
 
-    const newPosition = this.controls.target
-      .clone()
-      .add(direction.multiplyScalar(targetDistance));
+    const newPosition = this.controls.target.clone().add(direction.multiplyScalar(targetDistance));
 
     this.camera.position.copy(newPosition);
 
@@ -836,11 +812,7 @@ export class BaseThreeJsModule extends ModuleBase {
     const zoomLevelPercentage = this.cameraSettings.zoomLevel / 100;
     const minDistance = this.modelSize * 0.001; // Minimum distance when zoomLevel is 0
     const maxDistance = this.modelSize * 2.5; // Maximum distance when zoomLevel is 100
-    const distance = THREE.MathUtils.lerp(
-      minDistance,
-      maxDistance,
-      zoomLevelPercentage
-    );
+    const distance = THREE.MathUtils.lerp(minDistance, maxDistance, zoomLevelPercentage);
 
     switch (direction) {
       case "front":
@@ -950,9 +922,7 @@ export class BaseThreeJsModule extends ModuleBase {
     const EPS = 0.000001;
     spherical.phi = Math.max(EPS, Math.min(Math.PI - EPS, spherical.phi));
 
-    const newPosition = new THREE.Vector3()
-      .setFromSpherical(spherical)
-      .add(this.controls.target);
+    const newPosition = new THREE.Vector3().setFromSpherical(spherical).add(this.controls.target);
     this.camera.position.copy(newPosition);
     this.camera.lookAt(this.controls.target);
   }
@@ -1002,10 +972,7 @@ export class BaseThreeJsModule extends ModuleBase {
 
         // Nullify properties to help with garbage collection
         for (const propName in object) {
-          if (
-            typeof object[propName] === "object" &&
-            object[propName] !== null
-          ) {
+          if (typeof object[propName] === "object" && object[propName] !== null) {
             object[propName] = null;
           }
         }
@@ -1048,9 +1015,8 @@ export class BaseThreeJsModule extends ModuleBase {
     // Dispose of the renderer and its DOM element
     if (this.renderer) {
       if (this.renderer.domElement) {
-        this.renderer.domElement.parentNode.removeChild(
-          this.renderer.domElement
-        );
+        const parent = this.renderer.domElement.parentNode;
+        if (parent) parent.removeChild(this.renderer.domElement);
       }
       this.renderer.dispose();
       this.renderer = null;

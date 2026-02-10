@@ -149,6 +149,14 @@ export function useDashboardFileAudio({
         analyser.disconnect();
       } catch {}
     }
+
+    const ctx = audioContextRef.current;
+    audioContextRef.current = null;
+    if (ctx) {
+      try {
+        await ctx.close();
+      } catch {}
+    }
     armedRef.current = { low: true, medium: true, high: true };
     peakWhileDisarmedRef.current = { low: 0, medium: 0, high: 0 };
     lastEmitMsRef.current = { low: 0, medium: 0, high: 0 };
@@ -452,6 +460,7 @@ export function useDashboardFileAudio({
 
     const load = async () => {
       await stop();
+      const runId = runIdRef.current;
       setState({
         status: "loading",
         levels: lastLevelsRef.current,
@@ -475,6 +484,7 @@ export function useDashboardFileAudio({
           return;
         }
         const ab = await readFn(assetRelPath);
+        if (runId !== runIdRef.current) return;
         if (!(ab instanceof ArrayBuffer)) {
           setState({
             status: "error",
@@ -502,6 +512,7 @@ export function useDashboardFileAudio({
         const ctx = audioContextRef.current || new (Ctx as unknown as new () => AudioContext)();
         audioContextRef.current = ctx;
         const audioBuffer = await ctx.decodeAudioData(ab.slice(0));
+        if (runId !== runIdRef.current) return;
         bufferRef.current = audioBuffer;
         setState({
           status: "ready",
@@ -511,6 +522,7 @@ export function useDashboardFileAudio({
           durationSec: audioBuffer.duration,
         });
       } catch (e) {
+        if (runId !== runIdRef.current) return;
         const message = e instanceof Error ? e.message : String(e);
         setState({ status: "error", message, levels: zero, peaksDb: negInf, assetRelPath });
       }

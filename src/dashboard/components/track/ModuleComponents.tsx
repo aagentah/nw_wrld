@@ -415,13 +415,14 @@ export const NoteSelector = memo(
           (m) => isPlainObject(m) && String((m as Record<string, unknown>).id ?? "") === instanceId
         );
         if (!module || !isPlainObject(module)) return;
-        if (isDisabled) {
+        const currentlyDisabled = (module as Record<string, unknown>).disabled === true;
+        if (currentlyDisabled) {
           delete (module as Record<string, unknown>).disabled;
         } else {
           (module as Record<string, unknown>).disabled = true;
         }
       });
-    }, [setUserData, activeSetId, trackIndex, instanceId, isDisabled]);
+    }, [setUserData, activeSetId, trackIndex, instanceId]);
 
     return (
       <div className={`px-12 font-mono ${isDisabled ? "opacity-50" : ""}`}>
