@@ -424,6 +424,8 @@ const Dashboard = () => {
             workspacePath={workspacePath}
             workspaceModuleFiles={workspaceModuleFiles}
             workspaceModuleLoadFailures={workspaceModuleLoadFailures}
+            audioCaptureState={audioCaptureState}
+            fileAudioState={fileAudio.state}
           />
         </div>
       </div>
@@ -498,6 +500,12 @@ const Dashboard = () => {
         refreshAudioDevices={refreshAudioDevices}
         audioCaptureState={audioCaptureState}
         fileAudioState={fileAudio.state}
+        activeTrackAudioThresholds={
+          activeAudio && typeof activeAudio.thresholds === "object" ? activeAudio.thresholds : null
+        }
+        activeTrackFileThresholds={
+          activeFile && typeof activeFile.thresholds === "object" ? activeFile.thresholds : null
+        }
         settings={settings}
         aspectRatio={aspectRatio}
         setAspectRatio={setAspectRatio}

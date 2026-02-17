@@ -20,6 +20,7 @@ type Confirmation = { message: string; onConfirm?: () => void; type?: "confirm" 
 type UserData = Parameters<typeof SelectSetModal>[0]["userData"];
 type ProjectorSettings = Parameters<typeof SettingsModal>[0]["settings"];
 type PredefinedModules = Parameters<typeof AddModuleModal>[0]["predefinedModules"];
+type Band = "low" | "medium" | "high";
 
 type DashboardModalLayerProps = {
   isCreateTrackOpen: boolean;
@@ -63,6 +64,8 @@ type DashboardModalLayerProps = {
   refreshAudioDevices: () => Promise<void>;
   audioCaptureState: AudioCaptureState;
   fileAudioState: FileAudioState;
+  activeTrackAudioThresholds: Partial<Record<Band, number>> | null;
+  activeTrackFileThresholds: Partial<Record<Band, number>> | null;
   settings: ProjectorSettings;
   aspectRatio: string;
   setAspectRatio: (ratio: string) => void;
@@ -149,6 +152,8 @@ export const DashboardModalLayer = ({
   refreshAudioDevices,
   audioCaptureState,
   fileAudioState,
+  activeTrackAudioThresholds,
+  activeTrackFileThresholds,
   settings,
   aspectRatio,
   setAspectRatio,
@@ -247,6 +252,9 @@ export const DashboardModalLayer = ({
         availableAudioDevices={availableAudioDevices}
         refreshAudioDevices={refreshAudioDevices}
         audioCaptureState={audioCaptureState}
+        fileAudioState={fileAudioState}
+        activeTrackAudioThresholds={activeTrackAudioThresholds}
+        activeTrackFileThresholds={activeTrackFileThresholds}
         onOpenMappings={() => {
           setIsSettingsModalOpen(false);
           setIsInputMappingsModalOpen(true);

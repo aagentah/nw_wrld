@@ -6,6 +6,7 @@ import { ModalFooter } from "../components/ModalFooter";
 import { Button } from "../components/Button";
 import { NumberInput, TextInput, Select, Label, ValidationError } from "../components/FormInputs";
 import { HelpIcon } from "../components/HelpIcon";
+import { SignalThresholdMeter } from "../components/SignalThresholdMeter";
 import { userDataAtom, activeSetIdAtom, activeTrackIdAtom } from "../core/state";
 import { updateActiveSet } from "../core/utils";
 import { getActiveSetTracks } from "../../shared/utils/setUtils";
@@ -62,41 +63,6 @@ export const EditTrackModal = ({
     };
     return { low: read("low"), medium: read("medium"), high: read("high") };
   };
-
-  const Meter = useMemo(() => {
-    const C = ({
-      level,
-      threshold,
-      testId,
-    }: {
-      level: number;
-      threshold: number;
-      testId: string;
-    }) => {
-      const levelPct = clamp01(level) * 100;
-      const thresholdPct = clamp01(threshold) * 100;
-      return (
-        <div
-          className="relative h-2 rounded bg-neutral-800 overflow-hidden border border-neutral-700"
-          data-testid={testId}
-        >
-          <div
-            className="absolute inset-y-0 left-0 bg-neutral-400/25"
-            style={{ width: `${levelPct}%` }}
-          />
-          <div
-            className="absolute inset-y-0 w-[2px] bg-green-500"
-            style={{ left: `${levelPct}%`, transform: "translateX(-1px)" }}
-          />
-          <div
-            className="absolute inset-y-0 w-[2px] bg-neutral-200/80"
-            style={{ left: `${thresholdPct}%`, transform: "translateX(-1px)" }}
-          />
-        </div>
-      );
-    };
-    return C;
-  }, []);
 
   const tracks = getActiveSetTracks(userData, activeSetId);
   const track = (tracks as unknown[])[trackIndex] as Record<string, unknown> | undefined;
@@ -219,6 +185,7 @@ export const EditTrackModal = ({
   }, [isOpen, track]);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const autoSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const uploadFileToAssets = useCallback(async (file: File) => {
     setFileUploadError(null);
@@ -262,48 +229,163 @@ export const EditTrackModal = ({
     }
   }, []);
 
-  if (!isOpen) return null;
+  const persistTrackChanges = useCallback(() => {
+    if (!track) return;
 
-  const canSubmit = validation.isValid && trackSlot && availableSlots.includes(trackSlot);
-
-  const handleSubmit = () => {
-    if (!canSubmit) return;
+    const canPersistIdentity = validation.isValid && Boolean(trackSlot) && availableSlots.includes(trackSlot);
+    const nextTrackName = trackName.trim();
+    const nextTrackSlot = trackSlot;
+    const nextSignal = {
+      audio: {
+        thresholds: {
+          low: Math.max(0, Math.min(1, audioThresholds.low)),
+          medium: Math.max(0, Math.min(1, audioThresholds.medium)),
+          high: Math.max(0, Math.min(1, audioThresholds.high)),
+        },
+        minIntervalMs: Math.max(0, Math.min(10_000, Math.round(audioMinIntervalMs))),
+      },
+      file: {
+        thresholds: {
+          low: Math.max(0, Math.min(1, fileThresholds.low)),
+          medium: Math.max(0, Math.min(1, fileThresholds.medium)),
+          high: Math.max(0, Math.min(1, fileThresholds.high)),
+        },
+        minIntervalMs: Math.max(0, Math.min(10_000, Math.round(fileMinIntervalMs))),
+        assetRelPath: String(fileAssetRelPath || ""),
+        assetName: String(fileAssetName || ""),
+      },
+    };
 
     updateActiveSet(setUserData, activeSetId, (activeSet: unknown) => {
       const s = activeSet as Record<string, unknown>;
       const ts = Array.isArray(s.tracks) ? (s.tracks as unknown[]) : [];
       const t = (ts[trackIndex] as Record<string, unknown> | null) || null;
       if (!t) return;
-      t.name = trackName.trim();
-      t.trackSlot = trackSlot;
-      t.signal = {
-        audio: {
-          thresholds: {
-            low: Math.max(0, Math.min(1, audioThresholds.low)),
-            medium: Math.max(0, Math.min(1, audioThresholds.medium)),
-            high: Math.max(0, Math.min(1, audioThresholds.high)),
-          },
-          minIntervalMs: Math.max(0, Math.min(10_000, Math.round(audioMinIntervalMs))),
-        },
-        file: {
-          thresholds: {
-            low: Math.max(0, Math.min(1, fileThresholds.low)),
-            medium: Math.max(0, Math.min(1, fileThresholds.medium)),
-            high: Math.max(0, Math.min(1, fileThresholds.high)),
-          },
-          minIntervalMs: Math.max(0, Math.min(10_000, Math.round(fileMinIntervalMs))),
-          assetRelPath: String(fileAssetRelPath || ""),
-          assetName: String(fileAssetName || ""),
-        },
-      };
-    });
 
+      let changed = false;
+      if (canPersistIdentity && t.name !== nextTrackName) {
+        t.name = nextTrackName;
+        changed = true;
+      }
+      if (canPersistIdentity && t.trackSlot !== nextTrackSlot) {
+        t.trackSlot = nextTrackSlot;
+        changed = true;
+      }
+
+      const signal =
+        t.signal && typeof t.signal === "object" ? (t.signal as Record<string, unknown>) : null;
+      const audio =
+        signal && signal.audio && typeof signal.audio === "object"
+          ? (signal.audio as Record<string, unknown>)
+          : null;
+      const file =
+        signal && signal.file && typeof signal.file === "object"
+          ? (signal.file as Record<string, unknown>)
+          : null;
+      const audioThr =
+        audio && audio.thresholds && typeof audio.thresholds === "object"
+          ? (audio.thresholds as Record<string, unknown>)
+          : null;
+      const fileThr =
+        file && file.thresholds && typeof file.thresholds === "object"
+          ? (file.thresholds as Record<string, unknown>)
+          : null;
+
+      const signalChanged =
+        !audio ||
+        !file ||
+        !audioThr ||
+        !fileThr ||
+        audioThr.low !== nextSignal.audio.thresholds.low ||
+        audioThr.medium !== nextSignal.audio.thresholds.medium ||
+        audioThr.high !== nextSignal.audio.thresholds.high ||
+        audio.minIntervalMs !== nextSignal.audio.minIntervalMs ||
+        fileThr.low !== nextSignal.file.thresholds.low ||
+        fileThr.medium !== nextSignal.file.thresholds.medium ||
+        fileThr.high !== nextSignal.file.thresholds.high ||
+        file.minIntervalMs !== nextSignal.file.minIntervalMs ||
+        file.assetRelPath !== nextSignal.file.assetRelPath ||
+        file.assetName !== nextSignal.file.assetName;
+
+      if (signalChanged) {
+        t.signal = nextSignal;
+        changed = true;
+      }
+
+      if (!changed) return;
+    });
+  }, [
+    activeSetId,
+    audioMinIntervalMs,
+    audioThresholds.high,
+    audioThresholds.low,
+    audioThresholds.medium,
+    availableSlots,
+    fileAssetName,
+    fileAssetRelPath,
+    fileMinIntervalMs,
+    fileThresholds.high,
+    fileThresholds.low,
+    fileThresholds.medium,
+    setUserData,
+    track,
+    trackIndex,
+    trackName,
+    trackSlot,
+    validation.isValid,
+  ]);
+
+  const flushAutoSave = useCallback(() => {
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+      autoSaveTimeoutRef.current = null;
+    }
+    persistTrackChanges();
+  }, [persistTrackChanges]);
+
+  useEffect(() => {
+    if (!isOpen || !track) return;
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+    autoSaveTimeoutRef.current = setTimeout(() => {
+      autoSaveTimeoutRef.current = null;
+      persistTrackChanges();
+    }, 250);
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+        autoSaveTimeoutRef.current = null;
+      }
+    };
+  }, [
+    audioMinIntervalMs,
+    audioThresholds.high,
+    audioThresholds.low,
+    audioThresholds.medium,
+    fileAssetName,
+    fileAssetRelPath,
+    fileMinIntervalMs,
+    fileThresholds.high,
+    fileThresholds.low,
+    fileThresholds.medium,
+    isOpen,
+    persistTrackChanges,
+    track,
+    trackName,
+    trackSlot,
+  ]);
+
+  const handleClose = useCallback(() => {
+    flushAutoSave();
     onClose();
-  };
+  }, [flushAutoSave, onClose]);
+
+  if (!isOpen) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose}>
-      <ModalHeader title="EDIT TRACK" onClose={onClose} />
+    <Modal isOpen={isOpen} onClose={handleClose}>
+      <ModalHeader title="EDIT TRACK" onClose={handleClose} />
 
       <div className="px-6 flex flex-col gap-4">
         <div>
@@ -311,11 +393,6 @@ export const EditTrackModal = ({
           <TextInput
             value={trackName}
             onChange={(e) => setTrackName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && canSubmit) {
-                handleSubmit();
-              }
-            }}
             className="w-full"
             placeholder="My Performance Track"
             autoFocus
@@ -401,7 +478,7 @@ export const EditTrackModal = ({
                       <div className="text-[10px] opacity-50">{band.toUpperCase()}</div>
                       <div className="flex items-center gap-2">
                         <div className="flex-1">
-                          <Meter
+                          <SignalThresholdMeter
                             level={level}
                             threshold={value}
                             testId={`track-${isAudioMode ? "audio" : "file"}-threshold-meter-${band}`}
@@ -485,11 +562,8 @@ export const EditTrackModal = ({
       </div>
 
       <ModalFooter>
-        <Button onClick={onClose} type="secondary">
-          Cancel
-        </Button>
-        <Button onClick={handleSubmit} disabled={!canSubmit}>
-          Save Changes
+        <Button onClick={handleClose} type="secondary">
+          Close
         </Button>
       </ModalFooter>
     </Modal>

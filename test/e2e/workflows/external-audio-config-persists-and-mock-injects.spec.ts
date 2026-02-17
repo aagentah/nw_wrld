@@ -83,6 +83,9 @@ test("External Audio config persists across relaunch and mock audio emits input-
     await dashboard.getByText("SETTINGS", { exact: true }).click();
     await expect(dashboard.locator("#signal-external-audio")).toBeVisible();
     await dashboard.locator('label[for="signal-external-audio"]').click();
+    await expect(dashboard.getByTestId("settings-audio-threshold-meter-low")).toBeVisible();
+    await expect(dashboard.getByTestId("settings-audio-threshold-meter-medium")).toBeVisible();
+    await expect(dashboard.getByTestId("settings-audio-threshold-meter-high")).toBeVisible();
 
     await expect
       .poll(
@@ -109,14 +112,12 @@ test("External Audio config persists across relaunch and mock audio emits input-
       .first()
       .locator("..");
     await intermediateRow.getByTestId("edit-track").click();
-    const saveChanges = dashboard.getByText("Save Changes", { exact: true });
-    await expect(saveChanges).toBeVisible();
-    await expect(saveChanges).not.toHaveAttribute("aria-disabled", "true");
+    await expect(dashboard.getByText("Close", { exact: true })).toBeVisible();
     await dashboard.getByTestId("track-audio-cooldown").fill("250");
     await dashboard.getByTestId("track-audio-threshold-low").fill("0.2");
     await dashboard.getByTestId("track-audio-threshold-medium").fill("0.3");
     await dashboard.getByTestId("track-audio-threshold-high").fill("0.4");
-    await dashboard.getByText("Save Changes", { exact: true }).click();
+    await dashboard.getByText("Close", { exact: true }).click();
     await expect(dashboard.locator("text=EDIT TRACK")).toBeHidden();
     await dashboard.getByRole("button", { name: "CLOSE" }).click();
 

@@ -20,7 +20,7 @@ import {
   parsePitchClass,
   pitchClassToName,
 } from "../../../shared/midi/midiUtils";
-import { FaEdit, FaExclamationTriangle, FaEye, FaEyeSlash } from "react-icons/fa";
+import { FaCog, FaExclamationTriangle, FaEye, FaEyeSlash } from "react-icons/fa";
 import { Tooltip } from "../Tooltip";
 
 type Track = {
@@ -77,6 +77,8 @@ export const ModuleSelector = memo(
       return name || String(pc);
     }, [resolvedTrigger, currentInputType]);
     const isSequencerMode = userData.config?.sequencerMode || false;
+    const isAudioOrFileInput =
+      !isSequencerMode && (currentInputType === "audio" || currentInputType === "file");
 
     return (
       <div className="font-mono flex flex-col justify-between mb-4">
@@ -84,12 +86,16 @@ export const ModuleSelector = memo(
           {onEditTrack && (
             <button
               type="button"
-              className="text-neutral-500 hover:text-neutral-300 text-[11px] transition-colors"
+              className={`text-sm transition-colors ${
+                isAudioOrFileInput
+                  ? "text-blue-500 hover:text-blue-500"
+                  : "text-neutral-500 hover:text-neutral-300"
+              }`}
               onClick={onEditTrack}
               data-testid="dashboard-edit-track"
               aria-label="Edit track"
             >
-              <FaEdit />
+              <FaCog />
             </button>
           )}
           <span className="text-sm text-neutral-500">

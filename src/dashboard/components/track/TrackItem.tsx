@@ -18,6 +18,8 @@ import { Button } from "../Button";
 import { TrackDataModal } from "../../modals/TrackDataModal";
 import { EditTrackModal } from "../../modals/EditTrackModal";
 import { ModuleSelector, SortableModuleItem } from "./ModuleComponents";
+import type { AudioCaptureState } from "../../core/hooks/useDashboardAudioCapture";
+import type { FileAudioState } from "../../core/hooks/useDashboardFileAudio";
 
 type ModuleInstance = { id: string; type: string };
 
@@ -54,6 +56,8 @@ type TrackItemProps = {
   workspacePath?: string | null;
   workspaceModuleFiles?: string[];
   workspaceModuleLoadFailures?: string[];
+  audioCaptureState?: AudioCaptureState | null;
+  fileAudioState?: FileAudioState | null;
 };
 
 export const TrackItem = memo(
@@ -72,6 +76,8 @@ export const TrackItem = memo(
     workspacePath = null,
     workspaceModuleFiles = [],
     workspaceModuleLoadFailures = [],
+    audioCaptureState = null,
+    fileAudioState = null,
   }: TrackItemProps) => {
     const [_userData, setUserData] = useAtom(userDataAtom);
     const [recordingData] = useAtom(recordingDataAtom);
@@ -350,6 +356,8 @@ export const TrackItem = memo(
           onClose={() => setIsEditTrackModalOpen(false)}
           trackIndex={trackIndex}
           inputConfig={inputConfig as { type?: unknown; noteMatchMode?: unknown } | null}
+          audioCaptureState={audioCaptureState}
+          fileAudioState={fileAudioState}
         />
       </div>
     );

@@ -108,6 +108,9 @@ test("File Upload config persists across relaunch and mock file emits input-even
     await dashboard.getByText("SETTINGS", { exact: true }).click();
     await expect(dashboard.locator("#signal-file-upload")).toBeVisible();
     await dashboard.locator('label[for="signal-file-upload"]').click();
+    await expect(dashboard.getByTestId("settings-file-threshold-meter-low")).toBeVisible();
+    await expect(dashboard.getByTestId("settings-file-threshold-meter-medium")).toBeVisible();
+    await expect(dashboard.getByTestId("settings-file-threshold-meter-high")).toBeVisible();
 
     await expect
       .poll(
@@ -136,12 +139,10 @@ test("File Upload config persists across relaunch and mock file emits input-even
       .first()
       .locator("..");
     await intermediateRow.getByTestId("edit-track").click();
-    const saveChanges = dashboard.getByText("Save Changes", { exact: true });
-    await expect(saveChanges).toBeVisible();
-    await expect(saveChanges).not.toHaveAttribute("aria-disabled", "true");
+    await expect(dashboard.getByText("Close", { exact: true })).toBeVisible();
     await dashboard.getByTestId("track-file-upload-input").setInputFiles(wavPath);
     await expect(dashboard.getByText("e2e-upload.wav", { exact: true })).toBeVisible();
-    await dashboard.getByText("Save Changes", { exact: true }).click();
+    await dashboard.getByText("Close", { exact: true }).click();
     await expect(dashboard.locator("text=EDIT TRACK")).toBeHidden();
     await dashboard.getByRole("button", { name: "CLOSE" }).click();
 

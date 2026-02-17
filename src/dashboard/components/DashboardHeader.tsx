@@ -55,9 +55,7 @@ export const DashboardHeader = ({
             <button
               type="button"
               onClick={handleOpenUpdates}
-              className={`relative flex items-center ${
-                hasUpdate ? "text-red-500/80 opacity-100" : "text-neutral-300 opacity-50"
-              }`}
+              className={`relative flex items-center text-neutral-300 opacity-50`}
             >
               <FaTag size={12} className="opacity-75" />
               {hasUpdate ? (

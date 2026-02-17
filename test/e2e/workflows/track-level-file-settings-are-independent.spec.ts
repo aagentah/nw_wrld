@@ -119,16 +119,14 @@ test("File Upload settings are stored per track (independent assets + tuning)", 
       await dashboard.getByText("TRACKS", { exact: true }).click();
       const row = dashboard.locator("label").filter({ hasText: trackName }).first().locator("..");
       await row.getByTestId("edit-track").click();
-      const saveChanges = dashboard.getByText("Save Changes", { exact: true });
-      await expect(saveChanges).toBeVisible();
-      await expect(saveChanges).not.toHaveAttribute("aria-disabled", "true");
+      await expect(dashboard.getByText("Close", { exact: true })).toBeVisible();
       await dashboard.getByTestId("track-file-cooldown").fill(String(cooldownMs));
       await dashboard.getByTestId("track-file-threshold-low").fill(String(low));
       await dashboard.getByTestId("track-file-threshold-medium").fill(String(medium));
       await dashboard.getByTestId("track-file-threshold-high").fill(String(high));
       await dashboard.getByTestId("track-file-upload-input").setInputFiles(wavPath);
       await expect(dashboard.getByText(path.basename(wavPath), { exact: true })).toBeVisible();
-      await dashboard.getByText("Save Changes", { exact: true }).click();
+      await dashboard.getByText("Close", { exact: true }).click();
       await expect(dashboard.locator("text=EDIT TRACK")).toBeHidden();
       await dashboard.getByRole("button", { name: "CLOSE" }).click();
     };

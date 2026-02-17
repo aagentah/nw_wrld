@@ -13,7 +13,9 @@ import { ModalHeader } from "../components/ModalHeader";
 import { Button } from "../components/Button";
 import { Select, NumberInput, RadioButton, ColorInput, TextInput } from "../components/FormInputs";
 import { HelpIcon } from "../components/HelpIcon";
+import { SignalThresholdMeter } from "../components/SignalThresholdMeter";
 import { HELP_TEXT } from "../../shared/helpText";
+import type { FileAudioState } from "../core/hooks/useDashboardFileAudio";
 
 const isValidHexColor = (value: string): boolean => /^#([0-9A-F]{3}){1,2}$/i.test(value);
 
@@ -415,6 +417,8 @@ type Config = {
   userColors?: string[];
 };
 
+type Band = "low" | "medium" | "high";
+
 type SettingsModalProps = {
   isOpen: boolean;
   onClose: () => void;
@@ -458,6 +462,9 @@ type SettingsModalProps = {
         levels: Record<"low" | "medium" | "high", number>;
         peaksDb: Record<"low" | "medium" | "high", number>;
       };
+  fileAudioState: FileAudioState;
+  activeTrackAudioThresholds: Partial<Record<Band, number>> | null;
+  activeTrackFileThresholds: Partial<Record<Band, number>> | null;
   onOpenMappings: () => void;
   config: Config;
   updateConfig: (updates: Partial<Config>) => void;
@@ -479,12 +486,39 @@ export const SettingsModal = ({
   availableAudioDevices,
   refreshAudioDevices,
   audioCaptureState,
+  fileAudioState,
+  activeTrackAudioThresholds,
+  activeTrackFileThresholds,
   onOpenMappings,
   config,
   updateConfig,
   workspacePath,
   onSelectWorkspace,
 }: SettingsModalProps) => {
+  const clamp01 = useCallback((n: number) => (n < 0 ? 0 : n > 1 ? 1 : n), []);
+  const meterThresholds = useMemo(() => {
+    const t =
+      activeTrackAudioThresholds && typeof activeTrackAudioThresholds === "object"
+        ? activeTrackAudioThresholds
+        : {};
+    const read = (band: Band) => {
+      const v = t[band];
+      return typeof v === "number" && Number.isFinite(v) ? clamp01(v) : 0.5;
+    };
+    return { low: read("low"), medium: read("medium"), high: read("high") };
+  }, [activeTrackAudioThresholds, clamp01]);
+  const fileMeterThresholds = useMemo(() => {
+    const t =
+      activeTrackFileThresholds && typeof activeTrackFileThresholds === "object"
+        ? activeTrackFileThresholds
+        : {};
+    const read = (band: Band) => {
+      const v = t[band];
+      return typeof v === "number" && Number.isFinite(v) ? clamp01(v) : 0.5;
+    };
+    return { low: read("low"), medium: read("medium"), high: read("high") };
+  }, [activeTrackFileThresholds, clamp01]);
+
   const normalizedInputType =
     inputConfig?.type === "osc"
       ? "osc"
@@ -820,6 +854,32 @@ export const SettingsModal = ({
                           </div>
                         </div>
 
+                        <div className="pl-6 pb-4">
+                          <div className="opacity-50 mb-2 text-[11px]">Live Audio Levels</div>
+                          <div className="flex flex-col gap-2">
+                            {(["low", "medium", "high"] as const).map((band) => (
+                              <div key={band} className="grid grid-cols-[80px_1fr] gap-2 items-center">
+                                <div className="text-[10px] opacity-50">{band.toUpperCase()}</div>
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-1">
+                                    <SignalThresholdMeter
+                                      level={clamp01(audioCaptureState.levels[band])}
+                                      threshold={meterThresholds[band]}
+                                      testId={`settings-audio-threshold-meter-${band}`}
+                                    />
+                                  </div>
+                                  <div
+                                    className="text-[10px] text-neutral-400 w-[92px] text-right font-mono"
+                                    data-testid={`settings-audio-threshold-value-${band}`}
+                                  >
+                                    thr {meterThresholds[band].toFixed(2)}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
                         <div className="pl-6">
                           <div className="text-[10px] opacity-50 pb-4">
                             Status:{" "}
@@ -839,9 +899,37 @@ export const SettingsModal = ({
 
                     {normalizedInputType === "file" && (
                       <>
+                        <div className="pl-6 pb-4">
+                          <div className="opacity-50 mb-2 text-[11px]">Live File Levels</div>
+                          <div className="flex flex-col gap-2">
+                            {(["low", "medium", "high"] as const).map((band) => (
+                              <div key={band} className="grid grid-cols-[80px_1fr] gap-2 items-center">
+                                <div className="text-[10px] opacity-50">{band.toUpperCase()}</div>
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-1">
+                                    <SignalThresholdMeter
+                                      level={clamp01(fileAudioState.levels[band])}
+                                      threshold={fileMeterThresholds[band]}
+                                      testId={`settings-file-threshold-meter-${band}`}
+                                    />
+                                  </div>
+                                  <div
+                                    className="text-[10px] text-neutral-400 w-[92px] text-right font-mono"
+                                    data-testid={`settings-file-threshold-value-${band}`}
+                                  >
+                                    thr {fileMeterThresholds[band].toFixed(2)}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                         <div className="pl-6">
+                          <div className="text-[10px] opacity-50 pb-4">
+                            Status: {fileAudioState.status}
+                          </div>
                           <div className="text-[10px] opacity-50">
-                            Per-track audio is handled via the Edit Track modal.
+                            Per-track file source and thresholds are handled via the Edit Track modal.
                           </div>
                         </div>
                       </>
