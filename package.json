@@ -142,6 +142,9 @@
         "dmg"
       ],
       "icon": "build/logo.icns",
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "nw_wrld requires microphone access to capture audio input."
+      },
       "files": [
         "index.js",
         "package.json",
