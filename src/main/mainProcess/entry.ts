@@ -13,6 +13,7 @@ import {
   registerWorkspaceSelectionIpc,
 } from "./workspace";
 import { isExistingDirectory } from "./pathSafety";
+import { registerMenuHandlers, createApplicationMenu } from "./menu";
 
 const getTestProjectDir = (): string | null => {
   const raw = process.env.NW_WRLD_TEST_PROJECT_DIR;
@@ -25,6 +26,9 @@ const getTestProjectDir = (): string | null => {
 
 export function start() {
   setupApp();
+
+  // Register menu handlers before creating windows
+  registerMenuHandlers();
 
   registerIpcBridge();
   registerSandboxIpc();
@@ -48,5 +52,8 @@ export function start() {
     }
     registerActivate({ createWindow });
     createWindow(testProjectDir);
+
+    // Create application menu after window is ready
+    createApplicationMenu();
   });
 }
