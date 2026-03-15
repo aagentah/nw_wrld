@@ -341,6 +341,7 @@ const Dashboard = () => {
     setWorkspaceModalMode,
     setWorkspaceModalPath,
     setIsWorkspaceModalOpen,
+    setIsSettingsModalOpen,
   });
 
   const handleSelectWorkspace = useCallback(async () => {

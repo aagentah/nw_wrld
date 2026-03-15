@@ -20,6 +20,7 @@ type UseDashboardBootstrapArgs = {
   setWorkspaceModalMode: (mode: "initial" | "lostSync") => void;
   setWorkspaceModalPath: (path: string | null) => void;
   setIsWorkspaceModalOpen: (open: boolean) => void;
+  setIsSettingsModalOpen: (open: boolean) => void;
 };
 
 export const useDashboardBootstrap = ({
@@ -36,6 +37,7 @@ export const useDashboardBootstrap = ({
   setWorkspaceModalMode,
   setWorkspaceModalPath,
   setIsWorkspaceModalOpen,
+  setIsSettingsModalOpen,
 }: UseDashboardBootstrapArgs) => {
   useEffect(() => {
     const initializeUserData = async () => {
@@ -137,5 +139,9 @@ export const useDashboardBootstrap = ({
     setWorkspaceModalMode("lostSync");
     setWorkspaceModalPath(lostPath);
     setIsWorkspaceModalOpen(true);
+  });
+
+  useIPCListener("menu:openSettings", () => {
+    setIsSettingsModalOpen(true);
   });
 };
