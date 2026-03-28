@@ -2,7 +2,7 @@
 
 nw_wrld is an event-driven sequencer for triggering visuals using web technologies. It enables users to scale up audiovisual compositions for prototyping, demos, exhibitions, and live performances. Users code their own visual modules, then orchestrate them using the project's native UI composer.
 
-Visuals can be triggered via the built-in 16-step sequencer or by configuring external MIDI/OSC inputs.
+Visuals can be triggered via the built-in 16-step sequencer or by configuring external MIDI, OSC, audio capture, or file-upload inputs.
 
 ![Node Version](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen)
 ![Electron](https://img.shields.io/badge/electron-v39.2.7-blue)
@@ -11,7 +11,7 @@ Visuals can be triggered via the built-in 16-step sequencer or by configuring ex
 
 ## Beta Notice
 
-This project is currently in beta. Downloadable installers are not currently provided; run `nw_wrld` from source using this repository. Please note that whilst the project is in beta, there will likely be frequent breaking changes between releases.
+This project is currently in beta. Downloadable installers are provided via GitHub Releases for macOS, Windows, and Linux, and `nw_wrld` can also be run from source using this repository. Please note that whilst the project is in beta, there may be frequent breaking changes between releases.
 
 ## Roadmap
 
@@ -20,11 +20,11 @@ This project is currently in beta. Downloadable installers are not currently pro
 - [x] TypeScript migration
 - [x] Unit tests, E2E Playwright tests, runtime validations
 - [ ] Use-case specific User Guides (Ableton, strudel, TouchDesigner, etc.)
-- [ ] Signed and notarized MacOS app builds
-- [ ] Signed Windows app builds
-- [ ] Robust Linux & WSL support
+- [x] Signed and notarized macOS app builds
+- [x] Signed Windows app builds
+- [x] Robust Linux & WSL support
 - [ ] Userdata, Module, and JSON versioning (+ migration scripts)
-- [ ] Multi-band audio threshold analysis (local processing) for channel triggers
+- [x] Multi-band audio threshold analysis (local processing) for channel triggers
 - [ ] Advanced default sequencer (Working sampler with audio FX)
 - [ ] Remote API input source with HTTP/WebSocket client for cloud-based services (audio analysis APIs, ML models, etc.)
 - [ ] Serial port input support for hardware sensor integration
@@ -32,11 +32,13 @@ This project is currently in beta. Downloadable installers are not currently pro
 ## Features
 
 - **Built-in 16-step pattern sequencer** - Create rhythmic audiovisual compositions without external hardware
-- **External MIDI/OSC support** - Connect Ableton Live, TouchOSC, or any MIDI/OSC source for live performance
+- **External MIDI/OSC/audio/file support** - Use MIDI, OSC, microphone/loopback audio capture, or uploaded audio files as trigger sources
 - **Visual module system** - Build custom visuals with p5.js, Three.js, D3.js, or vanilla JavaScript
 - **Hot module reloading** - Edit modules and see changes instantly
 - **Project folder workflow** - Self-contained, portable projects with modules, assets, and data
 - **Flexible method mapping** - Trigger any visual method with sequencer patterns or external signals
+- **Per-track signal settings** - Configure per-track thresholds and trigger cooldown for audio and file modes
+- **Module enable/disable toggle** - Disable modules per track without removing configuration
 
 ---
 
@@ -117,7 +119,7 @@ Projects are completely portable - copy the folder to share with others, work ac
 
 ### Lost Project?
 
-If your project folder is deleted, moved, or disconnected (e.g., external drive unplugged), nw_wrld will detect the issue and prompt you to reselect or choose a different project.
+If your project folder is deleted, moved, or disconnected, nw_wrld will prompt you to reselect it (see [Getting Started](GETTING_STARTED.md#if-your-project-folder-goes-missing)).
 
 ---
 
@@ -147,22 +149,12 @@ Signal Sources:
                   ├──▶ Dashboard ──▶ Projector
 ┌──────────────┐  │    (Control)     (Visuals)
 │ External     │──┘
-│ MIDI/OSC     │
+│ MIDI/OSC/    │
+│ Audio/File   │
 └──────────────┘
 ```
 
-### Dashboard Window
-
-- Create tracks and add visual modules
-- Program patterns with the 16-step sequencer
-- Configure module methods and parameters
-- (Optional) Connect external MIDI/OSC sources
-
-### Projector Window
-
-- Displays active visual modules
-- Responds to sequencer or external triggers in real-time
-- Can be full-screened on external displays
+Dashboard is where you compose and map triggers; Projector is where visuals render and respond.
 
 ---
 
@@ -170,50 +162,15 @@ Signal Sources:
 
 Follow the [Getting Started Guide](GETTING_STARTED.md) for detailed step-by-step instructions.
 
-**Quick overview:**
-
-1. Create a track and add visual modules
-2. Add channels and program patterns in the 16-step grid
-3. Assign methods to channels (color, scale, rotate, etc.)
-4. Click PLAY to see your patterns trigger visuals in real-time
-
 The built-in sequencer is perfect for testing modules and creating standalone audiovisual pieces without external hardware.
 
 ---
 
-## Advanced: External MIDI/OSC Control
+## Advanced: External Input Control
 
-For live performance with external hardware, you can connect MIDI controllers or DAWs.
+For live performance and reactive workflows, you can use MIDI controllers/DAWs, OSC senders, audio input devices, or uploaded audio files.
 
-### Optional Prerequisites
-
-- **A DAW** that outputs MIDI (Ableton Live, FL Studio, Logic Pro, etc.)
-- **MIDI routing** setup:
-  - **Mac**: IAC Driver (built-in) - [Setup Guide](https://help.ableton.com/hc/en-us/articles/209774225-Using-virtual-MIDI-buses)
-  - **Windows**: loopMIDI or similar virtual MIDI port
-
-### Step 1: Configure MIDI Routing
-
-**Mac:**
-
-1. Open **Audio MIDI Setup** → Show MIDI Studio
-2. Enable **IAC Driver**
-
-**Windows:**
-
-1. Install [loopMIDI](https://www.tobias-erichsen.de/software/loopmidi.html)
-
-**In Ableton:**
-
-1. Preferences → MIDI
-2. Enable your virtual port for Track/Remote output
-
-### Step 2: Switch Mode
-
-1. Dashboard → **Settings** → **Signal Source**
-2. Select **External (MIDI/OSC)**
-3. Configure MIDI device or OSC port
-4. Go to **Settings → Configure Mappings** to customize trigger mappings (MIDI Pitch Class or MIDI Exact Note / OSC addresses)
+To set up input routing and switch modes, see [Getting Started](GETTING_STARTED.md#advanced-connect-external-midiosc).
 
 ### DAW Quickstart (Ableton / FL Studio / Logic / etc.)
 
@@ -234,13 +191,6 @@ Most DAW setups send notes on **MIDI Channel 1** unless you explicitly route or 
     - **Method Triggers MIDI Channel**: `1`
     - **Track Select MIDI Channel**: `2`
 
-### Step 3: Perform Live
-
-1. Play your DAW
-2. Track activation note loads modules
-3. MIDI Pitch Class or Exact Note triggers mapped methods
-4. Real-time audiovisual performance
-
 ---
 
 ## Creating Visual Modules
@@ -249,10 +199,7 @@ Modules are JavaScript files in your **project's `modules/` folder**. Edit them 
 
 ### Quick Module Creation
 
-1. Navigate to your project folder
-2. Open the `modules/` directory
-3. Create or edit a `.js` file
-4. Save → nw_wrld detects changes and reloads
+Create or edit a `.js` file in your project’s `modules/` folder and save — nw_wrld hot-reloads it automatically.
 
 ### Module File Contract (Docblock + Default Export)
 
@@ -277,10 +224,7 @@ Allowed `@nwWrld imports`:
 
 class MyModule extends ModuleBase {
   async init() {
-    // Load images from project assets/
     const imgUrl = assetUrl("images/blueprint.png");
-
-    // Load JSON data from project assets/
     const data = await loadJson("json/meteor.json");
   }
 }
@@ -302,7 +246,7 @@ See the [Module Development Guide](MODULE_DEVELOPMENT.md) for complete documenta
 
 When you extend `ModuleBase`, you inherit powerful methods for free: `show`, `hide`, `offset`, `scale`, `opacity`, `rotate`, `randomZoom`, and `matrix`.
 
-These methods can be triggered via the sequencer or external MIDI/OSC, giving you instant control over positioning, visibility, transformations, and effects.
+These methods can be triggered via the sequencer or external signal sources (MIDI/OSC/audio/file), giving you instant control over positioning, visibility, transformations, and effects.
 
 See the [Module Development Guide](MODULE_DEVELOPMENT.md#option-types-reference) for complete documentation of all built-in methods and their parameters.
 
@@ -314,11 +258,13 @@ Switch between modes in **Settings → Signal Source**.
 
 **Sequencer Mode (Default)** - Program patterns with a 16-step grid per channel. Perfect for getting started, testing modules, and creating standalone pieces without external hardware. Adjustable BPM (60-130), patterns loop continuously and save with your tracks.
 
-**External Mode (Advanced)** - Connect MIDI/OSC hardware for live performance.
+**External Modes (Advanced)** - Use one of the following sources:
 
 - **MIDI (Pitch Class)**: map C..B (octave-agnostic). This avoids “G7 vs G8” naming differences across DAWs because matching is based on pitch class.
 - **MIDI (Exact Note)**: map full MIDI note numbers (0–127) for octave-specific triggers.
 - **OSC**: map OSC addresses.
+- **External Audio**: capture live audio from a selected input device and trigger channels from Low/Medium/High bands.
+- **File Upload**: upload an MP3/WAV per track and trigger channels from Low/Medium/High bands during playback.
 
 Configure global mappings in Settings for consistent control across all tracks.
 
@@ -405,10 +351,10 @@ nw_wrld/
 │   ├── projector/              # Visual output window
 │   │   ├── Projector.js        # Main projector logic
 │   │   ├── helpers/
-│   │   │   ├── moduleBase.js   # Base class (the foundation)
-│   │   │   └── threeBase.js    # Three.js base class
+│   │   │   ├── moduleBase.ts   # Base class (the foundation)
+│   │   │   └── threeBase.ts    # Three.js base class
 │   │   └── templates/
-│   │       └── ThreeTemplate.js # 3D module template
+│   │       └── ThreeTemplate.ts # 3D module template
 │   │
 │   ├── main/                   # Electron main process
 │   │   ├── InputManager.js     # MIDI/OSC input handling
@@ -511,9 +457,17 @@ npm run dist:win
 
 This creates a portable Windows `.exe` in the `release/` directory.
 
+### Build Linux (AppImage + .deb)
+
+```bash
+npm run dist:linux
+```
+
+This creates Linux artifacts (typically `.AppImage` and `.deb`) in the `release/` directory.
+
 ### Automated Releases
 
-The project uses GitHub Actions to automatically build and attach release artifacts (macOS DMGs for arm64 + x64, plus Windows portable `.exe`):
+The project uses GitHub Actions to automatically build and attach release artifacts (macOS DMGs for arm64 + x64, Windows portable `.exe`, and Linux `.AppImage` + `.deb`). A `SHA256SUMS` file is also attached for verifying downloads:
 
 1. Tag a new version: `git tag v1.0.0`
 2. Push the tag: `git push origin v1.0.0`

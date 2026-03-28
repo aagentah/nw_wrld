@@ -9,18 +9,18 @@ import {
   selectedChannelAtom,
   flashingChannelsAtom,
   flashingConstructorsAtom,
-} from "../../core/state.ts";
+} from "../../core/state";
 import { updateActiveSet } from "../../core/utils";
-import { TERMINAL_STYLES } from "../../core/constants.ts";
-import { getActiveSetTracks } from "../../../shared/utils/setUtils.ts";
-import { getRecordingForTrack, getSequencerForTrack } from "../../../shared/json/recordingUtils.ts";
+import { TERMINAL_STYLES } from "../../core/constants";
+import { getActiveSetTracks } from "../../../shared/utils/setUtils";
+import { getRecordingForTrack, getSequencerForTrack } from "../../../shared/json/recordingUtils";
 import {
   resolveTrackTrigger,
   resolveChannelTrigger,
   parsePitchClass,
   pitchClassToName,
-} from "../../../shared/midi/midiUtils.ts";
-import { FaExclamationTriangle } from "react-icons/fa";
+} from "../../../shared/midi/midiUtils";
+import { FaCog, FaExclamationTriangle, FaEye, FaEyeSlash } from "react-icons/fa";
 import { Tooltip } from "../Tooltip";
 
 type Track = {
@@ -53,13 +53,11 @@ type ModuleSelectorProps = {
   stopPlayback: () => void;
   onShowTrackData: (track: unknown) => void;
   inputConfig: { type?: string } | null;
+  onEditTrack?: () => void;
 };
 
 export const ModuleSelector = memo(
-  ({
-    trackIndex,
-    inputConfig,
-  }: ModuleSelectorProps) => {
+  ({ trackIndex, inputConfig, onEditTrack }: ModuleSelectorProps) => {
     const [userData] = useAtom(userDataAtom);
     const [activeSetId] = useAtom(activeSetIdAtom);
     const tracks = getActiveSetTracks(userData, activeSetId) as unknown as Track[];
@@ -72,16 +70,34 @@ export const ModuleSelector = memo(
       if (resolvedTrigger === "" || resolvedTrigger === null || resolvedTrigger === undefined) {
         return resolvedTrigger;
       }
-      const pc = typeof resolvedTrigger === "number" ? resolvedTrigger : parsePitchClass(resolvedTrigger);
+      const pc =
+        typeof resolvedTrigger === "number" ? resolvedTrigger : parsePitchClass(resolvedTrigger);
       if (pc === null) return resolvedTrigger;
       const name = pitchClassToName(pc);
       return name || String(pc);
     }, [resolvedTrigger, currentInputType]);
     const isSequencerMode = userData.config?.sequencerMode || false;
+    const isAudioOrFileInput =
+      !isSequencerMode && (currentInputType === "audio" || currentInputType === "file");
 
     return (
       <div className="font-mono flex flex-col justify-between mb-4">
-        <div className="mb-4 flex items-center gap-2">
+        <div className="mb-4 pl-2 flex items-center gap-2">
+          {onEditTrack && (
+            <button
+              type="button"
+              className={`text-sm transition-colors ${
+                isAudioOrFileInput
+                  ? "text-blue-500 hover:text-blue-500"
+                  : "text-neutral-500 hover:text-neutral-300"
+              }`}
+              onClick={onEditTrack}
+              data-testid="dashboard-edit-track"
+              aria-label="Edit track"
+            >
+              <FaCog />
+            </button>
+          )}
           <span className="text-sm text-neutral-500">
             <span>[TRACK]</span>{" "}
             <span className="">
@@ -130,6 +146,7 @@ type NoteSelectorProps = {
   trackIndex: number;
   instanceId: string;
   moduleType: string;
+  moduleInstance: { id: string; type: string; disabled?: boolean };
   predefinedModules: unknown[];
   onRemoveModule?: ((instanceId: string) => void) | null;
   dragHandleProps?: Record<string, unknown> | null;
@@ -148,6 +165,7 @@ export const NoteSelector = memo(
     trackIndex,
     instanceId,
     moduleType,
+    moduleInstance,
     onRemoveModule,
     dragHandleProps,
     inputConfig,
@@ -389,10 +407,94 @@ export const NoteSelector = memo(
         .attr("fill", "transparent");
     }, []);
 
+    const isDisabled = moduleInstance?.disabled === true;
+    const toggleDisabled = useCallback(() => {
+      updateActiveSet(setUserData, activeSetId, (activeSet) => {
+        if (!isPlainObject(activeSet)) return;
+        const tracksUnknown = (activeSet as Record<string, unknown>).tracks;
+        if (!Array.isArray(tracksUnknown)) return;
+        const trackDraft = tracksUnknown[trackIndex];
+        if (!isPlainObject(trackDraft)) return;
+        const modulesUnknown = (trackDraft as Record<string, unknown>).modules;
+        if (!Array.isArray(modulesUnknown)) return;
+        const module = modulesUnknown.find(
+          (m) => isPlainObject(m) && String((m as Record<string, unknown>).id ?? "") === instanceId
+        );
+        if (!module || !isPlainObject(module)) return;
+        const currentlyDisabled = (module as Record<string, unknown>).disabled === true;
+        if (currentlyDisabled) {
+          delete (module as Record<string, unknown>).disabled;
+        } else {
+          (module as Record<string, unknown>).disabled = true;
+        }
+      });
+    }, [setUserData, activeSetId, trackIndex, instanceId]);
+
     return (
-      <div className="px-12 font-mono">
-        <div className="mb-2 flex flex-wrap items-center justify-between">
-          <span className="text-neutral-500 text-sm">
+      <div className={`px-12 font-mono ${isDisabled ? "opacity-50" : ""}`}>
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2">
+            {dragHandleProps && (
+              <span
+                className="text-[11px] font-mono text-neutral-300 cursor-move"
+                data-testid="module-drag-handle"
+                data-module-instance-id={instanceId}
+                data-module-type={moduleType}
+                {...dragHandleProps}
+              >
+                <span className="text-md text-neutral-300">{"\u2261 "}</span>
+              </span>
+            )}
+            <button
+              type="button"
+              className="cursor-pointer text-[11px] text-neutral-400 hover:text-neutral-300 transition-colors focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0"
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleDisabled();
+                if (
+                  typeof (e as unknown as { detail?: number }).detail === "number" &&
+                  (e as unknown as { detail?: number }).detail > 0
+                ) {
+                  e.currentTarget.blur();
+                }
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+              onKeyDown={(e) => {
+                if (e.code === "Space") {
+                  e.preventDefault();
+                }
+              }}
+              title={isDisabled ? "Enable Module" : "Disable Module"}
+              aria-pressed={isDisabled}
+              aria-label={isDisabled ? "Enable Module" : "Disable Module"}
+              data-testid="module-visibility-toggle"
+              data-module-instance-id={instanceId}
+            >
+              {isDisabled ? <FaEyeSlash /> : <FaEye />}
+            </button>
+            {onRemoveModule && (
+              <div className="flex items-center gap-2">
+                <div
+                  className="text-red-500/50 cursor-pointer text-[11px]"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRemoveModule(instanceId);
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  title="Remove Module"
+                >
+                  [{"\u00D7"}]
+                </div>
+              </div>
+            )}
+          </div>
+          <span
+            className={`text-sm ${
+              moduleInstance.disabled === true
+                ? "text-neutral-500/50 line-through"
+                : "text-neutral-500"
+            }`}
+          >
             <span>[MODULE]</span> {moduleType}
             {moduleWarningText ? (
               <span className="ml-2 inline-flex items-center">
@@ -400,7 +502,9 @@ export const NoteSelector = memo(
                   <span
                     className="text-red-500/70 text-[11px] cursor-help"
                     data-testid="workspace-module-warning"
-                    data-warning={isLoadFailed ? "load-failed" : isFileMissing ? "missing-file" : "unknown"}
+                    data-warning={
+                      isLoadFailed ? "load-failed" : isFileMissing ? "missing-file" : "unknown"
+                    }
                     data-module-type={moduleType}
                     onClick={(e) => {
                       e.preventDefault();
@@ -420,38 +524,12 @@ export const NoteSelector = memo(
               </span>
             ) : null}
           </span>
-          <div className="flex items-center gap-2">
-            {dragHandleProps && (
-              <span
-                className="text-[11px] font-mono text-neutral-300 cursor-move"
-                data-testid="module-drag-handle"
-                data-module-instance-id={instanceId}
-                data-module-type={moduleType}
-                {...dragHandleProps}
-              >
-                <span className="text-md text-neutral-300">{"\u2261 "}</span>
-              </span>
-            )}
-            {onRemoveModule && (
-              <div className="flex items-center gap-2">
-                <div
-                  className="text-red-500/50 cursor-pointer text-[11px]"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onRemoveModule(instanceId);
-                  }}
-                  onMouseDown={(e) => e.stopPropagation()}
-                  title="Remove Module"
-                >
-                  [{"\u00D7"}]
-                </div>
-              </div>
-            )}
-          </div>
         </div>
         <div className="">
           <div className="pl-12 flex flex-col gap-0">
-            <div className={`flex items-center p-0 ${isConstructorSelected ? "bg-white/5" : "bg-transparent"}`}>
+            <div
+              className={`flex items-center p-0 ${isConstructorSelected ? "bg-white/5" : "bg-transparent"}`}
+            >
               <div
                 className={`uppercase w-[140px] pr-4 text-[11px] flex items-center gap-2 cursor-pointer ${
                   flashingConstructors.has(`${track.id}:${instanceId}`)
@@ -501,7 +579,11 @@ export const NoteSelector = memo(
                 >
                   <div
                     className={`w-[140px] pr-4 text-[11px] font-mono flex items-center gap-2 cursor-pointer ${
-                      isFlashing ? "text-red-500" : isSelected ? "text-neutral-300" : "text-neutral-300"
+                      isFlashing
+                        ? "text-red-500"
+                        : isSelected
+                          ? "text-neutral-300"
+                          : "text-neutral-300"
                     }`}
                     data-testid="module-channel-config"
                     data-module-instance-id={instanceId}
@@ -532,21 +614,22 @@ export const NoteSelector = memo(
                         return `Channel ${channel.number}`;
                       }
                       if (currentInputType === "midi") {
-                        const noteMatchMode =
-                          (() => {
-                            const inputRaw = isPlainObject(globalMappings)
-                              ? (globalMappings as Record<string, unknown>).input
-                              : null;
-                            const mode =
-                              isPlainObject(inputRaw) && inputRaw.noteMatchMode === "exactNote"
-                                ? "exactNote"
-                                : "pitchClass";
-                            return mode;
-                          })();
+                        const noteMatchMode = (() => {
+                          const inputRaw = isPlainObject(globalMappings)
+                            ? (globalMappings as Record<string, unknown>).input
+                            : null;
+                          const mode =
+                            isPlainObject(inputRaw) && inputRaw.noteMatchMode === "exactNote"
+                              ? "exactNote"
+                              : "pitchClass";
+                          return mode;
+                        })();
                         if (noteMatchMode === "exactNote") {
                           const label = String(resolvedChannelTrigger ?? "").trim();
                           return label ? (
-                            <span className={isFlashing ? "text-red-500" : "text-blue-500"}>{label}</span>
+                            <span className={isFlashing ? "text-red-500" : "text-blue-500"}>
+                              {label}
+                            </span>
                           ) : (
                             `Channel ${channel.number}`
                           );
@@ -558,7 +641,9 @@ export const NoteSelector = memo(
                             : parsePitchClass(resolvedChannelTrigger);
                         const name = pc !== null ? pitchClassToName(pc) : null;
                         return name ? (
-                          <span className={isFlashing ? "text-red-500" : "text-blue-500"}>{name}</span>
+                          <span className={isFlashing ? "text-red-500" : "text-blue-500"}>
+                            {name}
+                          </span>
                         ) : (
                           `Channel ${channel.number}`
                         );
@@ -575,14 +660,21 @@ export const NoteSelector = memo(
                       <div className="flex gap-0.5 items-center" style={{ height: rowHeight }}>
                         {Array.from({ length: 16 }).map((_, stepIndex) => {
                           const channelKey = String(channel.number);
-                          const sequencerData = getSequencerForTrack(recordingData, String(track.id));
+                          const sequencerData = getSequencerForTrack(
+                            recordingData,
+                            String(track.id)
+                          );
                           const patternRaw = isPlainObject(sequencerData)
                             ? (sequencerData as Record<string, unknown>).pattern
                             : null;
-                          const pattern = isPlainObject(patternRaw) ? (patternRaw as Record<string, unknown>) : {};
+                          const pattern = isPlainObject(patternRaw)
+                            ? (patternRaw as Record<string, unknown>)
+                            : {};
                           const channelPattern = pattern[channelKey] || [];
-                          const isActive = Array.isArray(channelPattern) && channelPattern.includes(stepIndex);
-                          const isCurrentStep = isSequencerPlaying && sequencerCurrentStep === stepIndex;
+                          const isActive =
+                            Array.isArray(channelPattern) && channelPattern.includes(stepIndex);
+                          const isCurrentStep =
+                            isSequencerPlaying && sequencerCurrentStep === stepIndex;
 
                           return (
                             <button
@@ -615,7 +707,9 @@ export const NoteSelector = memo(
                       </div>
                     ) : (
                       <svg
-                        ref={(ref) => ref && visualizeChannel(channel, ref, trackDuration, moduleData)}
+                        ref={(ref) =>
+                          ref && visualizeChannel(channel, ref, trackDuration, moduleData)
+                        }
                         className="w-full"
                         style={{ height: rowHeight }}
                       ></svg>
@@ -672,6 +766,7 @@ export const SortableModuleItem = memo(
                 trackIndex={trackIndex}
                 instanceId={moduleInstance.id}
                 moduleType={moduleInstance.type}
+                moduleInstance={moduleInstance}
                 predefinedModules={predefinedModules}
                 onRemoveModule={onRemoveModule}
                 dragHandleProps={dragHandleProps as unknown as Record<string, unknown>}
@@ -691,4 +786,3 @@ export const SortableModuleItem = memo(
     );
   }
 );
-

@@ -5,7 +5,7 @@ import { ModalHeader } from "../components/ModalHeader";
 import { ModalFooter } from "../components/ModalFooter";
 import { Button } from "../components/Button";
 import { TextInput, Label, ValidationError } from "../components/FormInputs";
-import { userDataAtom } from "../core/state.ts";
+import { userDataAtom } from "../core/state";
 import { updateUserData } from "../core/utils";
 import { useNameValidation } from "../core/hooks/useNameValidation";
 

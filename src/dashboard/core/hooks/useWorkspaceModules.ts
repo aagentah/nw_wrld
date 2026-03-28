@@ -53,7 +53,7 @@ export const useWorkspaceModules = ({
   didMigrateWorkspaceModuleTypesRef,
   loadModulesRunIdRef,
 }: UseWorkspaceModulesArgs) => {
-  const loadModules = useCallback(async () => {
+  const loadModules = useCallback(async (opts?: { refreshProjector?: boolean }) => {
     const runId = ++loadModulesRunIdRef.current;
     const isStale = () => runId !== loadModulesRunIdRef.current;
     try {
@@ -61,6 +61,7 @@ export const useWorkspaceModules = ({
       const projectDirArg = getProjectDir();
       if (!projectDirArg) return;
       if (!workspacePath) return;
+      const refreshProjector = opts?.refreshProjector !== false;
       let summaries: unknown[] = [];
       let skipped: unknown[] = [];
       try {
@@ -154,7 +155,9 @@ export const useWorkspaceModules = ({
       });
       setIsProjectorReady(false);
       if (isStale()) return;
-      sendToProjector("refresh-projector", {});
+      if (refreshProjector) {
+        sendToProjector("refresh-projector", {});
+      }
       return;
     } catch (error) {
       console.error("❌ [Dashboard] Error loading modules:", error);
@@ -279,7 +282,7 @@ export const useWorkspaceModules = ({
   useIPCListener(
     "workspace:modulesChanged",
     () => {
-      loadModules();
+      loadModules({ refreshProjector: false });
     },
     [loadModules]
   );
@@ -294,7 +297,7 @@ export const useWorkspaceModules = ({
           });
         } catch {}
         try {
-          maybeHot.accept("../../../projector/helpers/threeBase.js", () => {
+          maybeHot.accept("../../../projector/helpers/threeBase", () => {
             loadModules();
           });
         } catch {}

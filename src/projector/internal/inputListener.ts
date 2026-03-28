@@ -3,7 +3,7 @@ import {
   normalizeNoteMatchMode,
   noteNumberToTriggerKey,
   pitchClassToName,
-} from "../../shared/midi/midiUtils.ts";
+} from "../../shared/midi/midiUtils";
 import logger from "../helpers/logger";
 import { getMessaging } from "./bridge";
 
@@ -165,6 +165,26 @@ export function initInputListener(this: InputListenerContext) {
                 logger.log(`🎯 [INPUT] OSC address maps to channels:`, channelNames);
               }
             }
+          } else if (data.source === "audio") {
+            const mappedChannels = trackMappings[String((data as { channelName?: unknown }).channelName)];
+            if (mappedChannels) {
+              channelNames = Array.isArray(mappedChannels)
+                ? mappedChannels
+                : [mappedChannels];
+              if (debugEnabled) {
+                logger.log(`🎯 [INPUT] AUDIO channel maps to channels:`, channelNames);
+              }
+            }
+          } else if (data.source === "file") {
+            const mappedChannels = trackMappings[String((data as { channelName?: unknown }).channelName)];
+            if (mappedChannels) {
+              channelNames = Array.isArray(mappedChannels)
+                ? mappedChannels
+                : [mappedChannels];
+              if (debugEnabled) {
+                logger.log(`🎯 [INPUT] FILE channel maps to channels:`, channelNames);
+              }
+            }
           }
         } else {
           if (debugEnabled) {
@@ -203,7 +223,14 @@ export function initInputListener(this: InputListenerContext) {
 
     if (this.debugOverlayActive && debugEnabled) {
       const timeStr = Number(timestamp).toFixed(5);
-      const source = data.source === "midi" ? "MIDI" : "OSC";
+      const source =
+        data.source === "midi"
+          ? "MIDI"
+          : data.source === "audio"
+            ? "AUDIO"
+            : data.source === "file"
+              ? "FILE"
+              : "OSC";
       let log = `[${timeStr}] ${source} Event\n`;
       if (data.source === "midi") {
         const key = noteNumberToTriggerKey(
@@ -222,6 +249,10 @@ export function initInputListener(this: InputListenerContext) {
         log += `  Channel: ${(data as { channel?: unknown }).channel}\n`;
       } else if (data.source === "osc") {
         log += `  Address: ${(data as { address?: unknown }).address}\n`;
+      } else if (data.source === "audio") {
+        log += `  Channel: ${(data as { channelName?: unknown }).channelName}\n`;
+      } else if (data.source === "file") {
+        log += `  Channel: ${(data as { channelName?: unknown }).channelName}\n`;
       }
       if (trackName) {
         log += `  Track: ${trackName}\n`;

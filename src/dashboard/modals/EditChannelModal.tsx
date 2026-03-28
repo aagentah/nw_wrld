@@ -6,11 +6,11 @@ import { ModalFooter } from "../components/ModalFooter";
 import { Button } from "../components/Button";
 import { Select, Label } from "../components/FormInputs";
 import { HelpIcon } from "../components/HelpIcon";
-import { userDataAtom, activeSetIdAtom } from "../core/state.ts";
+import { userDataAtom, activeSetIdAtom } from "../core/state";
 import { updateActiveSet, updateUserData } from "../core/utils";
-import { getActiveSetTracks } from "../../shared/utils/setUtils.ts";
-import { HELP_TEXT } from "../../shared/helpText.ts";
-import { parsePitchClass, pitchClassToName, resolveChannelTrigger } from "../../shared/midi/midiUtils.ts";
+import { getActiveSetTracks } from "../../shared/utils/setUtils";
+import { HELP_TEXT } from "../../shared/helpText";
+import { parsePitchClass, pitchClassToName, resolveChannelTrigger } from "../../shared/midi/midiUtils";
 
 const asPlainObject = (value: unknown): Record<string, unknown> | null => {
   if (!value) return null;
@@ -59,7 +59,14 @@ export const EditChannelModal = ({
 
   const tracks = getActiveSetTracks(userData, activeSetId);
   const track = (tracks as unknown[])[trackIndex] as Record<string, unknown> | undefined;
-  const inputType = inputConfig?.type === "osc" ? "osc" : "midi";
+  const inputType =
+    inputConfig?.type === "osc"
+      ? "osc"
+      : inputConfig?.type === "audio"
+        ? "audio"
+        : inputConfig?.type === "file"
+          ? "file"
+          : "midi";
   const noteMatchMode = inputConfig?.noteMatchMode === "exactNote" ? "exactNote" : "pitchClass";
   const globalMappings = useMemo(() => (userData as Record<string, unknown>).config || {}, [userData]);
 

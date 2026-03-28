@@ -1,28 +1,4 @@
-type ElectronProtocol = {
-  registerSchemesAsPrivileged(
-    schemes: Array<{
-      scheme: string;
-      privileges: {
-        standard: boolean;
-        secure: boolean;
-        supportFetchAPI: boolean;
-        corsEnabled: boolean;
-      };
-    }>
-  ): void;
-};
-
-type ElectronApp = {
-  setName(name: string): void;
-  getVersion(): string;
-  setAboutPanelOptions(opts: { applicationName: string; applicationVersion: string }): void;
-  commandLine: { appendSwitch(name: string, value?: string): void };
-};
-
-const { app, protocol } = require("electron") as {
-  app: ElectronApp;
-  protocol: ElectronProtocol;
-};
+import { app, protocol } from "electron";
 
 export function setupApp() {
   app.setName("nw_wrld");

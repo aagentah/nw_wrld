@@ -1,5 +1,5 @@
 import { forEach } from "lodash";
-import { buildMethodOptions } from "../../../shared/utils/methodOptions.ts";
+import { buildMethodOptions } from "../../../shared/utils/methodOptions";
 import logger from "../../helpers/logger";
 
 type MethodEntry = { name?: unknown; options?: unknown };

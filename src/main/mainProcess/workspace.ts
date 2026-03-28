@@ -1,28 +1,12 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 
+import { dialog, ipcMain } from "electron";
+
 import { state, srcDir } from "./state";
 import { isExistingDirectory } from "./pathSafety";
 import { ensureWorkspaceStarterModules } from "../workspaceStarterModules";
 import { ensureWorkspaceStarterAssets } from "../workspaceStarterAssets";
-
-type ElectronIpcMain = {
-  handle(
-    channel: string,
-    handler: (...args: unknown[]) => unknown | Promise<unknown>
-  ): void;
-};
-
-type ElectronDialog = {
-  showOpenDialog(options: {
-    properties: string[];
-  }): Promise<{ canceled: boolean; filePaths: string[] }>;
-};
-
-const { ipcMain, dialog } = require("electron") as {
-  ipcMain: ElectronIpcMain;
-  dialog: ElectronDialog;
-};
 
 const getLegacyJsonDirForMain = () =>
   path.join(srcDir, "..", "src", "shared", "json");

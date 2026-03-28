@@ -116,9 +116,10 @@ class LowEarthPointModule extends BaseThreeJsModule {
       options: [
         {
           name: "duration",
-          defaultVal: 0,
+          defaultVal: 500,
           type: "number",
-          description: "Duration for primary method animations",
+          unit: "ms",
+          min: 0,
         },
       ],
     },
@@ -272,8 +273,8 @@ class LowEarthPointModule extends BaseThreeJsModule {
   primary({ duration } = {}) {
     if (this.destroyed) return;
 
-    const seconds = Number(duration) || 0;
-    const millis = seconds > 0 ? seconds * 1000 : 500;
+    const millis = Number(duration);
+    const timeout = Number.isFinite(millis) ? Math.max(0, millis) : 500;
     const selected = sampleN(this.points, 5);
     const spheres = [];
 
@@ -294,7 +295,7 @@ class LowEarthPointModule extends BaseThreeJsModule {
           mesh.material && mesh.material.dispose();
         } catch {}
       });
-    }, millis);
+    }, timeout);
   }
 
   destroy() {

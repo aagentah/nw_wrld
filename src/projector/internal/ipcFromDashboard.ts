@@ -1,12 +1,6 @@
 import { find, isEqual } from "lodash";
 import { getMessaging } from "./bridge";
-
-type IpcMessage = {
-  type?: unknown;
-  props?: unknown;
-};
-
-type IpcProps = Record<string, unknown>;
+import { normalizeDashboardProjectorMessage } from "../../shared/validation/dashboardProjectorIpcValidation";
 
 type DashboardIpcContext = {
   introspectModule: (moduleId: unknown) => Promise<unknown>;
@@ -42,21 +36,13 @@ export function initDashboardIpc(this: DashboardIpcContext) {
   if (messaging && typeof messaging.onFromDashboard === "function") {
     messaging.onFromDashboard((event: unknown, data: unknown) => {
       try {
-        if (!data || typeof data !== "object") {
+        const msg = normalizeDashboardProjectorMessage(data);
+        if (!msg) {
           console.error("❌ [PROJECTOR-IPC] Invalid IPC message received:", data);
           return;
         }
-
-        const msg = data as IpcMessage;
         const type = msg.type;
-        const propsRaw = msg.props;
-        const props =
-          propsRaw && typeof propsRaw === "object" ? (propsRaw as IpcProps) : ({} as IpcProps);
-
-        if (!type) {
-          console.error("❌ [PROJECTOR-IPC] Message missing type field:", data);
-          return;
-        }
+        const props = msg.props;
 
         if (type === "module-introspect") {
           const moduleId = (props as { moduleId?: unknown } | null)?.moduleId || null;
@@ -150,24 +136,39 @@ export function initDashboardIpc(this: DashboardIpcContext) {
             if (
               this.activeTrack &&
               this.activeTrack.name === currentTrackName &&
-              nextTrack &&
-              isEqual(
-                {
-                  name: this.activeTrack.name,
-                  modules: (this.activeTrack as { modules?: unknown }).modules,
-                  modulesData: (this.activeTrack as { modulesData?: unknown }).modulesData,
-                  channelMappings: (this.activeTrack as { channelMappings?: unknown })
-                    .channelMappings,
-                },
-                {
-                  name: (nextTrack as { name?: unknown }).name,
-                  modules: (nextTrack as { modules?: unknown }).modules,
-                  modulesData: (nextTrack as { modulesData?: unknown }).modulesData,
-                  channelMappings: (nextTrack as { channelMappings?: unknown }).channelMappings,
-                }
-              )
+              nextTrack
             ) {
-              return;
+              const activeModules = Array.isArray((this.activeTrack as { modules?: unknown }).modules)
+                ? ((this.activeTrack as { modules?: unknown[] }).modules as unknown[]).filter((m: unknown) => {
+                    const mm = m as { disabled?: boolean } | null;
+                    return !mm?.disabled;
+                  })
+                : [];
+              const nextModules = Array.isArray((nextTrack as { modules?: unknown }).modules)
+                ? ((nextTrack as { modules?: unknown[] }).modules as unknown[]).filter((m: unknown) => {
+                    const mm = m as { disabled?: boolean } | null;
+                    return !mm?.disabled;
+                  })
+                : [];
+              if (
+                isEqual(
+                  {
+                    name: this.activeTrack.name,
+                    modules: activeModules,
+                    modulesData: (this.activeTrack as { modulesData?: unknown }).modulesData,
+                    channelMappings: (this.activeTrack as { channelMappings?: unknown })
+                      .channelMappings,
+                  },
+                  {
+                    name: (nextTrack as { name?: unknown }).name,
+                    modules: nextModules,
+                    modulesData: (nextTrack as { modulesData?: unknown }).modulesData,
+                    channelMappings: (nextTrack as { channelMappings?: unknown }).channelMappings,
+                  }
+                )
+              ) {
+                return;
+              }
             }
             this.deactivateActiveTrack();
             return this.handleTrackSelection(currentTrackName);

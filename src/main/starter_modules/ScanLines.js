@@ -18,6 +18,8 @@ class ScanLines extends ModuleBase {
           name: "duration",
           defaultVal: 2000,
           type: "number",
+          unit: "ms",
+          min: 0,
         },
         {
           name: "direction",

@@ -37,6 +37,16 @@ export const useIPCInvoke = () => {
         ? await messaging.getMidiDevices()
         : null;
     }
+    if (channel === "input:audio:emitBand") {
+      return typeof (messaging as unknown as { emitAudioBand?: unknown }).emitAudioBand === "function"
+        ? await (messaging as unknown as { emitAudioBand: (payload: unknown) => Promise<unknown> }).emitAudioBand(args[0])
+        : null;
+    }
+    if (channel === "input:file:emitBand") {
+      return typeof (messaging as unknown as { emitFileBand?: unknown }).emitFileBand === "function"
+        ? await (messaging as unknown as { emitFileBand: (payload: unknown) => Promise<unknown> }).emitFileBand(args[0])
+        : null;
+    }
     if (channel === "workspace:select") {
       return typeof messaging.selectWorkspace === "function"
         ? await messaging.selectWorkspace()

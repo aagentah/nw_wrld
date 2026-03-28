@@ -1,4 +1,4 @@
-import { memo, useState, useEffect, useCallback, useRef } from "react";
+import { memo, useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useAtom } from "jotai";
 import { remove } from "lodash";
 import { FaPlus } from "react-icons/fa";
@@ -10,13 +10,16 @@ import {
   activeSetIdAtom,
   flashingConstructorsAtom,
   useFlashingChannels,
-} from "../../core/state.ts";
+} from "../../core/state";
 import { updateActiveSet } from "../../core/utils";
-import { getRecordingForTrack } from "../../../shared/json/recordingUtils.ts";
-import MidiPlayback from "../../../shared/midi/midiPlayback.ts";
+import { getRecordingForTrack } from "../../../shared/json/recordingUtils";
+import MidiPlayback from "../../../shared/midi/midiPlayback";
 import { Button } from "../Button";
 import { TrackDataModal } from "../../modals/TrackDataModal";
+import { EditTrackModal } from "../../modals/EditTrackModal";
 import { ModuleSelector, SortableModuleItem } from "./ModuleComponents";
+import type { AudioCaptureState } from "../../core/hooks/useDashboardAudioCapture";
+import type { FileAudioState } from "../../core/hooks/useDashboardFileAudio";
 
 type ModuleInstance = { id: string; type: string };
 
@@ -53,6 +56,8 @@ type TrackItemProps = {
   workspacePath?: string | null;
   workspaceModuleFiles?: string[];
   workspaceModuleLoadFailures?: string[];
+  audioCaptureState?: AudioCaptureState | null;
+  fileAudioState?: FileAudioState | null;
 };
 
 export const TrackItem = memo(
@@ -71,6 +76,8 @@ export const TrackItem = memo(
     workspacePath = null,
     workspaceModuleFiles = [],
     workspaceModuleLoadFailures = [],
+    audioCaptureState = null,
+    fileAudioState = null,
   }: TrackItemProps) => {
     const [_userData, setUserData] = useAtom(userDataAtom);
     const [recordingData] = useAtom(recordingDataAtom);
@@ -78,6 +85,7 @@ export const TrackItem = memo(
     const [_flashingChannels, flashChannel] = useFlashingChannels();
     const [_flashingConstructors, setFlashingConstructors] = useAtom(flashingConstructorsAtom);
     const [selectedTrackForData, setSelectedTrackForData] = useState<unknown | null>(null);
+    const [isEditTrackModalOpen, setIsEditTrackModalOpen] = useState(false);
     const [isPlaying, setIsPlaying] = useState(false);
     const playbackEngineRef = useRef<MidiPlayback | null>(null);
 
@@ -102,7 +110,6 @@ export const TrackItem = memo(
       }
 
       if (!nextChannel) {
-        alert("All 12 channels are already in use.");
         return;
       }
 
@@ -118,6 +125,14 @@ export const TrackItem = memo(
         cm[String(nextChannel)] = nextChannel;
       });
     }, [track, trackIndex, setUserData, activeSetId]);
+
+    const isAtMaxChannels = useMemo(() => {
+      const existing = new Set(Object.keys(track?.channelMappings || {}).map(Number));
+      for (let i = 1; i <= 12; i++) {
+        if (!existing.has(i)) return false;
+      }
+      return true;
+    }, [track?.channelMappings]);
 
     const handleRemoveModule = useCallback(
       (instanceId: string) => {
@@ -237,6 +252,7 @@ export const TrackItem = memo(
                 setSelectedTrackForData(t);
               }}
               inputConfig={inputConfig}
+              onEditTrack={() => setIsEditTrackModalOpen(true)}
             />
             {track.modules.length > 0 && (
               <div className="absolute left-[11px] bottom-0 w-[2px] bg-neutral-800 h-4" />
@@ -312,9 +328,17 @@ export const TrackItem = memo(
               onClick={handleAddChannel}
               icon={<FaPlus />}
               data-testid="track-add-channel"
-              disabled={track.modules.length === 0}
-              className={track.modules.length === 0 ? "opacity-50 cursor-not-allowed" : ""}
-              title={track.modules.length === 0 ? "Add a module first" : "Add Channel"}
+              disabled={track.modules.length === 0 || isAtMaxChannels}
+              className={
+                track.modules.length === 0 || isAtMaxChannels ? "opacity-50 cursor-not-allowed" : ""
+              }
+              title={
+                track.modules.length === 0
+                  ? "Add a module first"
+                  : isAtMaxChannels
+                    ? "Max 12 channels"
+                    : "Add Channel"
+              }
             >
               CHANNEL
             </Button>
@@ -325,6 +349,15 @@ export const TrackItem = memo(
           isOpen={!!selectedTrackForData}
           onClose={() => setSelectedTrackForData(null)}
           trackData={selectedTrackForData}
+        />
+
+        <EditTrackModal
+          isOpen={isEditTrackModalOpen}
+          onClose={() => setIsEditTrackModalOpen(false)}
+          trackIndex={trackIndex}
+          inputConfig={inputConfig as { type?: unknown; noteMatchMode?: unknown } | null}
+          audioCaptureState={audioCaptureState}
+          fileAudioState={fileAudioState}
         />
       </div>
     );

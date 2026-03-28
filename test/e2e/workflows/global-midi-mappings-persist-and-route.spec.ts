@@ -25,12 +25,8 @@ const waitForProjectReady = async (page: import("playwright").Page) => {
   );
 };
 
-const getDashboardAndProjectorWindows = async (
-  app: import("playwright").ElectronApplication
-) => {
-  await expect
-    .poll(() => app.windows().length, { timeout: 15_000 })
-    .toBeGreaterThanOrEqual(2);
+const getDashboardAndProjectorWindows = async (app: import("playwright").ElectronApplication) => {
+  await expect.poll(() => app.windows().length, { timeout: 15_000 }).toBeGreaterThanOrEqual(2);
 
   const windows = app.windows();
   const dashboard = windows.find((w) => w.url().includes("dashboard.html")) || windows[0];
@@ -122,9 +118,12 @@ test("global MIDI mappings persist to userData.json and route input-event correc
     await expect(channelSelect).toBeVisible();
     await channelSelect.selectOption(String(channelTriggerNote));
 
-    const mappingsModal = dashboard.locator("div.fixed").filter({ hasText: "INPUT MAPPINGS" }).first();
+    const mappingsModal = dashboard
+      .locator("div.fixed")
+      .filter({ hasText: "INPUT MAPPINGS" })
+      .first();
     await expect(mappingsModal).toBeVisible();
-    await mappingsModal.getByText("CLOSE", { exact: true }).click();
+    await mappingsModal.getByText("BACK", { exact: true }).click();
     await expect(dashboard.getByText("INPUT MAPPINGS", { exact: true })).toBeHidden();
 
     if (await dashboard.locator("#midiDevice").isVisible()) {
@@ -155,13 +154,33 @@ test("global MIDI mappings persist to userData.json and route input-event correc
       });
 
     const userDataAfterMappings = await readUserData(dir);
-    const trackSelectionChannelRaw = getNested(userDataAfterMappings, ["config", "input", "trackSelectionChannel"]);
-    const methodTriggerChannelRaw = getNested(userDataAfterMappings, ["config", "input", "methodTriggerChannel"]);
-    if (typeof trackSelectionChannelRaw !== "number" || trackSelectionChannelRaw < 1 || trackSelectionChannelRaw > 16) {
-      throw new Error(`Invalid trackSelectionChannel in userData: ${String(trackSelectionChannelRaw)}`);
+    const trackSelectionChannelRaw = getNested(userDataAfterMappings, [
+      "config",
+      "input",
+      "trackSelectionChannel",
+    ]);
+    const methodTriggerChannelRaw = getNested(userDataAfterMappings, [
+      "config",
+      "input",
+      "methodTriggerChannel",
+    ]);
+    if (
+      typeof trackSelectionChannelRaw !== "number" ||
+      trackSelectionChannelRaw < 1 ||
+      trackSelectionChannelRaw > 16
+    ) {
+      throw new Error(
+        `Invalid trackSelectionChannel in userData: ${String(trackSelectionChannelRaw)}`
+      );
     }
-    if (typeof methodTriggerChannelRaw !== "number" || methodTriggerChannelRaw < 1 || methodTriggerChannelRaw > 16) {
-      throw new Error(`Invalid methodTriggerChannel in userData: ${String(methodTriggerChannelRaw)}`);
+    if (
+      typeof methodTriggerChannelRaw !== "number" ||
+      methodTriggerChannelRaw < 1 ||
+      methodTriggerChannelRaw > 16
+    ) {
+      throw new Error(
+        `Invalid methodTriggerChannel in userData: ${String(methodTriggerChannelRaw)}`
+      );
     }
     const trackSelectionChannel = trackSelectionChannelRaw;
     const methodTriggerChannel = methodTriggerChannelRaw;
@@ -189,7 +208,10 @@ test("global MIDI mappings persist to userData.json and route input-event correc
     await expect(trackALabel).toBeVisible();
     await trackALabel.click();
     {
-      const tracksModal = dashboard.locator("div.fixed").filter({ hasText: "Select Active Track:" }).first();
+      const tracksModal = dashboard
+        .locator("div.fixed")
+        .filter({ hasText: "Select Active Track:" })
+        .first();
       if (await tracksModal.isVisible()) {
         await tracksModal.getByText("CLOSE", { exact: true }).click();
       }
@@ -244,7 +266,10 @@ test("global MIDI mappings persist to userData.json and route input-event correc
     await expect(trackBLabel).toBeVisible();
     await trackBLabel.click();
     {
-      const tracksModal = dashboard.locator("div.fixed").filter({ hasText: "Select Active Track:" }).first();
+      const tracksModal = dashboard
+        .locator("div.fixed")
+        .filter({ hasText: "Select Active Track:" })
+        .first();
       if (await tracksModal.isVisible()) {
         await tracksModal.getByText("CLOSE", { exact: true }).click();
       }
@@ -257,10 +282,18 @@ test("global MIDI mappings persist to userData.json and route input-event correc
     await dashboard.evaluate(
       ({ deviceId, note, channel }) => {
         const bridge = (globalThis as unknown as { nwWrldBridge?: unknown }).nwWrldBridge;
-        const bridgeObj = bridge && typeof bridge === 'object' ? bridge as Record<string, unknown> : {};
-        const testing = bridgeObj.testing && typeof bridgeObj.testing === 'object' ? bridgeObj.testing as Record<string, unknown> : {};
-        const midi = testing.midi && typeof testing.midi === 'object' ? testing.midi as Record<string, unknown> : {};
-        const noteOn = typeof midi.noteOn === 'function' ? midi.noteOn as (args: unknown) => void : null;
+        const bridgeObj =
+          bridge && typeof bridge === "object" ? (bridge as Record<string, unknown>) : {};
+        const testing =
+          bridgeObj.testing && typeof bridgeObj.testing === "object"
+            ? (bridgeObj.testing as Record<string, unknown>)
+            : {};
+        const midi =
+          testing.midi && typeof testing.midi === "object"
+            ? (testing.midi as Record<string, unknown>)
+            : {};
+        const noteOn =
+          typeof midi.noteOn === "function" ? (midi.noteOn as (args: unknown) => void) : null;
         noteOn?.({
           deviceId,
           note,
@@ -296,10 +329,18 @@ test("global MIDI mappings persist to userData.json and route input-event correc
     await dashboard.evaluate(
       ({ deviceId, note, channel }) => {
         const bridge = (globalThis as unknown as { nwWrldBridge?: unknown }).nwWrldBridge;
-        const bridgeObj = bridge && typeof bridge === 'object' ? bridge as Record<string, unknown> : {};
-        const testing = bridgeObj.testing && typeof bridgeObj.testing === 'object' ? bridgeObj.testing as Record<string, unknown> : {};
-        const midi = testing.midi && typeof testing.midi === 'object' ? testing.midi as Record<string, unknown> : {};
-        const noteOn = typeof midi.noteOn === 'function' ? midi.noteOn as (args: unknown) => void : null;
+        const bridgeObj =
+          bridge && typeof bridge === "object" ? (bridge as Record<string, unknown>) : {};
+        const testing =
+          bridgeObj.testing && typeof bridgeObj.testing === "object"
+            ? (bridgeObj.testing as Record<string, unknown>)
+            : {};
+        const midi =
+          testing.midi && typeof testing.midi === "object"
+            ? (testing.midi as Record<string, unknown>)
+            : {};
+        const noteOn =
+          typeof midi.noteOn === "function" ? (midi.noteOn as (args: unknown) => void) : null;
         noteOn?.({
           deviceId,
           note,
@@ -328,4 +369,3 @@ test("global MIDI mappings persist to userData.json and route input-event correc
     await cleanup();
   }
 });
-

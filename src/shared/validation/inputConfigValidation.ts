@@ -24,7 +24,10 @@ export function normalizeInputConfig(value: unknown): InputConfig | null {
   if (!isPlainObject(value)) return null;
 
   const rawType = asNonEmptyStringPreserve(value.type);
-  const type = rawType === "midi" || rawType === "osc" ? rawType : null;
+  const type =
+    rawType === "midi" || rawType === "osc" || rawType === "audio" || rawType === "file"
+      ? rawType
+      : null;
   if (!type) return null;
 
   const trackSelectionChannel = asIntInRange(value.trackSelectionChannel, 1, 16);

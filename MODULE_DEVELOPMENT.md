@@ -13,11 +13,10 @@ This guide covers creating custom visual modules for nw_wrld, including the work
 7. [SDK API Reference](#sdk-api-reference)
 8. [Working with Assets](#working-with-assets)
 9. [Using Libraries](#using-libraries)
-10. [Starter Modules Reference](#starter-modules-reference)
-11. [Advanced Patterns](#advanced-patterns)
-12. [Debugging Modules](#debugging-modules)
-13. [Best Practices](#best-practices)
-14. [Performance Tips](#performance-tips)
+10. [Advanced Patterns](#advanced-patterns)
+11. [Debugging Modules](#debugging-modules)
+12. [Best Practices](#best-practices)
+13. [Performance Tips](#performance-tips)
 
 ---
 
@@ -203,12 +202,10 @@ class PulsingCircle extends ModuleBase {
 
       if (progress < 0.5) {
         // Growing phase
-        this.circleScale =
-          startScale + (intensity - startScale) * (progress * 2);
+        this.circleScale = startScale + (intensity - startScale) * (progress * 2);
       } else if (progress < 1) {
         // Shrinking phase
-        this.circleScale =
-          intensity - (intensity - startScale) * ((progress - 0.5) * 2);
+        this.circleScale = intensity - (intensity - startScale) * ((progress - 0.5) * 2);
       } else {
         // Animation complete
         this.circleScale = startScale;
@@ -333,6 +330,7 @@ static methods = [
         type: "text",              // UI control type
         min: 0,                    // (optional) for numbers
         max: 100,                  // (optional) for numbers
+        unit: "ms",                // (optional) UI-only unit label
         values: ["a", "b"],        // (optional) for selects
         allowRandomization: true,  // (optional) add randomize button
       },
@@ -340,6 +338,33 @@ static methods = [
   },
 ];
 ```
+
+### Option Schema (what the Dashboard understands)
+
+Each entry in `static methods[].options[]` is an **option definition** that drives:
+
+- What input control the Dashboard shows
+- How values are saved in track/channel method configs
+- What keys exist in the object passed to your method at runtime
+
+Supported option fields:
+
+- **`name`** (string, required): must match the property name your method reads (e.g. `pulse({ duration })`)
+- **`type`** (string, required): one of the option types listed below
+- **`defaultVal`** (optional): the value used when a method is first created in the UI
+- **`min` / `max`** (optional, number): numeric bounds for number inputs (the UI clamps values to these bounds)
+- **`unit`** (optional, string): UI-only display suffix (for example `ms`, `%`, `×`). This does not change runtime behavior.
+- **`values`** (optional, string[]): required for `select` options; `defaultVal` should be one of these values
+- **`allowRandomization`** (optional, boolean): enables the dice/random UI for this option
+- **`assetBaseDir`** (optional, string): for `assetFile` / `assetDir` options (e.g. `"images"`, `"models"`, `"json"`, `"fonts"`)
+- **`assetExtensions`** (optional, string[]): for `assetFile` options (e.g. `[".png", ".jpg"]`)
+- **`allowCustom`** (optional, boolean): for asset options; when true, users can type a custom path/list instead of picking
+
+### Units and numeric conventions (recommended)
+
+- **Durations**: use **milliseconds** and label with `unit: "ms"`.
+- **Percent values**: label with `unit: "%"`.
+- **Multipliers**: label with `unit: "×"`.
 
 ### executeOnLoad Explained
 
@@ -359,14 +384,16 @@ static methods = [
 
 ### Available Types
 
-| Type      | Description        | Example                                                                                     |
-| --------- | ------------------ | ------------------------------------------------------------------------------------------- |
-| `text`    | Text input         | `{ name: "message", defaultVal: "Hello", type: "text" }`                                    |
-| `number`  | Numeric input      | `{ name: "size", defaultVal: 50, type: "number", min: 10, max: 200 }`                       |
-| `color`   | Color picker (hex) | `{ name: "color", defaultVal: "#FF0000", type: "color" }`                                   |
-| `boolean` | Toggle switch      | `{ name: "enabled", defaultVal: true, type: "boolean" }`                                    |
-| `select`  | Dropdown menu      | `{ name: "mode", defaultVal: "bounce", type: "select", values: ["bounce", "slide"] }`       |
-| `matrix`  | Grid position      | `{ name: "position", defaultVal: { rows: 1, cols: 1, excludedCells: [] }, type: "matrix" }` |
+| Type        | Description                                       | Example                                                                                                                                                      |
+| ----------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `text`      | Text input                                        | `{ name: "message", defaultVal: "Hello", type: "text" }`                                                                                                     |
+| `number`    | Numeric input                                     | `{ name: "size", defaultVal: 50, type: "number", min: 10, max: 200 }`                                                                                        |
+| `color`     | Color picker (hex)                                | `{ name: "color", defaultVal: "#FF0000", type: "color" }`                                                                                                    |
+| `boolean`   | Toggle switch                                     | `{ name: "enabled", defaultVal: true, type: "boolean" }`                                                                                                     |
+| `select`    | Dropdown menu                                     | `{ name: "mode", defaultVal: "bounce", type: "select", values: ["bounce", "slide"] }`                                                                        |
+| `matrix`    | Grid position                                     | `{ name: "position", defaultVal: { rows: 1, cols: 1, excludedCells: [] }, type: "matrix" }`                                                                  |
+| `assetFile` | Asset file picker (from workspace `assets/`)      | `{ name: "imagePath", defaultVal: "images/blueprint.png", type: "assetFile", assetBaseDir: "images", assetExtensions: [".png", ".jpg"], allowCustom: true }` |
+| `assetDir`  | Asset directory picker (from workspace `assets/`) | `{ name: "directory", defaultVal: "images", type: "assetDir", assetBaseDir: "images", allowCustom: true }`                                                   |
 
 All options create UI controls in the Dashboard and pass values to your methods.
 
@@ -427,9 +454,12 @@ class MyModule extends ModuleBase {
 - `offset({ x, y })` - Reposition module
 - `scale({ scale })` - Scale module
 - `opacity({ opacity })` - Set opacity
-- `rotate({ degrees })` - Rotate module
-- `randomZoom()` - Random zoom effect
-- `matrix({ position })` - Position using matrix grid
+- `rotate({ direction, speed, duration })` - Rotate module (duration is milliseconds)
+- `randomZoom({ scaleFrom, scaleTo, position })` - Random zoom effect
+- `matrix({ matrix, border })` - Position using matrix grid
+- `viewportLine({ x, y, length, opacity })` - Draw a viewport line (x/y/length are percentages)
+- `background({ color })` - Set background color
+- `invert({ duration })` - Invert colors (duration is milliseconds)
 
 #### BaseThreeJsModule
 
@@ -591,7 +621,10 @@ class ImageModule extends ModuleBase {
         {
           name: "path",
           defaultVal: "images/blueprint.png",
-          type: "text",
+          type: "assetFile",
+          assetBaseDir: "images",
+          assetExtensions: [".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"],
+          allowCustom: true,
         },
       ],
     },
@@ -867,11 +900,7 @@ class MyModelLoader extends BaseThreeJsModule {
 
     const ext = String(modelPath).split(".").pop().toLowerCase();
     const loader =
-      ext === "obj"
-        ? new OBJLoader()
-        : ext === "glb" || ext === "gltf"
-        ? new GLTFLoader()
-        : null;
+      ext === "obj" ? new OBJLoader() : ext === "glb" || ext === "gltf" ? new GLTFLoader() : null;
     if (!loader) return;
 
     loader.load(url, (result) => {
@@ -907,11 +936,7 @@ class MyD3Module extends ModuleBase {
   init() {
     if (!d3) return;
 
-    this.svg = d3
-      .select(this.elem)
-      .append("svg")
-      .attr("width", "100%")
-      .attr("height", "100%");
+    this.svg = d3.select(this.elem).append("svg").attr("width", "100%").attr("height", "100%");
 
     // Create your visualization
     const data = [10, 20, 30, 40, 50];
@@ -946,138 +971,6 @@ The following libraries are available globally in workspace modules:
 - **d3** - `globalThis.d3` - Data visualization
 
 ---
-
-## Starter Modules Reference
-
-Every new project includes 16 starter modules that demonstrate different techniques and patterns. Study these modules to learn best practices.
-
-### 2D & UI Modules
-
-#### HelloWorld
-
-**File:** `modules/HelloWorld.js`  
-**Purpose:** Minimal working example - the simplest possible module  
-**Techniques:** Basic DOM manipulation, text display  
-**Good for:** Understanding the minimum module structure
-
-#### Text
-
-**File:** `modules/Text.js`  
-**Purpose:** Configurable text display and manipulation  
-**Techniques:** DOM text rendering, CSS styling, method options  
-**Good for:** Learning method parameters and text handling
-
-#### Corners
-
-**File:** `modules/Corners.js`  
-**Purpose:** DOM-based corner UI elements  
-**Techniques:** Fixed positioning, UI overlays  
-**Good for:** Creating persistent UI elements
-
-#### GridOverlay
-
-**File:** `modules/GridOverlay.js`  
-**Purpose:** Canvas-based grid overlay  
-**Techniques:** Canvas 2D API, responsive sizing  
-**Good for:** Learning canvas drawing basics
-
-#### GridDots
-
-**File:** `modules/GridDots.js`  
-**Purpose:** Animated dot grid patterns with p5.js  
-**Techniques:** p5.js sketches, animation loops, noise  
-**Good for:** Learning p5.js integration
-
-#### Frame
-
-**File:** `modules/Frame.js`  
-**Purpose:** Border frame overlay  
-**Techniques:** CSS borders, responsive containers  
-**Good for:** Simple visual framing
-
-#### Image
-
-**File:** `modules/Image.js`  
-**Purpose:** Load and display images from workspace assets  
-**Techniques:** `assetUrl()`, image loading  
-**Good for:** Learning asset loading patterns
-
-#### CodeColumns
-
-**File:** `modules/CodeColumns.js`  
-**Purpose:** Matrix-style animated text columns  
-**Techniques:** DOM animation, text effects  
-**Good for:** Creative text animations
-
-### 3D Graphics Modules
-
-#### SpinningCube
-
-**File:** `modules/SpinningCube.js`  
-**Purpose:** Basic Three.js cube with rotation  
-**Techniques:** BaseThreeJsModule, basic 3D objects, animation  
-**Good for:** Learning Three.js basics
-
-#### CubeCube
-
-**File:** `modules/CubeCube.js`  
-**Purpose:** Nested cube visualization  
-**Techniques:** Complex Three.js scenes, multiple objects  
-**Good for:** Intermediate Three.js patterns
-
-#### OrbitalPlane
-
-**File:** `modules/OrbitalPlane.js`  
-**Purpose:** Orbital mechanics simulation  
-**Techniques:** Mathematical animation, 3D transformations  
-**Good for:** Physics-based 3D visuals
-
-#### LowEarthPoint
-
-**File:** `modules/LowEarthPoint.js`  
-**Purpose:** Low earth orbit visualization  
-**Techniques:** Orbital calculations, particle systems  
-**Good for:** Advanced 3D techniques
-
-### Data Visualization Modules
-
-#### AsteroidGraph
-
-**File:** `modules/AsteroidGraph.js`  
-**Purpose:** p5.js visualization with workspace JSON data  
-**Techniques:** `loadJson()`, data processing, p5.js graphs  
-**Good for:** Learning asset loading and data visualization
-
-#### MathOrbitalMap
-
-**File:** `modules/MathOrbitalMap.js`  
-**Purpose:** Mathematical orbit mapping  
-**Techniques:** Mathematical visualization, coordinate systems  
-**Good for:** Mathematical graphics
-
-#### CloudPointIceberg
-
-**File:** `modules/CloudPointIceberg.js`  
-**Purpose:** 3D point cloud visualization  
-**Techniques:** Three.js points, particle systems  
-**Good for:** Point cloud rendering
-
-#### ZKProofVisualizer
-
-**File:** `modules/ZKProofVisualizer.js`  
-**Purpose:** Zero-knowledge proof visualization  
-**Techniques:** Complex animations, state visualization  
-**Good for:** Advanced visualization patterns
-
-### How to Learn from Starter Modules
-
-1. **Start with HelloWorld** - Understand the bare minimum structure
-2. **Study Text** - Learn method parameters and configuration
-3. **Try Image or AsteroidGraph** - Learn asset loading
-4. **Explore SpinningCube** - Get into 3D basics
-5. **Copy and modify** - Duplicate a module and change it to learn
-
-All starter modules are fully editable in your project's `modules/` folder. Experiment freely!
 
 ## Advanced Patterns
 
@@ -1446,8 +1339,7 @@ async testAssetLoading() {
 
 1. **Keep methods focused** - Each method does one thing well
 2. **Extract reusable logic** into private methods
-3. **Comment non-obvious code** - Explain "why", not "what"
-4. **Use consistent formatting** - Follow the starter module style
+3. **Use consistent formatting** - Follow the starter module style
 
 ### Error Handling
 
@@ -1636,7 +1528,6 @@ async testAssetLoading() {
 ### Memory Management
 
 1. **Avoid memory leaks**:
-
    - Remove event listeners in `destroy()`
    - Cancel animation frames
    - Clear intervals/timeouts
@@ -1688,14 +1579,12 @@ async testAssetLoading() {
 ### Testing Methods
 
 1. **Test each method individually**:
-
    - Create a track, add your module
    - Add a channel, assign one method
    - Trigger the method and verify behavior
    - Repeat for each method
 
 2. **Test with different parameters**:
-
    - Try minimum and maximum values
    - Test with invalid inputs
    - Verify default values work
@@ -1748,5 +1637,3 @@ The 16 starter modules in your project's `modules/` folder are your best learnin
 - [GitHub Issues](https://github.com/aagentah/nw_wrld/issues) - Report bugs, request features
 
 ---
-
-**Happy module development!** 🎨

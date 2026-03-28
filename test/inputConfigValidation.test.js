@@ -21,6 +21,32 @@ test("input config normalizer preserves valid config (including extra fields)", 
   assert.equal(res, input);
 });
 
+test("input config normalizer accepts audio input type", () => {
+  const input = {
+    type: "audio",
+    trackSelectionChannel: 2,
+    methodTriggerChannel: 1,
+    velocitySensitive: false,
+    port: 8000,
+    extra: { keep: true },
+  };
+  const res = normalizeInputConfig(input);
+  assert.equal(res, input);
+});
+
+test("input config normalizer accepts file input type", () => {
+  const input = {
+    type: "file",
+    trackSelectionChannel: 2,
+    methodTriggerChannel: 1,
+    velocitySensitive: false,
+    port: 8000,
+    extra: { keep: true },
+  };
+  const res = normalizeInputConfig(input);
+  assert.equal(res, input);
+});
+
 test("input config normalizer preserves unknown fields even when it sanitizes known fields", () => {
   const input = {
     type: "midi",

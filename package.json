@@ -1,7 +1,7 @@
 {
   "name": "nw-wrld",
   "productName": "nw_wrld",
-  "version": "0.4.0-beta",
+  "version": "0.5.0-beta",
   "description": "nw_wrld is an event-driven sequencer for triggering visuals using web technologies. It enables users to scale up audiovisual compositions for prototyping, demos, exhibitions, and live performances. Users code their own visual modules, then orchestrate them using the project's native UI composer.",
   "main": "index.js",
   "scripts": {
@@ -16,10 +16,10 @@
     "check:runtime-lane": "npm run build:scripts && node dist/scripts/checkRuntimeLaneNoDuplicateSources.js",
     "test:unit": "npm run build:runtime && npm run check:runtime-lane && node --test test/*.test.js",
     "test:e2e": "npm run build:runtime && npm run build && playwright test",
-    "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
-    "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "format": "prettier . --write",
-    "all:ci": "npm run typecheck:all && npm run test:unit && npm run test:e2e && npm run lint",
+    "all:test": "npm run typecheck:all && npm run test:unit && npm run test:e2e && npm run lint",
     "format:check": "prettier . --check",
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true});require('fs').rmSync('release',{recursive:true,force:true});\"",
     "build:renderer": "npm run clean && npm run build:runtime && webpack --mode production",
@@ -32,7 +32,9 @@
     "dist:mac:arm64": "npm run build:renderer && electron-builder --mac --arm64 --publish never",
     "dist:mac:x64": "npm run build:renderer && electron-builder --mac --x64 --publish never",
     "pack:win": "npm run build:renderer && electron-builder --win --dir",
-    "dist:win": "npm run build:renderer && electron-builder --win --publish never"
+    "dist:win": "npm run build:renderer && electron-builder --win --publish never",
+    "pack:linux": "npm run build:renderer && electron-builder --linux --dir",
+    "dist:linux": "npm run build:renderer && electron-builder --linux --publish never"
   },
   "engines": {
     "node": ">=20.0.0"
@@ -49,7 +51,7 @@
     "three-js",
     "p5-js"
   ],
-  "author": "https://github.com/aagentah",
+  "author": "aagentah <daniel@aagentah.tech> (https://github.com/aagentah)",
   "license": "GPL-3.0",
   "repository": {
     "type": "git",
@@ -69,8 +71,8 @@
     "noisejs": "^2.1.0",
     "osc": "^2.4.4",
     "p5": "^1.9.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "react-icons": "^5.3.0",
     "three": "^0.159.0",
     "tone": "^15.1.22",
@@ -133,14 +135,32 @@
       "src/shared/**",
       "src/assets/**",
       "!**/node_modules/**/prebuilds/android-*/**",
-      "!**/node_modules/**/prebuilds/linux-*/**",
-      "!**/node_modules/**/prebuilds/win32-*/**"
+      "!**/node_modules/**/prebuilds/win32-ia32/**"
     ],
     "mac": {
       "target": [
         "dmg"
       ],
       "icon": "build/logo.icns",
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "nw_wrld requires microphone access to capture audio input."
+      },
+      "files": [
+        "index.js",
+        "package.json",
+        "dist/**",
+        "src/index.js",
+        "src/main/**",
+        "src/projector/helpers/**",
+        "src/projector/views/**",
+        "src/dashboard/views/**",
+        "src/dashboard/assets/audio/**",
+        "src/shared/**",
+        "src/assets/**",
+        "!**/node_modules/**/prebuilds/android-*/**",
+        "!**/node_modules/**/prebuilds/linux-*/**",
+        "!**/node_modules/**/prebuilds/win32-*/**"
+      ],
       "hardenedRuntime": true,
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.inherit.plist",
@@ -150,7 +170,30 @@
       "target": [
         "portable"
       ],
-      "icon": "build/logo.ico"
+      "icon": "build/logo.ico",
+      "files": [
+        "index.js",
+        "package.json",
+        "dist/**",
+        "src/index.js",
+        "src/main/**",
+        "src/projector/helpers/**",
+        "src/projector/views/**",
+        "src/dashboard/views/**",
+        "src/dashboard/assets/audio/**",
+        "src/shared/**",
+        "src/assets/**",
+        "!**/node_modules/**/prebuilds/android-*/**",
+        "!**/node_modules/**/prebuilds/linux-*/**",
+        "!**/node_modules/**/prebuilds/win32-ia32/**"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "build/logo.png"
     }
   }
 }

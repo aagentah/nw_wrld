@@ -7,10 +7,10 @@ import { ModalHeader } from "../components/ModalHeader";
 import { Button } from "../components/Button";
 import { HelpIcon } from "../components/HelpIcon";
 import { Tooltip } from "../components/Tooltip";
-import { activeSetIdAtom, activeTrackIdAtom } from "../core/state.ts";
+import { activeSetIdAtom, activeTrackIdAtom } from "../core/state";
 import { updateActiveSet } from "../core/utils";
-import { getActiveSetTracks } from "../../shared/utils/setUtils.ts";
-import { HELP_TEXT } from "../../shared/helpText.ts";
+import { getActiveSetTracks } from "../../shared/utils/setUtils";
+import { HELP_TEXT } from "../../shared/helpText";
 
 type ModuleMethod = {
   name: string;
@@ -319,12 +319,11 @@ export const AddModuleModal = ({
       <ModalHeader title={modalTitle} onClose={handleClose} />
 
       <div className="px-6">
-        {Object.entries(modulesByCategory).map(([category, modules]) => (
-          <div key={category} className="mb-6 font-mono">
-            <div className="mb-2">
-              <div className="opacity-50 text-[11px] text-neutral-300">{category}:</div>
-
-              <div className="pl-6 uppercase flex flex-col flex-wrap gap-2">
+        <div className="flex flex-col gap-8 font-mono">
+          {Object.entries(modulesByCategory).map(([category, modules]) => (
+            <div key={category}>
+              <div className="opacity-50 text-[11px] mb-1">{category}:</div>
+              <div className="pl-6 uppercase flex flex-col gap-2">
                 {modules.map((module) => {
                   const handlePreview = () => {
                     const hoveredId = module.id || module.name;
@@ -502,27 +501,27 @@ export const AddModuleModal = ({
                 })}
               </div>
             </div>
-          </div>
-        ))}
+          ))}
 
-        {skippedList.length > 0 ? (
-          <div className="mt-6 font-mono border-t border-neutral-800 pt-4">
-            <div className="mb-2 opacity-50 text-[11px] text-neutral-300">Skipped modules:</div>
-            <div className="pl-6 flex flex-col gap-2">
-              {skippedList.map((s) => (
-                <div key={s.file} className="flex items-start gap-2 text-[11px] text-neutral-300">
-                  <span className="text-red-500/70 mt-[1px]">
-                    <FaExclamationTriangle />
-                  </span>
-                  <div className="min-w-0">
-                    <div className="truncate">{s.file}</div>
-                    <div className="opacity-60">{s.reason}</div>
+          {skippedList.length > 0 ? (
+            <div>
+              <div className="opacity-50 text-[11px] mb-1">Skipped modules:</div>
+              <div className="pl-6 flex flex-col gap-2">
+                {skippedList.map((s) => (
+                  <div key={s.file} className="flex items-start gap-2 text-[11px] text-neutral-300">
+                    <span className="text-red-500/70 mt-[1px]">
+                      <FaExclamationTriangle />
+                    </span>
+                    <div className="min-w-0">
+                      <div className="truncate">{s.file}</div>
+                      <div className="opacity-60">{s.reason}</div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        ) : null}
+          ) : null}
+        </div>
       </div>
     </Modal>
   );

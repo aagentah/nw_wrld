@@ -21,6 +21,22 @@ import { getProjectDirForEvent, type SenderEvent } from "./projectContext";
 const MODULE_METADATA_MAX_BYTES = 16 * 1024;
 const MODULE_ID_RULE = "^[A-Za-z][A-Za-z0-9]*$";
 
+const writeFileAtomicBytes = async (filePath: string, bytes: Uint8Array): Promise<void> => {
+  const dir = path.dirname(filePath);
+  const base = path.basename(filePath);
+  const rand = Math.random().toString(16).slice(2);
+  const tmp = path.join(dir, `.${base}.tmp-${process.pid}-${Date.now()}-${rand}`);
+  await fs.promises.writeFile(tmp, bytes);
+  await fs.promises.rename(tmp, filePath);
+};
+
+const toSafeFilenameStem = (raw: string): string => {
+  const s = String(raw || "").trim();
+  const stem = s.replace(/\.[^.]+$/, "");
+  const cleaned = stem.replace(/[^A-Za-z0-9_-]+/g, "_").replace(/^_+/, "").replace(/_+$/, "");
+  return cleaned || "upload";
+};
+
 const readFileHeadUtf8 = async (filePath: string, maxBytes: number): Promise<string> => {
   let fh: fs.promises.FileHandle | undefined;
   try {
@@ -284,6 +300,62 @@ export function registerWorkspaceBridge(): void {
       return await fs.promises.readFile(fullPath, "utf-8");
     } catch {
       return null;
+    }
+  });
+
+  ipcMain.handle("bridge:workspace:readAssetArrayBuffer", async (event, relPath) => {
+    const projectDir = getProjectDirForEvent(event as unknown as SenderEvent);
+    if (!projectDir || !isExistingDirectory(projectDir)) return null;
+    const assetsDir = path.join(projectDir, "assets");
+    const fullPath = resolveWithinDir(assetsDir, String(relPath || ""));
+    if (!fullPath) return null;
+    try {
+      const buf = await fs.promises.readFile(fullPath);
+      return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
+    } catch {
+      return null;
+    }
+  });
+
+  ipcMain.handle("bridge:workspace:writeAudioAsset", async (event, payload: unknown) => {
+    const projectDir = getProjectDirForEvent(event as unknown as SenderEvent);
+    if (!projectDir || !isExistingDirectory(projectDir)) return { ok: false, reason: "PROJECT_DIR_MISSING" };
+
+    const p = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : null;
+    const filename = p && typeof p.filename === "string" ? p.filename : "";
+    const bytesRaw = p ? (p as Record<string, unknown>).bytes : null;
+    const ext = String(path.extname(filename || "") || "").toLowerCase();
+    if (ext !== ".mp3" && ext !== ".wav") return { ok: false, reason: "UNSUPPORTED_TYPE" };
+
+    let bytes: Uint8Array | null = null;
+    if (bytesRaw instanceof ArrayBuffer) {
+      bytes = new Uint8Array(bytesRaw);
+    } else if (ArrayBuffer.isView(bytesRaw)) {
+      bytes = new Uint8Array(bytesRaw.buffer, bytesRaw.byteOffset, bytesRaw.byteLength);
+    }
+    if (!bytes) return { ok: false, reason: "INVALID_BYTES" };
+
+    const maxBytes = 50 * 1024 * 1024;
+    if (bytes.byteLength <= 0 || bytes.byteLength > maxBytes) return { ok: false, reason: "BYTES_OUT_OF_RANGE" };
+
+    const assetsDir = path.join(projectDir, "assets");
+    const audioDir = path.join(assetsDir, "audio");
+    try {
+      await fs.promises.mkdir(audioDir, { recursive: true });
+    } catch {}
+
+    const stem = toSafeFilenameStem(filename);
+    const rand = Math.random().toString(16).slice(2);
+    const outName = `${stem}-${Date.now()}-${rand}${ext}`;
+    const relPath = path.posix.join("audio", outName);
+    const fullPath = resolveWithinDir(assetsDir, relPath);
+    if (!fullPath) return { ok: false, reason: "INVALID_ASSET_PATH" };
+
+    try {
+      await writeFileAtomicBytes(fullPath, bytes);
+      return { ok: true, relPath };
+    } catch (e) {
+      return { ok: false, reason: e instanceof Error ? e.message : "WRITE_FAILED" };
     }
   });
 }

@@ -19,7 +19,7 @@ export async function launchNwWrld({
       NODE_ENV: "test",
       NW_WRLD_TEST_PROJECT_DIR: projectDir,
       ...(env || {}),
+      NW_WRLD_TEST_HEADLESS: "1",
     },
   });
 }
-

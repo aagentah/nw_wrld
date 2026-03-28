@@ -4,6 +4,7 @@ import * as path from "node:path";
 import InputManager from "../InputManager";
 import { DEFAULT_INPUT_CONFIG, DEFAULT_USER_DATA } from "../../shared/config/defaultConfig";
 import { sanitizeJsonForBridge } from "../../shared/validation/jsonBridgeValidation";
+import { normalizeDashboardProjectorMessage } from "../../shared/validation/dashboardProjectorIpcValidation";
 import { srcDir, state } from "./state";
 import { getProjectJsonDirForMain, startWorkspaceWatcher } from "./workspace";
 import { destroySandboxView, updateSandboxViewBounds } from "./sandbox";
@@ -11,6 +12,8 @@ import { destroySandboxView, updateSandboxViewBounds } from "./sandbox";
 type WebContentsWithId = { id?: unknown };
 type SenderEvent = { sender?: WebContentsWithId };
 type Jsonish = string | number | boolean | null | undefined | object;
+
+const isTestHeadless = process.env.NW_WRLD_TEST_HEADLESS === "1";
 
 const getProjectorAspectRatioValue = (aspectRatioId: unknown): number => {
   const id = String(aspectRatioId || "").trim();
@@ -202,13 +205,11 @@ export function loadConfig(projectDir: string | null): unknown {
 export function registerMessagingIpc({ ipcMain }: { ipcMain: Electron.IpcMain }): void {
   const messageChannels: Record<string, (data: unknown) => void> = {
     "dashboard-to-projector": (data) => {
+      const msg = normalizeDashboardProjectorMessage(data);
+      if (!msg) return;
       try {
-        if (
-          data &&
-          typeof data === "object" &&
-          (data as { type?: unknown }).type === "toggleAspectRatioStyle"
-        ) {
-          applyProjectorWindowAspectRatio((data as { props?: { name?: unknown } }).props?.name);
+        if (msg.type === "toggleAspectRatioStyle") {
+          applyProjectorWindowAspectRatio((msg.props as { name?: unknown } | null)?.name);
         }
       } catch {}
       const projector = state.projector1Window as {
@@ -224,7 +225,7 @@ export function registerMessagingIpc({ ipcMain }: { ipcMain: Electron.IpcMain })
         !projector.webContents.isDestroyed() &&
         typeof projector.webContents.send === "function"
       ) {
-        projector.webContents.send("from-dashboard", data);
+        projector.webContents.send("from-dashboard", msg);
       }
     },
     "projector-to-dashboard": (data) => {
@@ -303,7 +304,9 @@ export function createWindow(projectDir: string | null): void {
     const win = state.projector1Window as { once?: unknown; show?: unknown };
     if (typeof win.once === "function" && typeof win.show === "function") {
       win.once("ready-to-show", () => {
-        (state.projector1Window as { show: () => void }).show();
+        if (!isTestHeadless) {
+          (state.projector1Window as { show: () => void }).show();
+        }
       });
     }
   } catch {}
@@ -335,13 +338,16 @@ export function createWindow(projectDir: string | null): void {
     height: screenHeight,
     title: "nw_wrld",
     show: false,
+    paintWhenInitiallyHidden: true,
   });
 
   try {
     const win = state.dashboardWindow as { once?: unknown; show?: unknown };
     if (typeof win.once === "function" && typeof win.show === "function") {
       win.once("ready-to-show", () => {
-        (state.dashboardWindow as { show: () => void }).show();
+        if (!isTestHeadless) {
+          (state.dashboardWindow as { show: () => void }).show();
+        }
       });
     }
   } catch {}

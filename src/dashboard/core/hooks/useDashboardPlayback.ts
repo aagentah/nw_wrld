@@ -50,6 +50,9 @@ export const useDashboardPlayback = ({
   const isSequencerPlayingRef = useLatestRef(isSequencerPlaying);
   const sequencerMutedRef = useLatestRef(isSequencerMuted);
 
+  const prevActiveTrackIdRef = useRef<string | number | null>(activeTrackId);
+  const prevActiveSetIdRef = useRef<string | null>(activeSetId);
+
   const footerPlaybackEngineRef = useRef<Record<string, MidiPlayback>>({});
   const sequencerEngineRef = useRef<SequencerPlayback | null>(null);
   const sequencerAudioRef = useRef<SequencerAudio | null>(null);
@@ -57,13 +60,17 @@ export const useDashboardPlayback = ({
 
   useEffect(() => {
     if (isInitialMountRef.current) {
+      prevActiveTrackIdRef.current = activeTrackId;
+      prevActiveSetIdRef.current = activeSetId;
       return;
     }
 
     const userDataObj = userDataRef.current && typeof userDataRef.current === 'object' ? userDataRef.current as Record<string, unknown> : {};
     const config = userDataObj.config && typeof userDataObj.config === 'object' ? userDataObj.config as Record<string, unknown> : {};
+    const didTrackChange = prevActiveTrackIdRef.current !== activeTrackId;
+    const didSetChange = prevActiveSetIdRef.current !== activeSetId;
     const shouldKeepSequencerPlaying =
-      config.sequencerMode && isSequencerPlayingRef.current;
+      config.sequencerMode && isSequencerPlayingRef.current && !didTrackChange && !didSetChange;
     if (sequencerEngineRef.current && !shouldKeepSequencerPlaying) {
       sequencerEngineRef.current.stop();
       if (typeof sequencerEngineRef.current.getRunId === "function") {
@@ -95,6 +102,9 @@ export const useDashboardPlayback = ({
     } else {
       setIsProjectorReady(true);
     }
+
+    prevActiveTrackIdRef.current = activeTrackId;
+    prevActiveSetIdRef.current = activeSetId;
   }, [activeTrackId, activeSetId, sendToProjector, setIsProjectorReady, userDataRef, isInitialMountRef, isSequencerPlayingRef]);
 
   const handleSequencerToggle = useCallback(

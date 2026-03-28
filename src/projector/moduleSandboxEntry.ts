@@ -1,5 +1,5 @@
 import ModuleBase from "./helpers/moduleBase";
-import BaseThreeJsModule from "./helpers/threeBase.js";
+import BaseThreeJsModule from "./helpers/threeBase";
 import * as THREE from "three";
 import p5 from "p5";
 import * as d3 from "d3";
@@ -10,10 +10,7 @@ import { PCDLoader } from "three/examples/jsm/loaders/PCDLoader.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 import { parseNwWrldDocblockMetadata } from "../shared/nwWrldDocblock";
-import {
-  buildMethodOptions,
-  parseMatrixOptions,
-} from "../shared/utils/methodOptions";
+import { buildMethodOptions, parseMatrixOptions } from "../shared/utils/methodOptions";
 import { createSdkHelpers } from "../shared/utils/sdkHelpers";
 import {
   buildWorkspaceImportPreamble,
@@ -197,8 +194,7 @@ const mergeMethodsByName = (baseMethods, declaredMethods) => {
 
 const getBaseMethodsForClass = (Cls) => {
   try {
-    if (Cls?.prototype instanceof BaseThreeJsModule)
-      return BaseThreeJsModule.methods;
+    if (Cls?.prototype instanceof BaseThreeJsModule) return BaseThreeJsModule.methods;
     if (Cls?.prototype instanceof ModuleBase) return ModuleBase.methods;
   } catch {}
   return [];
@@ -214,8 +210,7 @@ const ensureRoot = () => {
   document.body.style.height = "100%";
   const el = document.createElement("div");
   el.id = "nwWrldTrackRoot";
-  el.style.cssText =
-    "position:fixed;inset:0;width:100vw;height:100vh;overflow:hidden;";
+  el.style.cssText = "position:fixed;inset:0;width:100vw;height:100vh;overflow:hidden;";
   document.body.appendChild(el);
   trackRoot = el;
   return trackRoot;
@@ -269,8 +264,7 @@ const destroyTrack = () => {
   instancesById.clear();
   moduleClassCache.clear();
   try {
-    if (trackRoot && trackRoot.parentNode)
-      trackRoot.parentNode.removeChild(trackRoot);
+    if (trackRoot && trackRoot.parentNode) trackRoot.parentNode.removeChild(trackRoot);
   } catch {}
   trackRoot = null;
 };
@@ -356,8 +350,7 @@ globalThis.nwSandboxIpc?.on?.(async (data) => {
           const constructorMethods = Array.isArray(modulesData?.[instanceId]?.constructor)
             ? modulesData[instanceId].constructor
             : [];
-          const matrixMethod =
-            constructorMethods.find((mm) => mm?.name === "matrix") || null;
+          const matrixMethod = constructorMethods.find((mm) => mm?.name === "matrix") || null;
           const matrix = parseMatrixOptions(matrixMethod?.options);
 
           const zIndex = getInstanceIndex(trackModules, instanceId) + 1;
@@ -396,9 +389,7 @@ globalThis.nwSandboxIpc?.on?.(async (data) => {
 
           instancesById.set(instanceId, { moduleType, instances });
 
-          const nonMatrix = constructorMethods.filter(
-            (mm) => mm?.name && mm.name !== "matrix"
-          );
+          const nonMatrix = constructorMethods.filter((mm) => mm?.name && mm.name !== "matrix");
           for (const mm of nonMatrix) {
             const methodName = String(mm.name || "").trim();
             if (!methodName) continue;
@@ -453,8 +444,7 @@ globalThis.nwSandboxIpc?.on?.(async (data) => {
         respond({ ok: false, error: "INVALID_INSTANCE_ID" });
         return;
       }
-      const moduleEntry =
-        trackModules.find((m) => m && m.id === instanceId) || null;
+      const moduleEntry = trackModules.find((m) => m && m.id === instanceId) || null;
       const moduleType = String(moduleEntry?.type || "").trim();
       if (!moduleType) {
         respond({ ok: false, error: "INSTANCE_NOT_IN_TRACK" });
@@ -532,9 +522,7 @@ globalThis.nwSandboxIpc?.on?.(async (data) => {
       const ModuleClass = await loadModuleClassFromSource(moduleType, sourceText);
       const callable = getCallableMethodNamesFromClass(ModuleClass);
       const baseMethods = getBaseMethodsForClass(ModuleClass);
-      const declaredMethods = Array.isArray(ModuleClass?.methods)
-        ? ModuleClass.methods
-        : [];
+      const declaredMethods = Array.isArray(ModuleClass?.methods) ? ModuleClass.methods : [];
       const methods = mergeMethodsByName(baseMethods, declaredMethods);
       respond({
         ok: true,
@@ -563,6 +551,7 @@ const perfToken = typeof TOKEN === "string" ? TOKEN : null;
 if (perfToken) {
   let lastFrameAt = performance.now();
   let reportStartedAt = lastFrameAt;
+  let lastPostedAt = lastFrameAt;
   let frames = 0;
   let sumDt = 0;
   let longFrames = 0;
@@ -587,7 +576,7 @@ if (perfToken) {
       const frameMsAvg = sumDt / frames;
       const longFramePct = (longFrames / frames) * 100;
       postToHost({
-        "__nwWrldSandboxPerf": true,
+        __nwWrldSandboxPerf: true,
         token: perfToken,
         stats: {
           fps,
@@ -597,6 +586,7 @@ if (perfToken) {
         },
       });
       reportStartedAt = now;
+      lastPostedAt = now;
       frames = 0;
       sumDt = 0;
       longFrames = 0;
@@ -605,7 +595,27 @@ if (perfToken) {
     requestAnimationFrame(tick);
   };
 
+  setInterval(() => {
+    const now = performance.now();
+    if (now - lastPostedAt < REPORT_MS * 2) return;
+    if (now - lastFrameAt < REPORT_MS * 2) return;
+    postToHost({
+      __nwWrldSandboxPerf: true,
+      token: perfToken,
+      stats: {
+        fps: 0,
+        frameMsAvg: 0,
+        longFramePct: 0,
+        at: Date.now(),
+      },
+    });
+    lastFrameAt = now;
+    reportStartedAt = now;
+    lastPostedAt = now;
+    frames = 0;
+    sumDt = 0;
+    longFrames = 0;
+  }, REPORT_MS);
+
   requestAnimationFrame(tick);
 }
-
-

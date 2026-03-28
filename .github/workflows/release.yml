@@ -1,32 +1,27 @@
-name: Release
+name: Release (Windows + macOS + Linux)
 
 on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag to build and publish (e.g. v0.2.0-beta)"
-        required: true
+        description: "Optional tag to build (e.g. v0.4.0-beta). If empty, builds the selected branch ref."
+        required: false
         type: string
-  # Temporarily disabled: do not auto-build/publish binaries on tag pushes.
-  # push:
-  #   tags:
-  #     - "v*"
+  push:
+    tags:
+      - "v*"
 
 permissions:
   contents: write
 
 jobs:
   mac:
-    name: macOS (${{ matrix.arch }})
+    name: macOS DMG
     runs-on: macos-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        arch: [arm64, x64]
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/tags/{0}', inputs.tag) || github.ref }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag != '' && format('refs/tags/{0}', github.event.inputs.tag) || github.ref }}
       - uses: actions/setup-node@v4
         with:
           node-version: 20.19.5
@@ -53,7 +48,8 @@ jobs:
           p = pathlib.Path("AuthKey.p8")
           p.write_bytes(base64.b64decode(os.environ["APPLE_API_KEY_BASE64"]))
           PY
-      - run: npm run dist:mac:${{ matrix.arch }}
+      - name: Build DMG
+        run: npm run dist:mac
         env:
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
@@ -62,9 +58,9 @@ jobs:
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
       - uses: actions/upload-artifact@v4
         with:
-          name: nw_wrld-mac-${{ matrix.arch }}
+          name: nw_wrld-mac-dmg
           path: |
-            release/**/*.dmg
+            release/*.dmg
 
   win:
     name: Windows
@@ -72,7 +68,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/tags/{0}', inputs.tag) || github.ref }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag != '' && format('refs/tags/{0}', github.event.inputs.tag) || github.ref }}
       - uses: actions/setup-node@v4
         with:
           node-version: 20.19.5
@@ -97,19 +93,84 @@ jobs:
           path: |
             release/nw_wrld*.exe
 
+  linux:
+    name: Linux (AppImage + deb)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag != '' && format('refs/tags/{0}', github.event.inputs.tag) || github.ref }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.5
+          cache: npm
+      - name: Debug env + lockfile
+        run: |
+          node -v
+          npm -v
+          node -e "const fs=require('fs');const crypto=require('crypto');const b=fs.readFileSync('package-lock.json');console.log('package-lock.json sha256:',crypto.createHash('sha256').update(b).digest('hex'));"
+          node -e "const fs=require('fs');const crypto=require('crypto');const b=fs.readFileSync('package.json');console.log('package.json sha256:',crypto.createHash('sha256').update(b).digest('hex'));"
+          node -e "const lock=require('./package-lock.json'); console.log('lockfileVersion:', lock.lockfileVersion);"
+          node -e "const lock=require('./package-lock.json'); const p=lock.packages||{}; const root=p['node_modules/picomatch']?.version; const nested=p['node_modules/tinyglobby/node_modules/picomatch']?.version; const tiny=p['node_modules/tinyglobby']?.dependencies?.picomatch; console.log('picomatch root:',root); console.log('tinyglobby depends picomatch:',tiny); console.log('picomatch under tinyglobby:',nested);"
+      - name: Configure npm for lockfile compatibility
+        run: |
+          npm config set legacy-peer-deps true
+          npm config get legacy-peer-deps
+      - run: npm ci --no-audit --no-fund
+      - run: npm run dist:linux
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nw_wrld-linux
+          path: |
+            release/*.AppImage
+            release/*.deb
+
   github_release:
     name: Publish GitHub Release
-    needs: [mac, win]
+    needs: [mac, win, linux]
     runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && github.event.inputs.tag != '')
     steps:
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
       - name: List artifacts
         run: ls -R artifacts
+      - name: Generate SHA256SUMS
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          import pathlib
+
+          artifacts_dir = pathlib.Path("artifacts")
+          exts = {".dmg", ".exe", ".AppImage", ".deb"}
+
+          files = sorted(
+              [
+                  p
+                  for p in artifacts_dir.rglob("*")
+                  if p.is_file() and p.suffix in exts
+              ],
+              key=lambda p: p.as_posix().lower(),
+          )
+
+          lines = []
+          for p in files:
+              h = hashlib.sha256()
+              with p.open("rb") as f:
+                  for chunk in iter(lambda: f.read(1024 * 1024), b""):
+                      h.update(chunk)
+              lines.append(f"{h.hexdigest()}  {p.name}")
+
+          pathlib.Path("SHA256SUMS").write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
+          print(pathlib.Path("SHA256SUMS").read_text(encoding="utf-8"))
+          PY
       - uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag != '' && github.event.inputs.tag || github.ref_name }}
           files: |
             artifacts/**/*.dmg
             artifacts/**/nw_wrld*.exe
+            artifacts/**/*.AppImage
+            artifacts/**/*.deb
+            SHA256SUMS

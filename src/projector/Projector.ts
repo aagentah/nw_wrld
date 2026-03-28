@@ -1,7 +1,7 @@
-import { loadJsonFileSync } from "../shared/json/jsonFileBase.ts";
-import { loadSettingsSync } from "../shared/json/configUtils.ts";
-import { getActiveSetTracks, migrateToSets } from "../shared/utils/setUtils.ts";
-import { getProjectDir } from "../shared/utils/projectDir.ts";
+import { loadJsonFileSync } from "../shared/json/jsonFileBase";
+import { loadSettingsSync } from "../shared/json/configUtils";
+import { getActiveSetTracks, migrateToSets } from "../shared/utils/setUtils";
+import { getProjectDir } from "../shared/utils/projectDir";
 import logger from "./helpers/logger";
 
 import { getMessaging } from "./internal/bridge";
@@ -36,6 +36,7 @@ const Projector = {
   activeTrack: null,
   activeModules: {},
   activeChannelHandlers: {},
+  lastRequestedTrackName: null,
   moduleClassCache: new Map(),
   workspaceModuleSourceCache: new Map(),
   methodOptionNoRepeatCache: new Map(),
@@ -50,6 +51,7 @@ const Projector = {
   isLoadingTrack: false,
   pendingTrackName: null,
   pendingReloadData: null,
+  pendingWorkspaceReload: false,
   previewModuleName: null,
   previewToken: 0,
   debugOverlayActive: false,

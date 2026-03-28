@@ -6,16 +6,18 @@ import { SortableList, arrayMove } from "../shared/SortableList";
 import { ModalHeader } from "../components/ModalHeader";
 import { ModalFooter } from "../components/ModalFooter";
 import { Button } from "../components/Button";
-import { RadioButton, Label } from "../components/FormInputs";
+import { RadioButton } from "../components/FormInputs";
 import { updateActiveSet } from "../core/utils";
-import { getActiveSetTracks, getActiveSet } from "../../shared/utils/setUtils.ts";
+import { getActiveSetTracks, getActiveSet } from "../../shared/utils/setUtils";
 import { EditTrackModal } from "./EditTrackModal";
-import { deleteRecordingsForTracks } from "../../shared/json/recordingUtils.ts";
+import { deleteRecordingsForTracks } from "../../shared/json/recordingUtils";
 import {
   parsePitchClass,
   pitchClassToName,
   resolveTrackTrigger,
-} from "../../shared/midi/midiUtils.ts";
+} from "../../shared/midi/midiUtils";
+import type { AudioCaptureState } from "../core/hooks/useDashboardAudioCapture";
+import type { FileAudioState } from "../core/hooks/useDashboardFileAudio";
 
 type Track = {
   id: string | number;
@@ -92,6 +94,8 @@ const SortableTrackItem = ({
           <button
             onClick={() => onEdit(trackIndex)}
             className="text-neutral-500 hover:text-neutral-300 text-[11px]"
+            data-testid="edit-track"
+            aria-label="Edit track"
           >
             <FaEdit />
           </button>
@@ -127,6 +131,8 @@ type SelectTrackModalProps = {
   activeSetId: string | null;
   recordingData: Record<string, unknown>;
   setRecordingData: (updater: (prev: Record<string, unknown>) => Record<string, unknown>) => void;
+  audioCaptureState: AudioCaptureState;
+  fileAudioState: FileAudioState;
   onCreateTrack: () => void;
   onConfirmDelete: (message: string, onConfirm: () => void) => void;
 };
@@ -143,6 +149,8 @@ export const SelectTrackModal = ({
   setRecordingData,
   onCreateTrack,
   onConfirmDelete,
+  audioCaptureState,
+  fileAudioState,
 }: SelectTrackModalProps) => {
   const [editingTrackIndex, setEditingTrackIndex] = useState<number | null>(null);
 
@@ -186,46 +194,52 @@ export const SelectTrackModal = ({
       <Modal isOpen={isOpen} onClose={onClose} size="small">
         <ModalHeader title="TRACKS" onClose={onClose} />
 
-        <div className="px-6 flex flex-col gap-4">
+        <div className="flex flex-col gap-4">
           <div>
-            <Label>Select Active Track:</Label>
-            {tracks.length === 0 ? (
-              <div className="text-neutral-500 text-[11px] font-mono py-2">
-                No tracks in this set
+            <div className="pl-6">
+              <div className="opacity-50 text-[11px] mb-1 font-mono">Select Active Track:</div>
+            </div>
+            <div className="pl-6">
+              <div className="pl-6">
+                {tracks.length === 0 ? (
+                  <div className="text-neutral-500 text-[11px] font-mono py-2">
+                    No tracks in this set
+                  </div>
+                ) : (
+                  <SortableList
+                    items={tracks}
+                    onReorder={(oldIndex: number, newIndex: number) => {
+                      updateActiveSet(setUserData, activeSetId, (activeSet) => {
+                        const tracksUnknown = (activeSet as Record<string, unknown>).tracks;
+                        if (Array.isArray(tracksUnknown)) {
+                          (activeSet as Record<string, unknown>).tracks = arrayMove(
+                            tracksUnknown,
+                            oldIndex,
+                            newIndex
+                          );
+                        }
+                      });
+                    }}
+                  >
+                    <div className="flex flex-col gap-2">
+                      {tracks.map((track, trackIndex) => (
+                        <SortableTrackItem
+                          key={track.id}
+                          track={track}
+                          trackIndex={trackIndex}
+                          activeTrackId={activeTrackId}
+                          inputType={String(inputType)}
+                          globalMappings={globalMappings}
+                          onTrackSelect={handleTrackSelect}
+                          onEdit={setEditingTrackIndex}
+                          onDelete={handleDeleteTrack}
+                        />
+                      ))}
+                    </div>
+                  </SortableList>
+                )}
               </div>
-            ) : (
-              <SortableList
-                items={tracks}
-                onReorder={(oldIndex: number, newIndex: number) => {
-                  updateActiveSet(setUserData, activeSetId, (activeSet) => {
-                    const tracksUnknown = (activeSet as Record<string, unknown>).tracks;
-                    if (Array.isArray(tracksUnknown)) {
-                      (activeSet as Record<string, unknown>).tracks = arrayMove(
-                        tracksUnknown,
-                        oldIndex,
-                        newIndex
-                      );
-                    }
-                  });
-                }}
-              >
-                <div className="flex flex-col gap-2">
-                  {tracks.map((track, trackIndex) => (
-                    <SortableTrackItem
-                      key={track.id}
-                      track={track}
-                      trackIndex={trackIndex}
-                      activeTrackId={activeTrackId}
-                      inputType={String(inputType)}
-                      globalMappings={globalMappings}
-                      onTrackSelect={handleTrackSelect}
-                      onEdit={setEditingTrackIndex}
-                      onDelete={handleDeleteTrack}
-                    />
-                  ))}
-                </div>
-              </SortableList>
-            )}
+            </div>
           </div>
         </div>
 
@@ -242,6 +256,8 @@ export const SelectTrackModal = ({
           onClose={() => setEditingTrackIndex(null)}
           trackIndex={editingTrackIndex}
           inputConfig={userData.config?.input || {}}
+          audioCaptureState={audioCaptureState}
+          fileAudioState={fileAudioState}
         />
       )}
     </>

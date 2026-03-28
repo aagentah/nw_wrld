@@ -22,7 +22,7 @@ export const Tooltip = ({ children, content, position = "top" }: TooltipProps) =
         let targetRect = wrapper.getBoundingClientRect();
 
         const absolutelyPositionedChild = wrapper.querySelector<HTMLElement>(
-          '[class*="absolute"]'
+          ':scope > [class*="absolute"]'
         );
         if (absolutelyPositionedChild) {
           targetRect = absolutelyPositionedChild.getBoundingClientRect();
@@ -38,8 +38,7 @@ export const Tooltip = ({ children, content, position = "top" }: TooltipProps) =
         switch (position) {
           case "top":
             top = targetRect.top - tooltipRect.height - 8;
-            left =
-              targetRect.left + targetRect.width / 2 - tooltipRect.width / 2;
+            left = targetRect.left + targetRect.width / 2 - tooltipRect.width / 2;
             if (top < 0) {
               top = targetRect.bottom + 8;
             }
@@ -52,8 +51,7 @@ export const Tooltip = ({ children, content, position = "top" }: TooltipProps) =
             break;
           case "bottom":
             top = targetRect.bottom + 8;
-            left =
-              targetRect.left + targetRect.width / 2 - tooltipRect.width / 2;
+            left = targetRect.left + targetRect.width / 2 - tooltipRect.width / 2;
             if (top + tooltipRect.height > viewportHeight - 8) {
               top = targetRect.top - tooltipRect.height - 8;
             }
@@ -65,8 +63,7 @@ export const Tooltip = ({ children, content, position = "top" }: TooltipProps) =
             }
             break;
           case "left":
-            top =
-              targetRect.top + targetRect.height / 2 - tooltipRect.height / 2;
+            top = targetRect.top + targetRect.height / 2 - tooltipRect.height / 2;
             left = targetRect.left - tooltipRect.width - 8;
             if (left < 8) {
               left = targetRect.right + 8;
@@ -79,8 +76,7 @@ export const Tooltip = ({ children, content, position = "top" }: TooltipProps) =
             }
             break;
           case "right":
-            top =
-              targetRect.top + targetRect.height / 2 - tooltipRect.height / 2;
+            top = targetRect.top + targetRect.height / 2 - tooltipRect.height / 2;
             left = targetRect.right + 8;
             if (left + tooltipRect.width > viewportWidth - 8) {
               left = targetRect.left - tooltipRect.width - 8;
@@ -124,9 +120,49 @@ export const Tooltip = ({ children, content, position = "top" }: TooltipProps) =
       {isVisible && (
         <div
           ref={tooltipRef}
-          className="fixed z-[1000] pointer-events-none bg-[#1a1a1a] border border-neutral-700 px-3 py-2 text-[10px] text-neutral-300 font-mono leading-tight max-w-[300px] shadow-lg"
+          className="fixed z-[1000] pointer-events-none bg-neutral-900 border border-neutral-700 px-3 py-2 text-[10px] text-neutral-300 font-mono leading-tight max-w-[300px] shadow-lg"
           style={{ whiteSpace: "normal" }}
         >
+          {position === "top" && (
+            <div
+              className="absolute left-1/2 -bottom-[6px] -translate-x-1/2 w-0 h-0"
+              style={{
+                borderLeft: "6px solid transparent",
+                borderRight: "6px solid transparent",
+                borderTop: "6px solid #404040",
+              }}
+            />
+          )}
+          {position === "bottom" && (
+            <div
+              className="absolute left-1/2 -top-[6px] -translate-x-1/2 w-0 h-0"
+              style={{
+                borderLeft: "6px solid transparent",
+                borderRight: "6px solid transparent",
+                borderBottom: "6px solid #404040",
+              }}
+            />
+          )}
+          {position === "left" && (
+            <div
+              className="absolute top-1/2 -right-[6px] -translate-y-1/2 w-0 h-0"
+              style={{
+                borderTop: "6px solid transparent",
+                borderBottom: "6px solid transparent",
+                borderLeft: "6px solid #404040",
+              }}
+            />
+          )}
+          {position === "right" && (
+            <div
+              className="absolute top-1/2 -left-[6px] -translate-y-1/2 w-0 h-0"
+              style={{
+                borderTop: "6px solid transparent",
+                borderBottom: "6px solid transparent",
+                borderRight: "6px solid #404040",
+              }}
+            />
+          )}
           {content}
         </div>
       )}

@@ -73,6 +73,8 @@ class ImageGallery extends ModuleBase {
           name: "amount",
           defaultVal: 1,
           type: "number",
+          min: -100,
+          max: 100,
         },
       ],
     },

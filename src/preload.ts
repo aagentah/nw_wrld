@@ -66,6 +66,10 @@ const nwWrldBridge = {
     listAssets: (relDir: unknown) => ipcRenderer.invoke("bridge:workspace:listAssets", relDir),
     readAssetText: (relPath: unknown) =>
       ipcRenderer.invoke("bridge:workspace:readAssetText", relPath),
+    readAssetArrayBuffer: (relPath: unknown) =>
+      ipcRenderer.invoke("bridge:workspace:readAssetArrayBuffer", relPath),
+    writeAudioAsset: (payload: unknown) =>
+      ipcRenderer.invoke("bridge:workspace:writeAudioAsset", payload),
   },
   app: {
     getBaseMethodNames: () => ipcRenderer.sendSync("bridge:app:getBaseMethodNames") as unknown,
@@ -121,21 +125,37 @@ const nwWrldBridge = {
     },
     configureInput: (payload: unknown) => ipcRenderer.invoke("input:configure", payload),
     getMidiDevices: () => ipcRenderer.invoke("input:get-midi-devices"),
+    emitAudioBand: (payload: unknown) => ipcRenderer.invoke("input:audio:emitBand", payload),
+    emitFileBand: (payload: unknown) => ipcRenderer.invoke("input:file:emitBand", payload),
     selectWorkspace: () => ipcRenderer.invoke("workspace:select"),
   },
 };
 
 const isTestEnv = process.env.NODE_ENV === "test";
 const isMockMidi = process.env.NW_WRLD_TEST_MIDI_MOCK === "1";
-if (isTestEnv && isMockMidi) {
-  (nwWrldBridge as unknown as { testing?: unknown }).testing = {
-    midi: {
+const isMockAudio = process.env.NW_WRLD_TEST_AUDIO_MOCK === "1";
+const isMockFile = process.env.NW_WRLD_TEST_FILE_MOCK === "1";
+if (isTestEnv && (isMockMidi || isMockAudio || isMockFile)) {
+  const testing: Record<string, unknown> = {};
+  if (isMockMidi) {
+    testing.midi = {
       reset: (devices: unknown) => ipcRenderer.invoke("test:midi:reset", devices),
       disconnect: (deviceId: unknown) => ipcRenderer.invoke("test:midi:disconnect", deviceId),
       reconnect: (device: unknown) => ipcRenderer.invoke("test:midi:reconnect", device),
       noteOn: (payload: unknown) => ipcRenderer.invoke("test:midi:noteOn", payload),
-    },
-  };
+    };
+  }
+  if (isMockAudio) {
+    testing.audio = {
+      emitBand: (payload: unknown) => ipcRenderer.invoke("test:audio:emitBand", payload),
+    };
+  }
+  if (isMockFile) {
+    testing.file = {
+      emitBand: (payload: unknown) => ipcRenderer.invoke("test:file:emitBand", payload),
+    };
+  }
+  (nwWrldBridge as unknown as { testing?: unknown }).testing = testing;
 }
 
 if (isTopLevelFrame()) {

@@ -9,7 +9,7 @@ function isRecord(value: unknown): value is JsonRecord {
 type InputType = string;
 
 type TrackLike = {
-  id?: string | null;
+  id?: string | number | null;
   trackSlot?: number | null;
 };
 
@@ -24,12 +24,17 @@ export const useTrackSlots = (
   tracks: TrackLike[],
   globalMappings: GlobalMappingsLike,
   inputType: InputType,
-  excludeTrackId: string | null = null
+  excludeTrackId: string | number | null = null
 ) => {
   const usedSlots = useMemo(() => {
+    const excludeId = excludeTrackId == null ? null : String(excludeTrackId);
     return new Set(
       tracks
-        .filter((t) => !excludeTrackId || t.id !== excludeTrackId)
+        .filter((t) => {
+          if (!excludeId) return true;
+          const id = t?.id == null ? null : String(t.id);
+          return id !== excludeId;
+        })
         .map((t) => t.trackSlot)
         .filter(Boolean) as number[]
     );

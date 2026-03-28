@@ -128,7 +128,7 @@ test("reorder tracks in a set -> persists after relaunch", async () => {
     const expected = [moved, ...before.slice(0, before.length - 1)];
 
     await dashboard.getByText("TRACKS", { exact: true }).click();
-    const trackListRoot = dashboard.getByText("Select Active Track:").locator("..");
+    const trackListRoot = dashboard.getByText("Select Active Track:").locator("../..");
     await expect(trackListRoot).toBeVisible();
 
     await dragToTop(dashboard, before.length - 1, trackListRoot);
@@ -179,4 +179,3 @@ test("reorder tracks in a set -> persists after relaunch", async () => {
     await cleanup();
   }
 });
-

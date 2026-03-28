@@ -1,5 +1,7 @@
 import { getActiveSetTracks } from "../../shared/utils/setUtils";
 import { TrackItem } from "./track/TrackItem";
+import type { AudioCaptureState } from "../core/hooks/useDashboardAudioCapture";
+import type { FileAudioState } from "../core/hooks/useDashboardFileAudio";
 
 type DashboardBodyProps = {
   userData: unknown;
@@ -17,6 +19,8 @@ type DashboardBodyProps = {
   workspacePath: string | null;
   workspaceModuleFiles: string[];
   workspaceModuleLoadFailures: string[];
+  audioCaptureState: AudioCaptureState;
+  fileAudioState: FileAudioState;
 };
 
 export const DashboardBody = ({
@@ -35,6 +39,8 @@ export const DashboardBody = ({
   workspacePath,
   workspaceModuleFiles,
   workspaceModuleLoadFailures,
+  audioCaptureState,
+  fileAudioState,
 }: DashboardBodyProps) => {
   const tracks = getActiveSetTracks(userData, activeSetId);
   const hasActiveTrack = activeTrackId && tracks.find((t) => t.id === activeTrackId);
@@ -66,6 +72,8 @@ export const DashboardBody = ({
               workspacePath={workspacePath}
               workspaceModuleFiles={workspaceModuleFiles}
               workspaceModuleLoadFailures={workspaceModuleLoadFailures}
+              audioCaptureState={audioCaptureState}
+              fileAudioState={fileAudioState}
             />
           );
         })}

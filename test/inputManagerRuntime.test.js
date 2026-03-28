@@ -53,3 +53,110 @@ test("InputManager.broadcast sends only normalized input-event payloads", () => 
   }
 });
 
+test("InputManager.getAvailableMIDIDevices returns [] when WebMIDI enable throws", async () => {
+  const prev = global.__nwWrldWebMidiOverride;
+  try {
+    global.__nwWrldWebMidiOverride = {
+      enabled: false,
+      inputs: [],
+      enable: () => {
+        throw new Error("enable failed");
+      },
+    };
+
+    const devices = await InputManager.getAvailableMIDIDevices();
+    assert.deepEqual(devices, []);
+  } finally {
+    if (prev === undefined) delete global.__nwWrldWebMidiOverride;
+    else global.__nwWrldWebMidiOverride = prev;
+  }
+});
+
+test("InputManager.getAvailableMIDIDevices returns [] when WebMIDI inputs getter throws", async () => {
+  const prev = global.__nwWrldWebMidiOverride;
+  try {
+    const mock = {
+      enabled: true,
+      enable: (_arg) => {},
+    };
+    Object.defineProperty(mock, "inputs", {
+      get() {
+        throw new Error("inputs unavailable");
+      },
+    });
+    global.__nwWrldWebMidiOverride = mock;
+
+    const devices = await InputManager.getAvailableMIDIDevices();
+    assert.deepEqual(devices, []);
+  } finally {
+    if (prev === undefined) delete global.__nwWrldWebMidiOverride;
+    else global.__nwWrldWebMidiOverride = prev;
+  }
+});
+
+test("InputManager.initialize rejects safely when WebMIDI enable throws", async () => {
+  const prev = global.__nwWrldWebMidiOverride;
+  try {
+    global.__nwWrldWebMidiOverride = {
+      enabled: false,
+      inputs: [],
+      enable: () => {
+        throw new Error("enable failed");
+      },
+      addListener: () => {},
+      removeListener: () => {},
+      getInputById: () => null,
+      getInputByName: () => null,
+    };
+
+    const mkWindow = () => ({
+      isDestroyed: () => false,
+      webContents: { isDestroyed: () => false, send: () => {} },
+    });
+    const mgr = new InputManager(mkWindow(), mkWindow());
+    await assert.rejects(
+      mgr.initialize({
+        type: "midi",
+        deviceName: "IAC Driver Bus 1",
+        trackSelectionChannel: 2,
+        methodTriggerChannel: 1,
+        velocitySensitive: false,
+        noteMatchMode: "pitchClass",
+        port: 8000,
+      }),
+      /enable failed/
+    );
+  } finally {
+    if (prev === undefined) delete global.__nwWrldWebMidiOverride;
+    else global.__nwWrldWebMidiOverride = prev;
+  }
+});
+
+test("InputManager.getAvailableMIDIDevices resolves [] when WebMIDI enable never calls callback (timeout)", async () => {
+  const prev = global.__nwWrldWebMidiOverride;
+  const prevTimeoutEnv = process.env.NW_WRLD_WEBMIDI_ENABLE_TIMEOUT_MS;
+  try {
+    process.env.NW_WRLD_WEBMIDI_ENABLE_TIMEOUT_MS = "1";
+
+    let enableCalls = 0;
+    global.__nwWrldWebMidiOverride = {
+      enabled: false,
+      inputs: [],
+      enable: () => {
+        enableCalls += 1;
+      },
+    };
+
+    const devices1 = await InputManager.getAvailableMIDIDevices();
+    const devices2 = await InputManager.getAvailableMIDIDevices();
+    assert.deepEqual(devices1, []);
+    assert.deepEqual(devices2, []);
+    assert.equal(enableCalls, 2);
+  } finally {
+    if (prevTimeoutEnv === undefined) delete process.env.NW_WRLD_WEBMIDI_ENABLE_TIMEOUT_MS;
+    else process.env.NW_WRLD_WEBMIDI_ENABLE_TIMEOUT_MS = prevTimeoutEnv;
+    if (prev === undefined) delete global.__nwWrldWebMidiOverride;
+    else global.__nwWrldWebMidiOverride = prev;
+  }
+});
+

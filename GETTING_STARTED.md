@@ -38,15 +38,6 @@ npm install
 npm start
 ```
 
-Two windows will open:
-
-- **Dashboard**: Control center for configuration and mapping
-- **Projector**: Visual output window
-
----
-
-**The rest of this guide assumes you're running from source.**
-
 ---
 
 ## Step 0: Choose Your Project Folder
@@ -274,7 +265,7 @@ The included **Image** module demonstrates asset loading:
 
 ## Advanced: Connect External MIDI/OSC
 
-Once you're comfortable with the sequencer, you can connect external hardware for live performance.
+Once you're comfortable with the sequencer, you can connect external hardware (or audio) for live performance.
 
 ### Prerequisites
 
@@ -294,9 +285,9 @@ Once you're comfortable with the sequencer, you can connect external hardware fo
 ### Switch to External Mode
 
 1. Open Dashboard → **Settings**
-2. **Signal Source** → Select **External (MIDI/OSC)**
-3. Configure your MIDI device or OSC port
-4. Go to **Settings → Configure Mappings** to customize trigger mappings (MIDI pitch classes / OSC addresses)
+2. **Signal Source** → Select **External MIDI**, **External OSC**, **External Audio (Low / Medium / High)**, or **File Upload (Low / Medium / High)**
+3. Configure your MIDI device / OSC port / audio input device
+4. Go to **Settings → Configure Mappings** to customize trigger mappings
 5. Your DAW now controls the visuals in real-time
 
 ### DAW Notes (Channel 1 Defaults + Best Practice)
@@ -304,7 +295,6 @@ Once you're comfortable with the sequencer, you can connect external hardware fo
 Many DAWs send note events on **MIDI Channel 1** by default. nw_wrld lets you choose which MIDI channel controls track selection and which controls method/channel triggers:
 
 - **Simplest setup (one channel)**:
-
   - Set both **Method Triggers MIDI Channel** and **Track Select MIDI Channel** to `1`.
   - Use **Settings → Configure Mappings** to choose which pitch classes (C..B) activate track selection vs method triggers.
 
@@ -320,15 +310,16 @@ Many DAWs send note events on **MIDI Channel 1** by default. nw_wrld lets you ch
 2. Ensure your MIDI routing is set up (per the instructions above), and confirm `nw_wrld` is configured by following the **Switch to External mode** instructions.
 3. In Strudel, send notes to a specific MIDI port and channel by appending `.midi('port_name').midichan(<channel_number>)`. Make sure to use single brackets for the port_name.
 4. Note that sending a pattern to MIDI will stop local (browser) sound for that pattern; to keep local audio and send MIDI with the same rhythm, reuse the same rhythmic pattern for two outputs (audio + MIDI). See code example below:
+
 ```js
 // 1) Declare the rhythm once (notes + rests define the rhythm)
-const r = "c4 ~ e4 g4 ~ e4 ~"   // short melody with rests
+const r = "c4 ~ e4 g4 ~ e4 ~"; // short melody with rests
 
 // 2) Local audio pattern (plays Strudel sound)
-$: note(r).s("piano")
+$: note(r).s("piano");
 
 // 3) Use same pattern to send to nw_wrld through Midi port
-$: note(r).midi('MIDI_port_name').midichan(1) // send to MIDI_port_name channel 1
+$: note(r).midi("MIDI_port_name").midichan(1); // send to MIDI_port_name channel 1
 ```
 
 ## Troubleshooting

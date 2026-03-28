@@ -64,8 +64,13 @@ export class MockWebMidi {
     this.disconnectedListeners = new Set();
   }
 
-  enable(cb?: (err: Error | null) => void) {
+  enable(
+    arg?:
+      | ((err: Error | null) => void)
+      | { callback?: (err: Error | null) => void }
+  ) {
     this.enabled = true;
+    const cb = typeof arg === "function" ? arg : arg?.callback;
     if (typeof cb === "function") cb(null);
   }
 
@@ -132,10 +137,11 @@ export class MockWebMidi {
     if (!Number.isFinite(channel) || channel < 1 || channel > 16) return false;
     if (!Number.isFinite(velocity) || velocity < 0 || velocity > 1) return false;
 
+    const clampedVelocity = Math.min(1, Math.max(0, velocity));
     input.emit("noteon", {
-      note: { number: Math.trunc(note) },
+      note: { number: Math.trunc(note), rawAttack: Math.round(clampedVelocity * 127) },
       message: { channel: Math.trunc(channel) },
-      velocity,
+      velocity: clampedVelocity,
     });
     return true;
   }

@@ -26,19 +26,19 @@ export class ModuleBase {
     {
       name: "show",
       executeOnLoad: true,
-      options: [{ name: "duration", defaultVal: 0, type: "number", min: 0 }],
+      options: [{ name: "duration", defaultVal: 0, type: "number", min: 0, unit: "ms" }],
     },
     {
       name: "hide",
       executeOnLoad: false,
-      options: [{ name: "duration", defaultVal: 0, type: "number", min: 0 }],
+      options: [{ name: "duration", defaultVal: 0, type: "number", min: 0, unit: "ms" }],
     },
     {
       name: "offset",
       executeOnLoad: false,
       options: [
-        { name: "x", defaultVal: 0, type: "number", allowRandomization: true },
-        { name: "y", defaultVal: 0, type: "number", allowRandomization: true },
+        { name: "x", defaultVal: 0, type: "number", allowRandomization: true, unit: "%" },
+        { name: "y", defaultVal: 0, type: "number", allowRandomization: true, unit: "%" },
       ],
     },
     {
@@ -87,6 +87,7 @@ export class ModuleBase {
           defaultVal: 0,
           type: "number",
           min: 0,
+          unit: "ms",
         },
       ],
     },
@@ -100,6 +101,7 @@ export class ModuleBase {
           type: "number",
           min: 0,
           max: 100,
+          unit: "%",
         },
         {
           name: "y",
@@ -107,6 +109,7 @@ export class ModuleBase {
           type: "number",
           min: 0,
           max: 100,
+          unit: "%",
         },
         {
           name: "length",
@@ -114,6 +117,7 @@ export class ModuleBase {
           type: "number",
           min: 0,
           max: 100,
+          unit: "%",
         },
         {
           name: "opacity",
@@ -138,7 +142,7 @@ export class ModuleBase {
     {
       name: "invert",
       executeOnLoad: false,
-      options: [{ name: "duration", defaultVal: 0, type: "number", min: 0 }],
+      options: [{ name: "duration", defaultVal: 0, type: "number", min: 0, unit: "ms" }],
     },
   ];
 

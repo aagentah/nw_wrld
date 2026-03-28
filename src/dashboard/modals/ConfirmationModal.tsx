@@ -34,7 +34,7 @@ export const ConfirmationModal = ({
     <Modal isOpen={isOpen} onClose={onClose} size="small">
       <ModalHeader title={isAlert ? "ALERT" : "CONFIRM"} onClose={onClose} />
 
-      <div className="px-6 flex flex-col gap-4">
+      <div className="px-6">
         <div className="text-neutral-300 text-[11px] font-mono">{message}</div>
       </div>
 
