@@ -77,6 +77,7 @@ class LumenSpiral extends BaseThreeJsModule {
     super(container);
     if (!THREE) return;
 
+    this.moduleGroup = new THREE.Group();
     this.instanceCount = 180;
     this.hexMesh = null;
     this.pulseStates = new Array(this.instanceCount).fill(null);
@@ -102,15 +103,17 @@ class LumenSpiral extends BaseThreeJsModule {
     this.scene.fog = new THREE.FogExp2("#05060f", 0.008);
 
     const hemi = new THREE.HemisphereLight(0xffffff, 0x040404, 0.6);
-    this.scene.add(hemi);
+    this.moduleGroup.add(hemi);
     const dir = new THREE.DirectionalLight(0xffffff, 0.8);
     dir.position.set(4, 6, 8);
-    this.scene.add(dir);
+    this.moduleGroup.add(dir);
 
     this.camera.position.set(0, 7, 24);
 
     this.createSpiral();
     this.createParticleSystem();
+
+    this.setModel(this.moduleGroup);
   }
 
   createSpiral() {
@@ -135,7 +138,7 @@ class LumenSpiral extends BaseThreeJsModule {
       new Float32Array(this.instanceCount * 3),
       3
     );
-    this.scene.add(this.hexMesh);
+    this.moduleGroup.add(this.hexMesh);
 
     const dummy = new THREE.Object3D();
     for (let i = 0; i < this.instanceCount; i++) {
@@ -212,7 +215,7 @@ class LumenSpiral extends BaseThreeJsModule {
     });
 
     this.particleSystem = new THREE.Points(this.particleGeometry, this.particleMaterial);
-    this.scene.add(this.particleSystem);
+    this.moduleGroup.add(this.particleSystem);
   }
 
   applyPaletteColors() {
@@ -393,19 +396,24 @@ class LumenSpiral extends BaseThreeJsModule {
 
   destroy() {
     if (this.hexMesh) {
-      this.scene.remove(this.hexMesh);
+      this.moduleGroup?.remove(this.hexMesh);
       this.hexMesh.geometry.dispose();
       this.hexMesh.material.dispose();
       this.hexMesh = null;
     }
 
     if (this.particleSystem) {
-      this.scene.remove(this.particleSystem);
+      this.moduleGroup?.remove(this.particleSystem);
       this.particleGeometry?.dispose();
       this.particleMaterial?.dispose();
       this.particleSystem = null;
       this.particleGeometry = null;
       this.particleMaterial = null;
+    }
+
+    if (this.moduleGroup) {
+      this.moduleGroup.clear();
+      this.moduleGroup = null;
     }
 
     super.destroy();
