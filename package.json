@@ -94,7 +94,7 @@
     "concurrently": "^8.2.2",
     "css-loader": "^6.10.0",
     "dmg-builder": "25.1.8",
-    "electron": "^39.2.7",
+    "electron": "^39.8.5",
     "electron-builder": "^25.1.8",
     "electron-builder-squirrel-windows": "25.1.8",
     "eslint": "^8.0.0",
