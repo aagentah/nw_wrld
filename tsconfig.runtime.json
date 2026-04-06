@@ -48,6 +48,7 @@
     "src/sandboxPreload.ts",
     "src/main/mainProcess/state.ts",
     "src/main/mainProcess/pathSafety.ts",
+    "src/main/mainProcess/menu.ts",
     "src/main/mainProcess/ipcBridge.ts",
     "src/main/mainProcess/ipcBridge/projectContext.ts",
     "src/main/mainProcess/ipcBridge/registerProjectBridge.ts",
