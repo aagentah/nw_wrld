@@ -301,6 +301,17 @@ export const NoteSelector = memo(
       return maxTime;
     }, [channelsData]);
 
+    // The sequencer pattern depends only on recordingData + track id (not on the
+    // channel or step), so derive it once per render instead of re-walking
+    // recordingData inside all 16 step buttons of every channel row.
+    const sequencerPattern = useMemo<Record<string, unknown>>(() => {
+      const sequencerData = getSequencerForTrack(recordingData, String(track.id));
+      const patternRaw = isPlainObject(sequencerData)
+        ? (sequencerData as Record<string, unknown>).pattern
+        : null;
+      return isPlainObject(patternRaw) ? (patternRaw as Record<string, unknown>) : {};
+    }, [recordingData, track.id]);
+
     const toggleSelectChannel = useCallback(
       (channelNumber, isConstructor = false) => {
         const isSelected =
@@ -660,17 +671,7 @@ export const NoteSelector = memo(
                       <div className="flex gap-0.5 items-center" style={{ height: rowHeight }}>
                         {Array.from({ length: 16 }).map((_, stepIndex) => {
                           const channelKey = String(channel.number);
-                          const sequencerData = getSequencerForTrack(
-                            recordingData,
-                            String(track.id)
-                          );
-                          const patternRaw = isPlainObject(sequencerData)
-                            ? (sequencerData as Record<string, unknown>).pattern
-                            : null;
-                          const pattern = isPlainObject(patternRaw)
-                            ? (patternRaw as Record<string, unknown>)
-                            : {};
-                          const channelPattern = pattern[channelKey] || [];
+                          const channelPattern = sequencerPattern[channelKey] || [];
                           const isActive =
                             Array.isArray(channelPattern) && channelPattern.includes(stepIndex);
                           const isCurrentStep =
