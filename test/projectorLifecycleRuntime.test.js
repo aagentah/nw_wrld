@@ -174,6 +174,7 @@ const createPreviewControllerHarness = () => {
 const createWindowsHarness = () => {
   const browserWindows = [];
   const attachCalls = [];
+  const shellOpenExternalCalls = [];
   let nextWebContentsId = 1;
 
   class MockBrowserWindow {
@@ -188,6 +189,16 @@ const createWindowsHarness = () => {
         isDestroyed: () => this.destroyed,
         send: () => {},
         once: () => {},
+        handlers: new Map(),
+        windowOpenHandler: null,
+        on(eventName, handler) {
+          const hs = this.handlers.get(eventName) || [];
+          hs.push(handler);
+          this.handlers.set(eventName, hs);
+        },
+        setWindowOpenHandler(fn) {
+          this.windowOpenHandler = fn;
+        },
       };
       browserWindows.push(this);
     }
@@ -265,6 +276,11 @@ const createWindowsHarness = () => {
         on: () => {},
         quit: () => {},
       },
+      shell: {
+        openExternal: (url) => {
+          shellOpenExternalCalls.push(url);
+        },
+      },
       screen: {
         getPrimaryDisplay: () => ({
           workAreaSize: { width: 1200, height: 800 },
@@ -286,6 +302,10 @@ const createWindowsHarness = () => {
     "../../shared/validation/dashboardProjectorIpcValidation": {
       normalizeDashboardProjectorMessage: (value) => value,
     },
+    "../../shared/validation/openExternalValidation": {
+      normalizeOpenExternalUrl: (url) =>
+        typeof url === "string" && /^https?:\/\//i.test(url) ? url : null,
+    },
     "./state": {
       srcDir: "/tmp/src",
       state,
@@ -300,7 +320,7 @@ const createWindowsHarness = () => {
     },
   });
 
-  return { ...moduleExports, browserWindows, state, attachCalls };
+  return { ...moduleExports, browserWindows, state, attachCalls, shellOpenExternalCalls };
 };
 
 test("handleTrackSelection drains pending track after empty-track early exit", async () => {
@@ -431,4 +451,53 @@ test("projector recovery timer does not recreate a window after shutdown starts"
   assert.equal(projectorWindowsAfterClose.length, 1);
   assert.equal(state.projector1Window, null);
   assert.deepEqual(attachCalls, [null]);
+});
+
+test("createWindow denies new windows and blocks external navigation on both windows", () => {
+  const { createWindow, browserWindows, shellOpenExternalCalls } = createWindowsHarness();
+
+  createWindow("/tmp/workspace");
+
+  const windowsToCheck = browserWindows.filter(
+    (win) => win.title === "Projector 1" || win.title === "nw_wrld"
+  );
+  assert.equal(windowsToCheck.length, 2, "expected a projector and a dashboard window");
+
+  for (const win of windowsToCheck) {
+    const wc = win.webContents;
+
+    // New windows are denied, and a genuine external link is routed through the
+    // validated openExternal path instead of opening an in-app BrowserWindow.
+    assert.equal(
+      typeof wc.windowOpenHandler,
+      "function",
+      `${win.title}: setWindowOpenHandler should be installed`
+    );
+    // Compare by property, not deepStrictEqual: the response object is created
+    // inside the vm sandbox realm, so its prototype differs from this realm's.
+    const decision = wc.windowOpenHandler({ url: "https://example.com/page" });
+    assert.equal(decision.action, "deny", `${win.title}: window.open must be denied`);
+
+    // External navigation of the privileged renderer is blocked...
+    const navHandlers = wc.handlers.get("will-navigate") || [];
+    assert.ok(navHandlers.length >= 1, `${win.title}: will-navigate should be registered`);
+    let blockedExternal = false;
+    navHandlers.forEach((handler) =>
+      handler({ preventDefault: () => (blockedExternal = true) }, "https://evil.example/x")
+    );
+    assert.equal(blockedExternal, true, `${win.title}: external navigation must be prevented`);
+
+    // ...while in-app file:// navigation is still allowed.
+    let blockedInternal = false;
+    navHandlers.forEach((handler) =>
+      handler({ preventDefault: () => (blockedInternal = true) }, "file:///app/dashboard.html")
+    );
+    assert.equal(blockedInternal, false, `${win.title}: file:// navigation must be allowed`);
+  }
+
+  assert.deepEqual(
+    shellOpenExternalCalls,
+    ["https://example.com/page", "https://example.com/page"],
+    "denied http(s) window.open should be forwarded to shell.openExternal once per window"
+  );
 });

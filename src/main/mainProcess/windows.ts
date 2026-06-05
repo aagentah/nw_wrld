@@ -1,10 +1,11 @@
-import { BrowserWindow, app, screen } from "electron";
+import { BrowserWindow, app, screen, shell } from "electron";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import InputManager from "../InputManager";
 import { DEFAULT_INPUT_CONFIG, DEFAULT_USER_DATA } from "../../shared/config/defaultConfig";
 import { sanitizeJsonForBridge } from "../../shared/validation/jsonBridgeValidation";
 import { normalizeDashboardProjectorMessage } from "../../shared/validation/dashboardProjectorIpcValidation";
+import { normalizeOpenExternalUrl } from "../../shared/validation/openExternalValidation";
 import { srcDir, state } from "./state";
 import { getProjectJsonDirForMain, startWorkspaceWatcher } from "./workspace";
 import { destroySandboxView, updateSandboxViewBounds } from "./sandbox";
@@ -14,6 +15,51 @@ type SenderEvent = { sender?: WebContentsWithId };
 type Jsonish = string | number | boolean | null | undefined | object;
 
 const isTestHeadless = process.env.NW_WRLD_TEST_HEADLESS === "1";
+
+const isAllowedInternalNavigation = (url: unknown): boolean => {
+  if (typeof url !== "string") return false;
+  return (
+    url.startsWith("file:") ||
+    url.startsWith("nw-sandbox:") ||
+    url.startsWith("nw-assets:") ||
+    url.startsWith("devtools:") ||
+    url === "about:blank"
+  );
+};
+
+// The dashboard and projector are privileged windows: their preload exposes the
+// full nwWrldBridge (workspace fs, JSON store, openExternal). Deny any in-app
+// window.open and any navigation away from the bundled local content, so a stray
+// link or injected navigation cannot load remote code into a window that can
+// reach the filesystem. Genuine external http(s) links are still honoured, but
+// only via the same validated path as os.openExternal (scheme allow-list).
+const hardenWindowNavigation = (win: BrowserWindow): void => {
+  try {
+    const wc = win.webContents;
+    if (!wc) return;
+    if (typeof wc.setWindowOpenHandler === "function") {
+      wc.setWindowOpenHandler(({ url }) => {
+        const safe = normalizeOpenExternalUrl(url);
+        if (safe) {
+          try {
+            shell.openExternal(safe);
+          } catch {}
+        }
+        return { action: "deny" };
+      });
+    }
+    wc.on("will-navigate", (event, url) => {
+      if (!isAllowedInternalNavigation(url)) {
+        event.preventDefault();
+      }
+    });
+    wc.on("will-redirect", (event, url) => {
+      if (!isAllowedInternalNavigation(url)) {
+        event.preventDefault();
+      }
+    });
+  } catch {}
+};
 
 const getProjectorAspectRatioValue = (aspectRatioId: unknown): number => {
   const id = String(aspectRatioId || "").trim();
@@ -287,6 +333,8 @@ const createProjectorWindow = (projectDir: string | null): BrowserWindow => {
     frame: false,
   });
 
+  hardenWindowNavigation(projectorWindow);
+
   try {
     if (typeof projectorWindow.getBounds === "function") {
       state.projectorDefaultBounds = projectorWindow.getBounds();
@@ -402,6 +450,8 @@ export function createWindow(projectDir: string | null): void {
     show: false,
     paintWhenInitiallyHidden: true,
   });
+
+  hardenWindowNavigation(state.dashboardWindow as BrowserWindow);
 
   try {
     const win = state.dashboardWindow as { once?: unknown; show?: unknown };
