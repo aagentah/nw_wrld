@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useRef,
   type Dispatch,
   type MutableRefObject,
   type SetStateAction,
@@ -61,6 +62,38 @@ export const useInputEvents = ({
   isDebugOverlayOpen,
   setIsProjectorReady,
 }: UseInputEventsArgs) => {
+  // Debug overlay logging: always retain recent entries in a cheap ring buffer,
+  // but only trigger a React re-render while the overlay is actually visible.
+  // This removes a setState (and re-render of every debugLogs consumer) on every
+  // inbound MIDI/OSC event when nobody is viewing the overlay, while preserving
+  // the exact observable behaviour (overlay shows the last 200 entries) via the
+  // flush-on-open effect below.
+  const debugLogBufferRef = useRef<string[]>([]);
+  const isDebugOverlayOpenRef = useRef(isDebugOverlayOpen);
+
+  const recordDebugEntries = useCallback(
+    (entries: string[]) => {
+      if (entries.length === 0) return;
+      if (!isDebugOverlayOpenRef.current) {
+        const buf = debugLogBufferRef.current;
+        for (const entry of entries) buf.push(entry);
+        if (buf.length > 200) buf.splice(0, buf.length - 200);
+        return;
+      }
+      setDebugLogs((prev) => [...prev, ...entries].slice(-200));
+    },
+    [setDebugLogs]
+  );
+
+  useEffect(() => {
+    isDebugOverlayOpenRef.current = isDebugOverlayOpen;
+    if (isDebugOverlayOpen && debugLogBufferRef.current.length > 0) {
+      const buffered = debugLogBufferRef.current;
+      debugLogBufferRef.current = [];
+      setDebugLogs((prev) => [...prev, ...buffered].slice(-200));
+    }
+  }, [isDebugOverlayOpen, setDebugLogs]);
+
   useEffect(() => {
     const tracks = getActiveSetTracks(userData, activeSetId);
     const globalMappings =
@@ -106,10 +139,7 @@ export const useInputEvents = ({
               : ""
             : "";
       const logEntries = rawLog.split("\n\n").filter((entry) => entry.trim());
-      setDebugLogs((prev) => {
-        const newLogs = [...prev, ...logEntries];
-        return newLogs.slice(-200);
-      });
+      recordDebugEntries(logEntries);
     }
   });
 
@@ -119,12 +149,12 @@ export const useInputEvents = ({
     });
   }, [isDebugOverlayOpen, sendToProjector]);
 
-  const addDebugLog = useCallback((log: string) => {
-    setDebugLogs((prev) => {
-      const newLogs = [...prev, log];
-      return newLogs.slice(-200);
-    });
-  }, []);
+  const addDebugLog = useCallback(
+    (log: string) => {
+      recordDebugEntries([log]);
+    },
+    [recordDebugEntries]
+  );
 
   const formatDebugLog = useCallback((eventData: Record<string, unknown>) => {
     const timestampRaw = eventData.timestamp;
