@@ -41,9 +41,9 @@ const hardenWindowNavigation = (win: BrowserWindow): void => {
       wc.setWindowOpenHandler(({ url }) => {
         const safe = normalizeOpenExternalUrl(url);
         if (safe) {
-          try {
-            shell.openExternal(safe);
-          } catch {}
+          // openExternal returns a promise; swallow async rejection (e.g. no OS
+          // handler for the URL) the same way registerOsBridge does.
+          Promise.resolve(shell.openExternal(safe)).catch(() => {});
         }
         return { action: "deny" };
       });

@@ -31,7 +31,13 @@ exports.default = async function afterPack(context) {
   } else if (electronPlatformName === "win32") {
     electronBinaryPath = path.join(appOutDir, `${appName}.exe`);
   } else {
-    electronBinaryPath = path.join(appOutDir, appName);
+    // Linux: electron-builder derives the executable name from the package "name"
+    // (sanitizedName.toLowerCase()), NOT productName/productFilename. Using appName
+    // ("nw_wrld") here would point at a nonexistent file ("nw-wrld" is the real
+    // basename) and flipFuses would throw ENOENT, aborting the Linux build.
+    const linuxExecutableName =
+      packager.executableName || packager.appInfo.sanitizedName.toLowerCase();
+    electronBinaryPath = path.join(appOutDir, linuxExecutableName);
   }
 
   await flipFuses(electronBinaryPath, {
