@@ -83,6 +83,7 @@
     "@babel/preset-env": "^7.23.5",
     "@babel/preset-react": "^7.23.3",
     "@babel/preset-typescript": "^7.28.5",
+    "@electron/fuses": "^1.8.0",
     "@eslint/js": "^9.0.0",
     "@playwright/test": "1.60.0",
     "@types/node": "^20.0.0",
@@ -123,6 +124,7 @@
     "productName": "nw_wrld",
     "asar": true,
     "npmRebuild": false,
+    "afterPack": "scripts/afterPack.js",
     "directories": {
       "output": "release",
       "buildResources": "build"
