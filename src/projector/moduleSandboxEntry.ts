@@ -12,6 +12,7 @@ import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 import { parseNwWrldDocblockMetadata } from "../shared/nwWrldDocblock";
 import { buildMethodOptions, parseMatrixOptions } from "../shared/utils/methodOptions";
 import { createSdkHelpers } from "../shared/utils/sdkHelpers";
+import { resolveConstructorRunList } from "./internal/track/constructorRunList";
 import {
   buildWorkspaceImportPreamble,
   ensureTrailingSlash,
@@ -389,8 +390,12 @@ globalThis.nwSandboxIpc?.on?.(async (data) => {
 
           instancesById.set(instanceId, { moduleType, instances });
 
-          const nonMatrix = constructorMethods.filter((mm) => mm?.name && mm.name !== "matrix");
-          for (const mm of nonMatrix) {
+          const allClassMethods = mergeMethodsByName(
+            getBaseMethodsForClass(ModuleClass),
+            Array.isArray(ModuleClass?.methods) ? ModuleClass.methods : []
+          );
+          const runList = resolveConstructorRunList(constructorMethods, allClassMethods);
+          for (const mm of runList) {
             const methodName = String(mm.name || "").trim();
             if (!methodName) continue;
             const opts = buildMethodOptions(mm.options);
@@ -464,8 +469,6 @@ globalThis.nwSandboxIpc?.on?.(async (data) => {
         const ctor = Array.isArray(modulesData?.[instanceId]?.constructor)
           ? modulesData[instanceId].constructor
           : [];
-        const nonMatrix = ctor.filter((mm) => mm?.name && mm.name !== "matrix");
-
         const ModuleClass = await getModuleClass(moduleType, moduleSources);
         const instances = [];
         for (let row = 1; row <= matrix.rows; row++) {
@@ -496,7 +499,12 @@ globalThis.nwSandboxIpc?.on?.(async (data) => {
 
         instancesById.set(instanceId, { moduleType, instances });
 
-        for (const mm of nonMatrix) {
+        const allClassMethods = mergeMethodsByName(
+          getBaseMethodsForClass(ModuleClass),
+          Array.isArray(ModuleClass?.methods) ? ModuleClass.methods : []
+        );
+        const runList = resolveConstructorRunList(ctor, allClassMethods);
+        for (const mm of runList) {
           const methodName = String(mm.name || "").trim();
           if (!methodName) continue;
           const opts = buildMethodOptions(mm.options);

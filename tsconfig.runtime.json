@@ -78,6 +78,7 @@
     "src/projector/internal/workspaceModules.ts",
     "src/projector/internal/sandbox/TrackSandboxHost.ts",
     "src/projector/internal/introspection.ts",
-    "src/projector/internal/track/reloadTarget.ts"
+    "src/projector/internal/track/reloadTarget.ts",
+    "src/projector/internal/track/constructorRunList.ts"
   ]
 }
