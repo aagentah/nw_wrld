@@ -47,7 +47,6 @@ class AsteroidGraph extends ModuleBase {
     this.meteors = [];
     this.dataset = null;
     this.myp5 = null;
-    this.destroyed = false;
     this.init();
   }
 
@@ -59,7 +58,6 @@ class AsteroidGraph extends ModuleBase {
       let noiseOffsetY = 0.0;
 
       p.setup = () => {
-        if (this.destroyed || !this.elem) return;
         let canvasWidth = this.elem.clientWidth;
         let canvasHeight = this.elem.clientHeight;
 
@@ -71,7 +69,6 @@ class AsteroidGraph extends ModuleBase {
       };
 
       p.draw = () => {
-        if (this.destroyed || !this.elem) return;
         p.clear();
         const centerY = p.height / 2;
         let maxDistortion = (p.height / 2) * 0.9;
@@ -135,7 +132,6 @@ class AsteroidGraph extends ModuleBase {
     if (!this.dataset) {
       this.dataset = await getSdkMeteorDataset();
     }
-    if (this.destroyed) return;
 
     if (this.dataset && this.dataset.length > 0 && this.myp5) {
       for (let i = 0; i < safeCount; i++) {
@@ -164,7 +160,6 @@ class AsteroidGraph extends ModuleBase {
   }
 
   destroy() {
-    this.destroyed = true;
     if (this.myp5) {
       this.myp5.remove();
       this.myp5 = null;
