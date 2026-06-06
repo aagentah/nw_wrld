@@ -301,9 +301,6 @@ export const NoteSelector = memo(
       return maxTime;
     }, [channelsData]);
 
-    // The sequencer pattern depends only on recordingData + track id (not on the
-    // channel or step), so derive it once per render instead of re-walking
-    // recordingData inside all 16 step buttons of every channel row.
     const sequencerPattern = useMemo<Record<string, unknown>>(() => {
       const sequencerData = getSequencerForTrack(recordingData, String(track.id));
       const patternRaw = isPlainObject(sequencerData)

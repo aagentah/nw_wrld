@@ -29,7 +29,6 @@ test("atomicWriteFile: rolls a .backup of the previous contents on overwrite", a
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "nw_wrld_atomicbackup_"));
   const filePath = path.join(dir, "data.json");
 
-  // First write to a fresh path: nothing to back up yet.
   await atomicWriteFile(filePath, JSON.stringify({ v: 1 }));
   assert.equal(
     fs.existsSync(filePath + ".backup"),
@@ -37,7 +36,6 @@ test("atomicWriteFile: rolls a .backup of the previous contents on overwrite", a
     "no .backup should exist after the very first write (nothing to preserve)"
   );
 
-  // Overwrite: the previous good contents must be preserved in .backup.
   await atomicWriteFile(filePath, JSON.stringify({ v: 2 }));
   assert.equal(fs.readFileSync(filePath, "utf-8"), JSON.stringify({ v: 2 }));
   assert.equal(
@@ -63,7 +61,6 @@ test("atomicWriteFile: fsyncs the file and the directory for crash durability", 
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "nw_wrld_atomicfsync_"));
   const filePath = path.join(dir, "data.json");
 
-  // Spy on FileHandle.sync via fs.promises.open (same cached module instance as the SUT).
   const realOpen = fs.promises.open;
   let syncCount = 0;
   fs.promises.open = async (...args) => {

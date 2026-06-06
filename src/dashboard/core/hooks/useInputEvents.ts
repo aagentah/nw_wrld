@@ -62,12 +62,7 @@ export const useInputEvents = ({
   isDebugOverlayOpen,
   setIsProjectorReady,
 }: UseInputEventsArgs) => {
-  // Debug overlay logging: always retain recent entries in a cheap ring buffer,
-  // but only trigger a React re-render while the overlay is actually visible.
-  // This removes a setState (and re-render of every debugLogs consumer) on every
-  // inbound MIDI/OSC event when nobody is viewing the overlay, while preserving
-  // the exact observable behaviour (overlay shows the last 200 entries) via the
-  // flush-on-open effect below.
+  // Buffer debug entries in a ring buffer; only re-render while the overlay is open.
   const debugLogBufferRef = useRef<string[]>([]);
   const isDebugOverlayOpenRef = useRef(isDebugOverlayOpen);
 

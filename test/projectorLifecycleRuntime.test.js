@@ -466,19 +466,14 @@ test("createWindow denies new windows and blocks external navigation on both win
   for (const win of windowsToCheck) {
     const wc = win.webContents;
 
-    // New windows are denied, and a genuine external link is routed through the
-    // validated openExternal path instead of opening an in-app BrowserWindow.
     assert.equal(
       typeof wc.windowOpenHandler,
       "function",
       `${win.title}: setWindowOpenHandler should be installed`
     );
-    // Compare by property, not deepStrictEqual: the response object is created
-    // inside the vm sandbox realm, so its prototype differs from this realm's.
     const decision = wc.windowOpenHandler({ url: "https://example.com/page" });
     assert.equal(decision.action, "deny", `${win.title}: window.open must be denied`);
 
-    // External navigation of the privileged renderer is blocked...
     const navHandlers = wc.handlers.get("will-navigate") || [];
     assert.ok(navHandlers.length >= 1, `${win.title}: will-navigate should be registered`);
     let blockedExternal = false;
@@ -487,7 +482,6 @@ test("createWindow denies new windows and blocks external navigation on both win
     );
     assert.equal(blockedExternal, true, `${win.title}: external navigation must be prevented`);
 
-    // ...while in-app file:// navigation is still allowed.
     let blockedInternal = false;
     navHandlers.forEach((handler) =>
       handler({ preventDefault: () => (blockedInternal = true) }, "file:///app/dashboard.html")

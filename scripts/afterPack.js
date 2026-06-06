@@ -1,17 +1,5 @@
-// electron-builder afterPack hook: harden the packaged Electron binary by
-// flipping security fuses BEFORE electron-builder code-signs the app (afterPack
-// runs prior to signing, so the resulting signature covers the modified binary).
-//
-// Fuses disabled here close the standard Electron local-code-execution backdoors:
-//   - RunAsNode: blocks ELECTRON_RUN_AS_NODE=... relaunching the signed app as a
-//     generic Node runtime inside the app's code-signing identity / entitlements.
-//   - EnableNodeCliInspectArguments: blocks --inspect / --inspect-brk attaching a
-//     debugger to the main process.
-//   - EnableNodeOptionsEnvironmentVariable: blocks NODE_OPTIONS injection.
-//
-// Intentionally NOT touching OnlyLoadAppFromAsar / EnableEmbeddedAsarIntegrityValidation:
-// those interact with electron-builder's asar packing/signing and need a dedicated
-// build+notarize test before enabling. They can be added later once verified.
+// electron-builder afterPack hook: disable RunAsNode / inspect / NODE_OPTIONS
+// fuses before signing, so the signature covers the hardened binary.
 const path = require("node:path");
 const { flipFuses, FuseVersion, FuseV1Options } = require("@electron/fuses");
 
@@ -31,10 +19,7 @@ exports.default = async function afterPack(context) {
   } else if (electronPlatformName === "win32") {
     electronBinaryPath = path.join(appOutDir, `${appName}.exe`);
   } else {
-    // Linux: electron-builder derives the executable name from the package "name"
-    // (sanitizedName.toLowerCase()), NOT productName/productFilename. Using appName
-    // ("nw_wrld") here would point at a nonexistent file ("nw-wrld" is the real
-    // basename) and flipFuses would throw ENOENT, aborting the Linux build.
+    // Linux executable name comes from package "name", not productName.
     const linuxExecutableName =
       packager.executableName || packager.appInfo.sanitizedName.toLowerCase();
     electronBinaryPath = path.join(appOutDir, linuxExecutableName);

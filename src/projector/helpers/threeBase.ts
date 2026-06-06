@@ -1012,11 +1012,7 @@ export class BaseThreeJsModule extends ModuleBase {
       this.scene = null;
     }
 
-    // Remove the window resize listener registered in the constructor so the
-    // destroyed instance (and everything its closure retains) can be garbage
-    // collected. Without this it accumulates across same-sandbox instance churn
-    // (e.g. matrix re-configuration), since controls.dispose() only removes the
-    // controls' own listeners, not this one.
+    // Remove the constructor's resize listener so the instance can be GC'd.
     window.removeEventListener("resize", this.onWindowResize);
 
     // Dispose of the renderer and its DOM element
@@ -1025,9 +1021,7 @@ export class BaseThreeJsModule extends ModuleBase {
         const parent = this.renderer.domElement.parentNode;
         if (parent) parent.removeChild(this.renderer.domElement);
       }
-      // Eagerly release the underlying WebGL context rather than waiting for GC
-      // of the canvas/renderer, so repeated instance churn cannot transiently
-      // stack live GL contexts toward the per-process limit.
+      // Eagerly release the WebGL context before disposing.
       if (typeof this.renderer.forceContextLoss === "function") {
         this.renderer.forceContextLoss();
       }

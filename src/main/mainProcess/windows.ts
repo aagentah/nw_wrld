@@ -27,12 +27,7 @@ const isAllowedInternalNavigation = (url: unknown): boolean => {
   );
 };
 
-// The dashboard and projector are privileged windows: their preload exposes the
-// full nwWrldBridge (workspace fs, JSON store, openExternal). Deny any in-app
-// window.open and any navigation away from the bundled local content, so a stray
-// link or injected navigation cannot load remote code into a window that can
-// reach the filesystem. Genuine external http(s) links are still honoured, but
-// only via the same validated path as os.openExternal (scheme allow-list).
+// Privileged windows can reach the fs; pin them to local content (external links go via validated openExternal).
 const hardenWindowNavigation = (win: BrowserWindow): void => {
   try {
     const wc = win.webContents;
@@ -41,8 +36,6 @@ const hardenWindowNavigation = (win: BrowserWindow): void => {
       wc.setWindowOpenHandler(({ url }) => {
         const safe = normalizeOpenExternalUrl(url);
         if (safe) {
-          // openExternal returns a promise; swallow async rejection (e.g. no OS
-          // handler for the URL) the same way registerOsBridge does.
           Promise.resolve(shell.openExternal(safe)).catch(() => {});
         }
         return { action: "deny" };
