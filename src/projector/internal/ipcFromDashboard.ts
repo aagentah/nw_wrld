@@ -1,6 +1,7 @@
 import { find, isEqual } from "lodash";
 import { getMessaging } from "./bridge";
 import { normalizeDashboardProjectorMessage } from "../../shared/validation/dashboardProjectorIpcValidation";
+import { resolveReloadTarget } from "./track/reloadTarget";
 
 type DashboardIpcContext = {
   introspectModule: (moduleId: unknown) => Promise<unknown>;
@@ -19,12 +20,14 @@ type DashboardIpcContext = {
   pendingReloadData: unknown;
   activeTrack: { name?: unknown } | null;
   userData: unknown;
+  lastRequestedTrackName: string | null;
 
   loadUserData: (setId: unknown) => unknown;
   applyConfigSettings: () => unknown;
   deactivateActiveTrack: () => unknown;
   handleTrackSelection: (trackName: unknown) => unknown;
   handleChannelMessage: (channelPath: string) => unknown;
+  setRenderStatus: (status: unknown, message?: unknown) => unknown;
 
   debugOverlayActive: boolean;
   debugLogTimeout: ReturnType<typeof setTimeout> | null;
@@ -118,20 +121,29 @@ export function initDashboardIpc(this: DashboardIpcContext) {
           if (this.isLoadingTrack) {
             this.pendingReloadData = {
               setId: (props as { setId?: unknown }).setId,
-              trackName:
-                (props as { trackName?: unknown }).trackName ||
-                (this.activeTrack as { name?: unknown } | null)?.name,
+              trackName: (props as { trackName?: unknown }).trackName ?? null,
             };
             return;
           }
 
-          const currentTrackName =
-            (props as { trackName?: unknown }).trackName ||
-            (this.activeTrack as { name?: unknown } | null)?.name;
           this.loadUserData((props as { setId?: unknown }).setId);
           this.applyConfigSettings();
 
-          if (currentTrackName) {
+          const tracks = Array.isArray(this.userData) ? (this.userData as unknown[]) : [];
+          const target = resolveReloadTarget(
+            (props as { trackName?: unknown }).trackName,
+            tracks.length
+          );
+
+          if (target.action === "empty") {
+            this.lastRequestedTrackName = null;
+            this.deactivateActiveTrack();
+            this.setRenderStatus("empty", target.message);
+            return;
+          }
+
+          {
+            const currentTrackName = target.trackName;
             const nextTrack = find(this.userData as never, { name: currentTrackName } as never);
             if (
               this.activeTrack &&
