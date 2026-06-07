@@ -33,7 +33,7 @@ function bandForHz(hz: number): Band | null {
 
 const dbToLin = (db: number) => (Number.isFinite(db) ? Math.pow(10, db / 20) : 0);
 
-export function useDashboardAudioCapture({
+export const useDashboardAudioCapture = ({
   enabled,
   deviceId,
   emitBand,
@@ -45,7 +45,7 @@ export function useDashboardAudioCapture({
   emitBand: (payload: { channelName: Band; velocity: number }) => Promise<unknown>;
   thresholds?: Partial<Levels> | null;
   minIntervalMs?: number | null;
-}) {
+}) => {
   const zero: Levels = { low: 0, medium: 0, high: 0 };
   const negInf: PeaksDb = { low: -Infinity, medium: -Infinity, high: -Infinity };
   const [state, setState] = useState<AudioCaptureState>({

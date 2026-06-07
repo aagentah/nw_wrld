@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 type AudioDevice = { id: string; label: string };
 
-export function useDashboardAudioDevices(enabled: boolean) {
+export const useDashboardAudioDevices = (enabled: boolean) => {
   const [devices, setDevices] = useState<AudioDevice[]>([]);
   const [error, setError] = useState<string | null>(null);
 

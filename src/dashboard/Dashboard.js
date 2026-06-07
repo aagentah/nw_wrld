@@ -34,7 +34,7 @@ import { useDashboardUpdateConfig } from "./core/hooks/useDashboardUpdateConfig"
 import { useDashboardAudioDevices } from "./core/hooks/useDashboardAudioDevices";
 import { useDashboardAudioCapture } from "./core/hooks/useDashboardAudioCapture";
 import { useDashboardFileAudio } from "./core/hooks/useDashboardFileAudio";
-import ErrorBoundary from "./components/ErrorBoundary";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 
 const Dashboard = () => {
   const [userData, setUserData] = useAtom(userDataAtom);

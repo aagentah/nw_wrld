@@ -59,7 +59,7 @@ const getBridgeWorkspace = () => {
   return w;
 };
 
-export function useDashboardFileAudio({
+export const useDashboardFileAudio = ({
   enabled,
   assetRelPath,
   emitBand,
@@ -71,7 +71,7 @@ export function useDashboardFileAudio({
   emitBand: (payload: { channelName: Band; velocity: number }) => Promise<unknown>;
   thresholds?: Partial<Levels> | null;
   minIntervalMs?: number | null;
-}) {
+}) => {
   const zero: Levels = useMemo(() => ({ low: 0, medium: 0, high: 0 }), []);
   const negInf: PeaksDb = useMemo(
     () => ({ low: -Infinity, medium: -Infinity, high: -Infinity }),

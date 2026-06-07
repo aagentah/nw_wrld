@@ -1,4 +1,5 @@
 import { find, isEqual } from "lodash";
+import logger from "../helpers/logger";
 import { getMessaging } from "./bridge";
 import { normalizeDashboardProjectorMessage } from "../../shared/validation/dashboardProjectorIpcValidation";
 import { resolveReloadTarget } from "./track/reloadTarget";
@@ -41,7 +42,7 @@ export function initDashboardIpc(this: DashboardIpcContext) {
       try {
         const msg = normalizeDashboardProjectorMessage(data);
         if (!msg) {
-          console.error("❌ [PROJECTOR-IPC] Invalid IPC message received:", data);
+          logger.error("❌ [PROJECTOR-IPC] Invalid IPC message received:", data);
           return;
         }
         const type = msg.type;
@@ -66,7 +67,7 @@ export function initDashboardIpc(this: DashboardIpcContext) {
 
         if (type === "toggleAspectRatioStyle") {
           if (!(props as { name?: unknown } | null)?.name) {
-            console.error("❌ [PROJECTOR-IPC] toggleAspectRatioStyle missing name");
+            logger.error("❌ [PROJECTOR-IPC] toggleAspectRatioStyle missing name");
             return;
           }
           return this.toggleAspectRatioStyle((props as { name?: unknown }).name);
@@ -74,7 +75,7 @@ export function initDashboardIpc(this: DashboardIpcContext) {
 
         if (type === "setBg") {
           if (!(props as { value?: unknown } | null)?.value) {
-            console.error("❌ [PROJECTOR-IPC] setBg missing value");
+            logger.error("❌ [PROJECTOR-IPC] setBg missing value");
             return;
           }
           return this.setBg((props as { value?: unknown }).value);
@@ -82,7 +83,7 @@ export function initDashboardIpc(this: DashboardIpcContext) {
 
         if (type === "preview-module") {
           if (!(props as { moduleName?: unknown } | null)?.moduleName) {
-            console.error("❌ [PROJECTOR-IPC] preview-module missing moduleName");
+            logger.error("❌ [PROJECTOR-IPC] preview-module missing moduleName");
             return;
           }
           return this.previewModule(
@@ -101,7 +102,7 @@ export function initDashboardIpc(this: DashboardIpcContext) {
             !(props as { moduleName?: unknown } | null)?.moduleName ||
             !(props as { methodName?: unknown } | null)?.methodName
           ) {
-            console.error(
+            logger.error(
               "❌ [PROJECTOR-IPC] trigger-preview-method missing moduleName or methodName"
             );
             return;
@@ -196,7 +197,7 @@ export function initDashboardIpc(this: DashboardIpcContext) {
 
         if (type === "track-activate") {
           if (!(props as { trackName?: unknown } | null)?.trackName) {
-            console.error("❌ [PROJECTOR-IPC] track-activate missing trackName");
+            logger.error("❌ [PROJECTOR-IPC] track-activate missing trackName");
             return;
           }
           return this.handleTrackSelection((props as { trackName?: unknown }).trackName);
@@ -213,19 +214,19 @@ export function initDashboardIpc(this: DashboardIpcContext) {
           }
 
           if (!channelNumber) {
-            console.error(
+            logger.error(
               "❌ [PROJECTOR-IPC] channel-trigger missing channelNumber/channelName"
             );
             return;
           }
 
-          console.log("🎵 [PROJECTOR-IPC] Channel trigger:", channelNumber);
+          logger.log("🎵 [PROJECTOR-IPC] Channel trigger:", channelNumber);
           return this.handleChannelMessage(`/Ableton/${channelNumber}`);
         }
 
         if (type === "debug-overlay-visibility") {
           if (typeof (props as { isOpen?: unknown } | null)?.isOpen !== "boolean") {
-            console.error(
+            logger.error(
               "❌ [PROJECTOR-IPC] debug-overlay-visibility missing isOpen"
             );
             return;
@@ -242,12 +243,12 @@ export function initDashboardIpc(this: DashboardIpcContext) {
           return;
         }
       } catch (error) {
-        console.error("❌ [PROJECTOR-IPC] Error processing IPC message:", error);
-        console.error(
+        logger.error("❌ [PROJECTOR-IPC] Error processing IPC message:", error);
+        logger.error(
           "❌ [PROJECTOR-IPC] Error stack:",
           (error as { stack?: unknown } | null)?.stack
         );
-        console.error("❌ [PROJECTOR-IPC] Message that caused error:", data);
+        logger.error("❌ [PROJECTOR-IPC] Message that caused error:", data);
       }
     });
   }
