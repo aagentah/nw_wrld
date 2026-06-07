@@ -8,6 +8,7 @@ You are reviewing changes in `nw_wrld`, an Electron app with a deliberate archit
 - `MODULE_DEVELOPMENT.md`
 - `CONTRIBUTING.md`
 - `RUNTIME_TS_TESTING_GUIDELINES.md`
+- `E2E_TESTING_GUIDELINES.md`
 
 #### Primary goal
 

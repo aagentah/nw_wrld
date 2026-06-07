@@ -35,3 +35,4 @@ Anything risky, or areas to pay attention to:
 - `MODULE_DEVELOPMENT.md`
 - `CONTRIBUTING.md`
 - `RUNTIME_TS_TESTING_GUIDELINES.md`
+- `E2E_TESTING_GUIDELINES.md`

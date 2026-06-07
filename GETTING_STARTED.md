@@ -22,21 +22,11 @@ This guide covers installation, setup, and basic usage of nw_wrld.
 
 ## Installation
 
-### Developer Setup
-
 **Requirements:** Node.js v20+ and basic terminal knowledge
 
-```bash
-# Clone the repository
-git clone https://github.com/aagentah/nw_wrld.git
-cd nw_wrld
+To clone the repository, install dependencies, start the app, and learn what the two windows are, follow the [Installation (For Developers)](README.md#for-developers) section in the README.
 
-# Install dependencies
-npm install
-
-# Start the app
-npm start
-```
+The rest of this guide picks up from your first launch.
 
 ---
 
@@ -55,7 +45,7 @@ You have two options:
 
 nw_wrld will initialize your project folder with:
 
-- **16 starter modules** - Ready-to-use examples (Text, GridOverlay, SpinningCube, etc.)
+- **22 starter modules** - Ready-to-use examples (Text, GridOverlay, SpinningCube, etc.)
 - **Sample assets** - Images and JSON data files for experimentation
 - **Data storage** - Configuration, tracks, and recordings
 
@@ -65,7 +55,7 @@ Your project folder structure will look like this:
 
 ```
 MyProject/
-├── modules/           # Visual modules (16 starter modules included)
+├── modules/           # Visual modules (22 starter modules included)
 ├── assets/            # Images and JSON data
 │   ├── images/
 │   └── json/
@@ -97,7 +87,7 @@ Tracks are containers for visual modules and sequencer patterns.
 2. Select a module from the dropdown (e.g., **Text**, **GridOverlay**, **Corners**)
 3. Configure the module's initial properties if prompted
 
-**What are modules?** Modules are visual elements displayed in the Projector window. Your project includes 16 starter modules covering 2D graphics, 3D visuals, text, and data visualization.
+**What are modules?** Modules are visual elements displayed in the Projector window. Your project includes 22 starter modules covering 2D graphics, 3D visuals, text, and data visualization.
 
 ---
 
@@ -156,7 +146,7 @@ One of nw_wrld's most powerful features is that you can edit modules and see cha
 
 1. Navigate to your project folder (the one you selected on first launch)
 2. Open the `modules/` directory
-3. You'll see all 16 starter modules as `.js` files
+3. You'll see all 22 starter modules as `.js` files
 
 ### Editing Modules
 
@@ -167,12 +157,14 @@ One of nw_wrld's most powerful features is that you can edit modules and see cha
 3. Save the file
 4. nw_wrld automatically detects the change and reloads the module
 
-**Option 2: Use the Built-in Editor (Optional)**
+**Option 2: View the Source via the Module Editor**
 
-1. In Dashboard, go to Settings → Module Editor
-2. Select a module to edit
-3. Make changes in the Monaco editor
-4. Save → hot reload applies automatically
+The Module Editor modal does not edit modules in-app. It shows the module's source read-only and gives you a quick way to jump to the file.
+
+1. In Dashboard, open the Module Editor for a module
+2. Read the source in the read-only viewer to find what you want to change
+3. Click the link to open the file in your own code editor
+4. Edit and save there, and nw_wrld hot-reloads the change automatically
 
 ### What You Can Change
 
@@ -197,7 +189,7 @@ Save the file and the module reloads automatically.
 
 ### Learning from Examples
 
-Study the 16 starter modules to learn different patterns:
+Study the 22 starter modules to learn different patterns:
 
 - **HelloWorld.js** - Simplest possible module
 - **Text.js** - DOM-based text rendering
@@ -388,6 +380,12 @@ $: note(r).midi("MIDI_port_name").midichan(1); // send to MIDI_port_name channel
 ### Linux/WSL Issues
 
 **libasound.so cannot open shared object file (Windows 11 + WSL/Ubuntu):**
+
+Electron needs the ALSA sound libraries, which are not installed by default on minimal WSL/Ubuntu setups. Install them, then start the app again:
+
+```bash
+sudo apt-get install libasound2 libasound2-dev
+```
 
 For more help, see [Troubleshooting](README.md#troubleshooting) in the README or check [GitHub Issues](https://github.com/aagentah/nw_wrld/issues).
 

@@ -74,9 +74,9 @@ Examples of **not critical**:
 
 In this repo, the canonical boundary points include:
 
-- Main process IPC handlers in `src/index.js`
+- Main-process IPC handlers in `src/main/mainProcess/ipcBridge/*` (`registerJsonBridge.ts`, `registerWorkspaceBridge.ts`, `registerInputBridge.ts`, `registerAppBridge.ts`, `registerProjectBridge.ts`, `registerOsBridge.ts`, etc.)
 - JSON bridge sanitization in `src/shared/validation/jsonBridgeValidation.ts`
-- Sandbox request/result handling in `src/index.js` and runtime validators in `src/shared/validation/*`
+- Sandbox request/result handling and boundary wiring in `src/main/mainProcess/sandbox.ts`, with runtime validators in `src/shared/validation/*`
 - Input emission in `src/main/InputManager.ts`
 
 ---
@@ -94,33 +94,17 @@ In this repo, the canonical boundary points include:
 
 ---
 
-### Preference: runtime code must not import from `src/` at runtime
+### When to import from `dist/runtime/**` vs `src/**`
 
-When migrating logic into the runtime TS lane, the **single runtime source of truth** is the compiled output under `dist/runtime/**`.
+The **single runtime source of truth** is the compiled output under `dist/runtime/**`. This repo has two “worlds” that can both consume shared logic, so import by which world the code path belongs to:
 
-- Runtime code should **not** use “require-from-`src` fallbacks” (e.g., “try `dist/runtime`, else `src/`”).
-- If a module is needed at runtime, it should be **compiled into** `dist/runtime/**` (via `tsconfig.runtime.json`) and imported normally from the runtime bundle.
-- This avoids duplicated implementations (`.js` + `.ts`) and keeps runtime behavior consistent with what unit tests execute.
+- **Runtime/Node code and runtime tests → import from `dist/runtime/**`**:
+  - Main-process/runtime code and runtime-focused unit tests should import from `dist/runtime/**`, so they exercise what actually executes at runtime.
+  - Do **not** use “require-from-`src` fallbacks” (e.g., “try `dist/runtime`, else `src/`”). If a module is needed at runtime, compile it into `dist/runtime/**` (via `tsconfig.runtime.json`) and import it from the runtime bundle. This avoids duplicated implementations (`.js` + `.ts`) and keeps runtime behavior consistent with what unit tests execute.
 
----
-
-### Clarification: when to import from `dist/runtime/**` vs `src/**`
-
-This repo has two “worlds” that can both consume shared logic:
-
-- **Runtime lane (Electron/Node execution)**:
-  - Main-process/runtime code should import from **`dist/runtime/**`\*\*.
-  - Runtime-focused unit tests should import from **`dist/runtime/**`\*\* to validate what actually executes at runtime.
-  - This keeps runtime behavior consistent and enforces the “single runtime source of truth” rule.
-
-- **App/renderer/source code (bundled UI code under `src/`)**:
-  - Source/UI code should import from **`src/**`** (typically `src/shared/**`), not from `dist/runtime/**`.
+- **Renderer/UI bundled code → import from `src/**`**:
+  - Source/UI code bundled by webpack should import from `src/**` (typically `src/shared/**`), not from `dist/runtime/**`.
   - Avoid making `src/**` depend on build artifacts under `dist/**` (it creates brittle build-order coupling and breaks clean builds).
-
-In practice:
-
-- **Use `dist/runtime/**`\*\* when the code path is intended to run as part of the runtime TS lane (Electron main process / runtime execution) or when a unit test is explicitly validating that compiled output.
-- **Use `src/**`\*\* for renderer/UI modules and other source code that is bundled by webpack.
 
 ---
 
@@ -136,10 +120,10 @@ In practice:
   - Preserve unknown fields unless unsafe.
   - Be a no-op on valid inputs whenever possible.
 - **Wire it at the boundary**:
-  - Central place (e.g., `src/index.js` IPC handler, `sanitizeJsonForBridge`).
+  - Central place (e.g., an IPC handler under `src/main/mainProcess/ipcBridge/*`, the sandbox boundary in `src/main/mainProcess/sandbox.ts`, or `sanitizeJsonForBridge`).
 - **Add minimal unit tests**:
-  - 1–2 “valid input preserved” tests
-  - 1–2 “invalid input contained” tests
+  - 1-2 “valid input preserved” tests
+  - 1-2 “invalid input contained” tests
 - **Prove no regression**:
   - Run `npm run test:unit`.
   - Confirm the runtime lane duplicate check passes (it is run as part of `npm run test:unit`).
@@ -268,7 +252,7 @@ test("normalizer rejects invalid payload", () => {
 ### Practical “don’t overdo it” rules
 
 - **Prefer 1 normalizer at 1 boundary** over many validators scattered in the app.
-- **Prefer 3–6 tests total** for a new critical area; more is usually diminishing returns.
+- **Prefer 3-6 tests total** for a new critical area; more is usually diminishing returns.
 - **Don’t normalize deep trees unless needed**:
   - Stabilize the minimal shape that prevents crashes or silent failure.
 - **Avoid creating “a schema system”**:
@@ -295,5 +279,5 @@ This repo currently follows these standards in practice via:
 
 - Runtime TS compilation (`tsconfig.runtime.json` → `dist/runtime/**`)
 - Boundary validators/sanitizers under `src/shared/validation/**`
-- Main-process boundary wiring in `src/index.js`
+- Main-process boundary wiring under `src/main/mainProcess/ipcBridge/**` (and sandbox wiring in `src/main/mainProcess/sandbox.ts`)
 - Minimal unit tests under `test/**` using `node --test`
