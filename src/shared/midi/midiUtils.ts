@@ -1,28 +1,3 @@
-export const MIDI_INPUT_NAME = "IAC Driver Bus 1";
-
-export const CHANNEL_NOTES: Record<string, string> = {
-  G8: "ch1",
-  "F#8": "ch2",
-  F8: "ch3",
-  E8: "ch4",
-  "D#8": "ch5",
-  D8: "ch6",
-  "C#8": "ch7",
-  C8: "ch8",
-  B7: "ch9",
-  "A#7": "ch10",
-  A7: "ch11",
-  "G#7": "ch12",
-  G7: "ch13",
-  "F#7": "ch14",
-  F7: "ch15",
-  E7: "ch16",
-};
-
-export const NOTE_TO_CHANNEL: Record<string, string> = Object.fromEntries(
-  Object.entries(CHANNEL_NOTES).map(([note, channel]) => [channel, note])
-);
-
 export const NOTE_OFFSETS: Record<string, number> = {
   C: 0,
   "C#": 1,
@@ -132,26 +107,6 @@ export function parseMidiTriggerValue(input: unknown, noteMatchMode: unknown): n
   return noteNameToPitchClass(trimmed);
 }
 
-export function noteNameToNumber(noteName: unknown): number | null {
-  if (typeof noteName !== "string") return null;
-  const match = noteName.trim().match(/^([A-G](?:#|b)?)(-?\d+)$/);
-  if (!match) return null;
-  const note = match[1];
-  const octave = parseInt(match[2], 10);
-  const semitone = NOTE_OFFSETS[note];
-  if (semitone === undefined || Number.isNaN(octave)) return null;
-  return (octave + 2) * 12 + semitone;
-}
-
-export function buildChannelNotesMap(): Record<number, string> {
-  const map: Record<number, string> = {};
-  Object.entries(CHANNEL_NOTES).forEach(([noteName, channelName]) => {
-    const num = noteNameToNumber(noteName);
-    if (num !== null) map[num] = channelName;
-  });
-  return map;
-}
-
 export function resolveTrackTrigger(
   track: unknown,
   inputType: unknown,
@@ -242,36 +197,6 @@ export function resolveChannelTrigger(
   }
 
   return "";
-}
-
-export function buildTrackNotesMapFromTracks(
-  tracks: unknown,
-  globalMappings: unknown,
-  currentInputType: unknown = "midi"
-): Record<number, unknown> {
-  const map: Record<number, unknown> = {};
-  if (!Array.isArray(tracks)) {
-    return map;
-  }
-
-  tracks.forEach((track) => {
-    const t = track && typeof track === "object" ? (track as Record<string, unknown>) : null;
-    const trackTrigger = resolveTrackTrigger(track, currentInputType, globalMappings);
-
-    if (
-      t &&
-      trackTrigger !== "" &&
-      trackTrigger !== null &&
-      trackTrigger !== undefined &&
-      t.id &&
-      currentInputType === "midi"
-    ) {
-      const pc = parsePitchClass(trackTrigger);
-      if (pc !== null) map[pc] = t.id;
-    }
-  });
-
-  return map;
 }
 
 export function buildMidiConfig(

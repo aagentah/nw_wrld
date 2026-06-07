@@ -43,7 +43,5 @@ export const HELP_TEXT: Record<string, string> = {
     "UDP port for receiving OSC messages. Default: 8000. Configure your OSC sender to match this port. OSC naming: use /track/name for tracks, /ch/name for channels.",
   sequencerMode:
     "Choose your signal source. Sequencer (default): program patterns with a 16-step grid. External: connect MIDI/OSC hardware for live performance.",
-  sequencerGrid:
-    "Program 16-step patterns here. Each row is a channel; lit steps trigger the channel on that beat.",
   sequencerBpm: "Set the sequencer tempo in BPM. Controls playback speed when using the sequencer.",
 };

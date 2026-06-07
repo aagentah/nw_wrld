@@ -14,7 +14,6 @@ export const flashingConstructorsAtom = atom<Set<string>>(new Set<string>());
 export const recordingStateAtom = atom<Record<string, { startTime: number; isRecording: boolean }>>(
   {}
 );
-export const helpTextAtom = atom<string>("");
 
 export const useFlashingChannels = (): [
   Set<string>,
