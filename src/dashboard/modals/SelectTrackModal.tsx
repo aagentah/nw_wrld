@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FaPlus, FaEdit, FaTrash } from "react-icons/fa";
+import { FaPlus, FaEdit, FaTrash, FaClone } from "react-icons/fa";
 import { Modal } from "../shared/Modal";
 import { SortableWrapper } from "../shared/SortableWrapper";
 import { SortableList, arrayMove } from "../shared/SortableList";
@@ -10,7 +10,13 @@ import { RadioButton } from "../components/FormInputs";
 import { updateActiveSet } from "../core/utils";
 import { getActiveSetTracks, getActiveSet } from "../../shared/utils/setUtils";
 import { EditTrackModal } from "./EditTrackModal";
+import { ConfirmationModal } from "./ConfirmationModal";
 import { deleteRecordingsForTracks } from "../../shared/json/recordingUtils";
+import {
+  duplicateName,
+  duplicateTrack,
+  copyRecordingEntries,
+} from "../../shared/utils/duplicateUtils";
 import {
   parsePitchClass,
   pitchClassToName,
@@ -32,6 +38,7 @@ type SortableTrackItemProps = {
   globalMappings: Record<string, unknown>;
   onTrackSelect: (id: string | number) => void;
   onEdit: (index: number) => void;
+  onDuplicate: (index: number) => void;
   onDelete: (index: number) => void;
 };
 
@@ -43,6 +50,7 @@ const SortableTrackItem = ({
   globalMappings,
   onTrackSelect,
   onEdit,
+  onDuplicate,
   onDelete,
 }: SortableTrackItemProps) => {
   return (
@@ -100,6 +108,15 @@ const SortableTrackItem = ({
             <FaEdit />
           </button>
           <button
+            onClick={() => onDuplicate(trackIndex)}
+            className="text-neutral-500 hover:text-neutral-300 text-[11px]"
+            data-testid="duplicate-track"
+            aria-label="Duplicate track"
+            title="Duplicate track"
+          >
+            <FaClone />
+          </button>
+          <button
             onClick={() => onDelete(trackIndex)}
             className="text-neutral-500 hover:text-red-500 text-[11px]"
             data-testid="delete-track"
@@ -153,6 +170,7 @@ export const SelectTrackModal = ({
   fileAudioState,
 }: SelectTrackModalProps) => {
   const [editingTrackIndex, setEditingTrackIndex] = useState<number | null>(null);
+  const [alertMessage, setAlertMessage] = useState<string | null>(null);
 
   const tracks = getActiveSetTracks(userData, activeSetId);
   const _activeSet = getActiveSet(userData, activeSetId);
@@ -162,6 +180,44 @@ export const SelectTrackModal = ({
   const handleTrackSelect = (trackId: string | number) => {
     setActiveTrackId(trackId);
     onClose();
+  };
+
+  const handleDuplicateTrack = (trackIndex: number) => {
+    const track = tracks[trackIndex];
+    if (!track) return;
+
+    const maxSlots = String(inputType) === "midi" ? 12 : 10;
+    const usedSlots = new Set(
+      (tracks as Array<{ trackSlot?: unknown }>).map((t) => t.trackSlot).filter(Boolean)
+    );
+    const freeSlot = Array.from({ length: maxSlots }, (_, i) => i + 1).find(
+      (slot) => !usedSlots.has(slot)
+    );
+    if (!freeSlot) {
+      setAlertMessage(`Cannot duplicate: no track numbers available (max ${maxSlots} tracks).`);
+      return;
+    }
+
+    const randomSuffix = () => Math.random().toString(36).slice(2, 11);
+    const newTrackId = `track_${Date.now()}_${randomSuffix()}`;
+    const newTrack = duplicateTrack(track as unknown as Record<string, unknown>, {
+      newId: newTrackId,
+      name: duplicateName(
+        String(track.name || ""),
+        (tracks as Array<{ name?: unknown }>).map((t) => String(t.name || ""))
+      ),
+      trackSlot: freeSlot,
+      makeModuleId: () => `inst_${Date.now()}_${randomSuffix()}`,
+    });
+
+    updateActiveSet(setUserData, activeSetId, (activeSet) => {
+      const tracksUnknown = (activeSet as Record<string, unknown>).tracks;
+      if (Array.isArray(tracksUnknown)) {
+        tracksUnknown.splice(trackIndex + 1, 0, newTrack);
+      }
+    });
+
+    setRecordingData((prev) => copyRecordingEntries(prev, { [String(track.id)]: newTrackId }));
   };
 
   const handleDeleteTrack = (trackIndex: number) => {
@@ -232,6 +288,7 @@ export const SelectTrackModal = ({
                           globalMappings={globalMappings}
                           onTrackSelect={handleTrackSelect}
                           onEdit={setEditingTrackIndex}
+                          onDuplicate={handleDuplicateTrack}
                           onDelete={handleDeleteTrack}
                         />
                       ))}
@@ -260,6 +317,13 @@ export const SelectTrackModal = ({
           fileAudioState={fileAudioState}
         />
       )}
+
+      <ConfirmationModal
+        isOpen={!!alertMessage}
+        onClose={() => setAlertMessage(null)}
+        message={alertMessage}
+        type="alert"
+      />
     </>
   );
 };

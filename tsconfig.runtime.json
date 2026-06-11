@@ -39,6 +39,7 @@
     "src/shared/json/recordingUtils.ts",
     "src/shared/json/readJsonWithBackup.ts",
     "src/shared/utils/setUtils.ts",
+    "src/shared/utils/duplicateUtils.ts",
     "src/shared/utils/sdkHelpers.ts",
     "src/shared/utils/methodOptions.ts",
     "src/shared/utils/projectDir.ts",

@@ -21,7 +21,8 @@ import {
   parsePitchClass,
   pitchClassToName,
 } from "../../../shared/midi/midiUtils";
-import { FaCog, FaExclamationTriangle, FaEye, FaEyeSlash } from "react-icons/fa";
+import { duplicateModuleInstanceInTrack } from "../../../shared/utils/duplicateUtils";
+import { FaClone, FaCog, FaExclamationTriangle, FaEye, FaEyeSlash } from "react-icons/fa";
 import { Tooltip } from "../Tooltip";
 
 type Track = {
@@ -496,6 +497,22 @@ export const NoteSelector = memo(
       });
     }, [setUserData, activeSetId, trackIndex, instanceId]);
 
+    const duplicateModule = useCallback(() => {
+      const newInstanceId = `inst_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+      updateActiveSet(setUserData, activeSetId, (activeSet) => {
+        if (!isPlainObject(activeSet)) return;
+        const tracksUnknown = (activeSet as Record<string, unknown>).tracks;
+        if (!Array.isArray(tracksUnknown)) return;
+        const trackDraft = tracksUnknown[trackIndex];
+        if (!isPlainObject(trackDraft)) return;
+        duplicateModuleInstanceInTrack(
+          trackDraft as Record<string, unknown>,
+          instanceId,
+          newInstanceId
+        );
+      });
+    }, [setUserData, activeSetId, trackIndex, instanceId]);
+
     return (
       <div className={`px-12 font-mono ${isDisabled ? "opacity-50" : ""}`}>
         <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -537,6 +554,22 @@ export const NoteSelector = memo(
               data-module-instance-id={instanceId}
             >
               {isDisabled ? <FaEyeSlash /> : <FaEye />}
+            </button>
+            <button
+              type="button"
+              className="cursor-pointer text-[11px] text-neutral-400 hover:text-neutral-300 transition-colors focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0"
+              onClick={(e) => {
+                e.stopPropagation();
+                duplicateModule();
+                e.currentTarget.blur();
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+              title="Duplicate Module"
+              aria-label="Duplicate Module"
+              data-testid="module-duplicate"
+              data-module-instance-id={instanceId}
+            >
+              <FaClone />
             </button>
             {onRemoveModule && (
               <div className="flex items-center gap-2">

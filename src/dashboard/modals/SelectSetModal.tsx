@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FaPlus, FaEdit, FaTrash } from "react-icons/fa";
+import { FaPlus, FaEdit, FaTrash, FaClone } from "react-icons/fa";
 import { Modal } from "../shared/Modal";
 import { SortableWrapper } from "../shared/SortableWrapper";
 import { SortableList, arrayMove } from "../shared/SortableList";
@@ -11,6 +11,11 @@ import { updateUserData } from "../core/utils";
 import { EditSetModal } from "./EditSetModal";
 import { ConfirmationModal } from "./ConfirmationModal";
 import { deleteRecordingsForTracks } from "../../shared/json/recordingUtils";
+import {
+  duplicateName,
+  duplicateSet,
+  copyRecordingEntries,
+} from "../../shared/utils/duplicateUtils";
 
 type Set = {
   id: string;
@@ -23,6 +28,7 @@ type SortableSetItemProps = {
   activeSetId: string | null;
   onSetSelect: (setId: string) => void;
   onEdit: (setId: string) => void;
+  onDuplicate: (setId: string) => void;
   onDelete: (setId: string) => void;
   canDelete: boolean;
 };
@@ -32,6 +38,7 @@ const SortableSetItem = ({
   activeSetId,
   onSetSelect,
   onEdit,
+  onDuplicate,
   onDelete,
   canDelete,
 }: SortableSetItemProps) => {
@@ -61,6 +68,16 @@ const SortableSetItem = ({
             className="text-neutral-500 hover:text-neutral-300 text-[11px]"
           >
             <FaEdit />
+          </button>
+          <button
+            onClick={() => onDuplicate(set.id)}
+            className="text-neutral-500 hover:text-neutral-300 text-[11px]"
+            data-testid="duplicate-set"
+            data-set-id={set.id}
+            aria-label="Duplicate set"
+            title="Duplicate set"
+          >
+            <FaClone />
           </button>
           <button
             onClick={() => onDelete(set.id)}
@@ -131,6 +148,35 @@ export const SelectSetModal = ({
     onClose();
   };
 
+  const handleDuplicateSet = (setId: string) => {
+    const sourceSet = sets.find((s) => s.id === setId);
+    if (!sourceSet) return;
+
+    const randomSuffix = () => Math.random().toString(36).slice(2, 11);
+    const { set: newSet, trackIdMap } = duplicateSet(
+      sourceSet as unknown as Record<string, unknown>,
+      {
+        newId: `set_${Date.now()}_${randomSuffix()}`,
+        name: duplicateName(
+          sourceSet.name,
+          sets.map((s) => s.name)
+        ),
+        makeTrackId: () => `track_${Date.now()}_${randomSuffix()}`,
+        makeModuleId: () => `inst_${Date.now()}_${randomSuffix()}`,
+      }
+    );
+
+    updateUserData(setUserData, (draft) => {
+      const d = draft as unknown as UserData;
+      const index = d.sets.findIndex((s) => s.id === setId);
+      d.sets.splice(index === -1 ? d.sets.length : index + 1, 0, newSet as unknown as Set);
+    });
+
+    if (Object.keys(trackIdMap).length > 0) {
+      setRecordingData((prev) => copyRecordingEntries(prev, trackIdMap));
+    }
+  };
+
   const handleDeleteSet = (setId: string) => {
     if (sets.length <= 1) {
       setAlertMessage("Cannot delete the last set.");
@@ -199,6 +245,7 @@ export const SelectSetModal = ({
                         activeSetId={activeSetId}
                         onSetSelect={handleSetSelect}
                         onEdit={setEditingSetId}
+                        onDuplicate={handleDuplicateSet}
                         onDelete={handleDeleteSet}
                         canDelete={sets.length > 1}
                       />
