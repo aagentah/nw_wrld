@@ -1,5 +1,5 @@
 import { memo, useState, useEffect, useMemo, useCallback } from "react";
-import { useAtom, type PrimitiveAtom } from "jotai";
+import { useAtom, useAtomValue, type PrimitiveAtom } from "jotai";
 import * as d3 from "d3";
 import { SortableWrapper } from "../../shared/SortableWrapper";
 import {
@@ -9,6 +9,7 @@ import {
   selectedChannelAtom,
   flashingChannelsAtom,
   flashingConstructorsAtom,
+  sequencerCurrentStepAtom,
 } from "../../core/state";
 import { updateActiveSet } from "../../core/utils";
 import { TERMINAL_STYLES } from "../../core/constants";
@@ -142,6 +143,65 @@ const groupSequences = (sequences: Array<{ time: number; duration: number }>, th
   return grouped;
 };
 
+type SequencerStepRowProps = {
+  channelNumber: number;
+  channelPattern: unknown;
+  hasMethods: boolean;
+  isSequencerPlaying: boolean;
+  handleSequencerToggle: (channelKey: string, stepIndex: number) => void;
+  rowHeight: number;
+};
+
+const SequencerStepRow = memo(
+  ({
+    channelNumber,
+    channelPattern,
+    hasMethods,
+    isSequencerPlaying,
+    handleSequencerToggle,
+    rowHeight,
+  }: SequencerStepRowProps) => {
+    const sequencerCurrentStep = useAtomValue(sequencerCurrentStepAtom);
+    const channelKey = String(channelNumber);
+    return (
+      <div className="flex gap-0.5 items-center" style={{ height: rowHeight }}>
+        {Array.from({ length: 16 }).map((_, stepIndex) => {
+          const isActive = Array.isArray(channelPattern) && channelPattern.includes(stepIndex);
+          const isCurrentStep = isSequencerPlaying && sequencerCurrentStep === stepIndex;
+
+          return (
+            <button
+              key={stepIndex}
+              type="button"
+              data-testid="sequencer-step"
+              data-channel-number={channelNumber}
+              data-step-index={stepIndex}
+              aria-pressed={isActive}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleSequencerToggle(channelKey, stepIndex);
+              }}
+              className={`
+                w-[22px] h-[11px] border transition-all flex-shrink-0
+                ${
+                  isActive
+                    ? "bg-[#b85c5c] border-[#b85c5c]"
+                    : "bg-[#1a1a1a] border-neutral-700 hover:border-neutral-500"
+                }
+                ${isCurrentStep ? "ring-2 ring-neutral-400" : ""}
+              `}
+              style={{
+                opacity: isActive && !hasMethods ? 0.2 : 1,
+              }}
+              title={`Channel ${channelNumber} - Step ${stepIndex + 1}`}
+            />
+          );
+        })}
+      </div>
+    );
+  }
+);
+
 type NoteSelectorProps = {
   trackIndex: number;
   instanceId: string;
@@ -153,7 +213,6 @@ type NoteSelectorProps = {
   inputConfig: { type?: string } | null;
   config: Record<string, unknown> | null;
   isSequencerPlaying: boolean;
-  sequencerCurrentStep: number;
   handleSequencerToggle: (channelKey: string, stepIndex: number) => void;
   workspacePath?: string | null;
   workspaceModuleFiles?: string[];
@@ -171,7 +230,6 @@ export const NoteSelector = memo(
     inputConfig,
     config,
     isSequencerPlaying,
-    sequencerCurrentStep,
     handleSequencerToggle,
     workspacePath = null,
     workspaceModuleFiles = [],
@@ -665,44 +723,14 @@ export const NoteSelector = memo(
                   </div>
                   <div className="flex-1">
                     {config?.sequencerMode ? (
-                      <div className="flex gap-0.5 items-center" style={{ height: rowHeight }}>
-                        {Array.from({ length: 16 }).map((_, stepIndex) => {
-                          const channelKey = String(channel.number);
-                          const channelPattern = sequencerPattern[channelKey] || [];
-                          const isActive =
-                            Array.isArray(channelPattern) && channelPattern.includes(stepIndex);
-                          const isCurrentStep =
-                            isSequencerPlaying && sequencerCurrentStep === stepIndex;
-
-                          return (
-                            <button
-                              key={stepIndex}
-                              type="button"
-                              data-testid="sequencer-step"
-                              data-channel-number={channel.number}
-                              data-step-index={stepIndex}
-                              aria-pressed={isActive}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleSequencerToggle(channelKey, stepIndex);
-                              }}
-                              className={`
-                                w-[22px] h-[11px] border transition-all flex-shrink-0
-                                ${
-                                  isActive
-                                    ? "bg-[#b85c5c] border-[#b85c5c]"
-                                    : "bg-[#1a1a1a] border-neutral-700 hover:border-neutral-500"
-                                }
-                                ${isCurrentStep ? "ring-2 ring-neutral-400" : ""}
-                              `}
-                              style={{
-                                opacity: isActive && !hasMethods ? 0.2 : 1,
-                              }}
-                              title={`Channel ${channel.number} - Step ${stepIndex + 1}`}
-                            />
-                          );
-                        })}
-                      </div>
+                      <SequencerStepRow
+                        channelNumber={channel.number}
+                        channelPattern={sequencerPattern[String(channel.number)]}
+                        hasMethods={hasMethods}
+                        isSequencerPlaying={isSequencerPlaying}
+                        handleSequencerToggle={handleSequencerToggle}
+                        rowHeight={rowHeight}
+                      />
                     ) : (
                       <svg
                         ref={(ref) =>
@@ -732,7 +760,6 @@ type SortableModuleItemProps = {
   inputConfig: { type?: string } | null;
   config: Record<string, unknown> | null;
   isSequencerPlaying: boolean;
-  sequencerCurrentStep: number;
   handleSequencerToggle: (channelKey: string, stepIndex: number) => void;
   workspacePath?: string | null;
   workspaceModuleFiles?: string[];
@@ -749,7 +776,6 @@ export const SortableModuleItem = memo(
     inputConfig,
     config,
     isSequencerPlaying,
-    sequencerCurrentStep,
     handleSequencerToggle,
     workspacePath = null,
     workspaceModuleFiles = [],
@@ -771,7 +797,6 @@ export const SortableModuleItem = memo(
                 inputConfig={inputConfig}
                 config={config}
                 isSequencerPlaying={isSequencerPlaying}
-                sequencerCurrentStep={sequencerCurrentStep}
                 handleSequencerToggle={handleSequencerToggle}
                 workspacePath={workspacePath}
                 workspaceModuleFiles={workspaceModuleFiles}

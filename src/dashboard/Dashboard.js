@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { createRoot } from "react-dom/client";
-import { useAtom } from "jotai";
+import { useAtom, useSetAtom } from "jotai";
 import { getActiveSetTracks } from "../shared/utils/setUtils";
 import { useIPCSend, useIPCInvoke } from "./core/hooks/useIPC";
 import { useLatestRef } from "./core/hooks/useLatestRef";
@@ -43,8 +43,8 @@ const Dashboard = () => {
   const [activeSetId, setActiveSetId] = useAtom(activeSetIdAtom);
   const [predefinedModules, setPredefinedModules] = useState([]);
   const [selectedChannel, setSelectedChannel] = useAtom(selectedChannelAtom);
-  const [, flashChannel] = useFlashingChannels();
-  const [, setFlashingConstructors] = useAtom(flashingConstructorsAtom);
+  const flashChannel = useFlashingChannels();
+  const setFlashingConstructors = useSetAtom(flashingConstructorsAtom);
 
   const sendToProjector = useIPCSend("dashboard-to-projector");
   const invokeIPC = useIPCInvoke();
@@ -300,7 +300,7 @@ const Dashboard = () => {
     setPredefinedModules,
     setWorkspaceModuleLoadFailures,
   });
-  useProjectorPerfStats(setPerfStats);
+  useProjectorPerfStats(setPerfStats, isDebugOverlayOpen);
 
   useWorkspaceModules({
     workspacePath,
@@ -359,7 +359,6 @@ const Dashboard = () => {
   const {
     footerPlaybackState,
     isSequencerPlaying,
-    sequencerCurrentStep,
     handleSequencerToggle,
     handleFooterPlayPause,
     handleFooterStop,
@@ -419,7 +418,6 @@ const Dashboard = () => {
             inputConfig={inputConfig}
             config={userData.config}
             isSequencerPlaying={isSequencerPlaying}
-            sequencerCurrentStep={sequencerCurrentStep}
             handleSequencerToggle={handleSequencerToggle}
             workspacePath={workspacePath}
             workspaceModuleFiles={workspaceModuleFiles}

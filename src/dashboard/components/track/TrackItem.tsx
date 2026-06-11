@@ -1,5 +1,5 @@
 import { memo, useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { useAtom } from "jotai";
+import { useAtom, useSetAtom } from "jotai";
 import { remove } from "lodash";
 import { FaPlus } from "react-icons/fa";
 import { SortableList, arrayMove } from "../../shared/SortableList";
@@ -51,7 +51,6 @@ type TrackItemProps = {
   inputConfig: unknown;
   config: Record<string, unknown> | null;
   isSequencerPlaying: boolean;
-  sequencerCurrentStep: number;
   handleSequencerToggle: (channelName: string, stepIndex: number) => void;
   workspacePath?: string | null;
   workspaceModuleFiles?: string[];
@@ -71,7 +70,6 @@ export const TrackItem = memo(
     inputConfig,
     config: _config,
     isSequencerPlaying,
-    sequencerCurrentStep,
     handleSequencerToggle,
     workspacePath = null,
     workspaceModuleFiles = [],
@@ -79,11 +77,11 @@ export const TrackItem = memo(
     audioCaptureState = null,
     fileAudioState = null,
   }: TrackItemProps) => {
-    const [_userData, setUserData] = useAtom(userDataAtom);
+    const setUserData = useSetAtom(userDataAtom);
     const [recordingData] = useAtom(recordingDataAtom);
     const [activeSetId] = useAtom(activeSetIdAtom);
-    const [_flashingChannels, flashChannel] = useFlashingChannels();
-    const [_flashingConstructors, setFlashingConstructors] = useAtom(flashingConstructorsAtom);
+    const flashChannel = useFlashingChannels();
+    const setFlashingConstructors = useSetAtom(flashingConstructorsAtom);
     const [selectedTrackForData, setSelectedTrackForData] = useState<unknown | null>(null);
     const [isEditTrackModalOpen, setIsEditTrackModalOpen] = useState(false);
     const [isPlaying, setIsPlaying] = useState(false);
@@ -305,7 +303,6 @@ export const TrackItem = memo(
                             inputConfig={inputConfig}
                             config={_config}
                             isSequencerPlaying={isSequencerPlaying}
-                            sequencerCurrentStep={sequencerCurrentStep}
                             handleSequencerToggle={handleSequencerToggle}
                             workspacePath={workspacePath}
                             workspaceModuleFiles={workspaceModuleFiles}

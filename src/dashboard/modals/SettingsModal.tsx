@@ -519,6 +519,8 @@ export const SettingsModal = ({
     return { low: read("low"), medium: read("medium"), high: read("high") };
   }, [activeTrackFileThresholds, clamp01]);
 
+  if (!isOpen) return null;
+
   const normalizedInputType =
     inputConfig?.type === "osc"
       ? "osc"

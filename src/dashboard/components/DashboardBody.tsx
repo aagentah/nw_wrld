@@ -14,7 +14,6 @@ type DashboardBodyProps = {
   inputConfig: unknown;
   config: Record<string, unknown> | null;
   isSequencerPlaying: boolean;
-  sequencerCurrentStep: number;
   handleSequencerToggle: (channelName: string, stepIndex: number) => void;
   workspacePath: string | null;
   workspaceModuleFiles: string[];
@@ -34,7 +33,6 @@ export const DashboardBody = ({
   inputConfig,
   config,
   isSequencerPlaying,
-  sequencerCurrentStep,
   handleSequencerToggle,
   workspacePath,
   workspaceModuleFiles,
@@ -67,7 +65,6 @@ export const DashboardBody = ({
               inputConfig={inputConfig}
               config={config}
               isSequencerPlaying={isSequencerPlaying}
-              sequencerCurrentStep={sequencerCurrentStep}
               handleSequencerToggle={handleSequencerToggle}
               workspacePath={workspacePath}
               workspaceModuleFiles={workspaceModuleFiles}

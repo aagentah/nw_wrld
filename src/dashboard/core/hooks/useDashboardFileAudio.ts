@@ -380,23 +380,28 @@ export const useDashboardFileAudio = ({
       if (now - lastUi >= 100) {
         lastLevelsUpdateMsRef.current = now;
         setState((prev) => {
-          const nextLevels = { ...lastLevelsRef.current };
-          const nextPeaksDb = { ...lastPeaksDbRef.current };
           if (prev.status === "error") return prev;
           if (prev.status === "idle") return prev;
           if (prev.status === "loading") return prev;
-          if (prev.status === "ready")
-            return {
-              status: "playing",
-              levels: nextLevels,
-              peaksDb: nextPeaksDb,
-              assetRelPath,
-              durationSec: buf.duration,
-            };
+          const nl = lastLevelsRef.current;
+          const np = lastPeaksDbRef.current;
+          if (
+            prev.status === "playing" &&
+            prev.assetRelPath === assetRelPath &&
+            prev.durationSec === buf.duration &&
+            prev.levels.low === nl.low &&
+            prev.levels.medium === nl.medium &&
+            prev.levels.high === nl.high &&
+            prev.peaksDb.low === np.low &&
+            prev.peaksDb.medium === np.medium &&
+            prev.peaksDb.high === np.high
+          ) {
+            return prev;
+          }
           return {
             status: "playing",
-            levels: nextLevels,
-            peaksDb: nextPeaksDb,
+            levels: { ...nl },
+            peaksDb: { ...np },
             assetRelPath,
             durationSec: buf.duration,
           };

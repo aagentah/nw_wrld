@@ -372,11 +372,24 @@ export const useDashboardAudioCapture = ({
           if (now - lastUi >= 100) {
             lastLevelsUpdateMsRef.current = now;
             setState((prev) => {
-              const nextLevels = { ...lastLevelsRef.current };
-              const nextPeaksDb = { ...lastPeaksDbRef.current };
               if (prev.status === "error") return prev;
               if (prev.status === "mock") return prev;
               if (prev.status === "idle") return prev;
+              const nl = lastLevelsRef.current;
+              const np = lastPeaksDbRef.current;
+              if (
+                prev.status === "running" &&
+                prev.levels.low === nl.low &&
+                prev.levels.medium === nl.medium &&
+                prev.levels.high === nl.high &&
+                prev.peaksDb.low === np.low &&
+                prev.peaksDb.medium === np.medium &&
+                prev.peaksDb.high === np.high
+              ) {
+                return prev;
+              }
+              const nextLevels = { ...nl };
+              const nextPeaksDb = { ...np };
               if (prev.status === "starting")
                 return { status: "starting", levels: nextLevels, peaksDb: nextPeaksDb };
               return { status: "running", levels: nextLevels, peaksDb: nextPeaksDb };

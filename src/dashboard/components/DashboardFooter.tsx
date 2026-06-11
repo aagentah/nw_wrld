@@ -1,6 +1,4 @@
-import { useAtom } from "jotai";
 import { FaPlay, FaStop } from "react-icons/fa";
-import { recordingDataAtom } from "../core/state";
 import { Checkbox } from "./FormInputs";
 import { Button } from "./Button";
 
@@ -45,7 +43,6 @@ export const DashboardFooter = ({
   onMuteChange,
   isProjectorReady,
 }: DashboardFooterProps) => {
-  const [_recordingData] = useAtom(recordingDataAtom);
   const isFileMode = !config?.sequencerMode && inputConfig?.type === "file";
   const trackObj = track && typeof track === "object" ? (track as Record<string, unknown>) : null;
   const trackSignal =
