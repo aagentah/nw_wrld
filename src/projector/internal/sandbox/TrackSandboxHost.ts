@@ -3,6 +3,16 @@ import { getBridge } from "../bridge";
 type EnsureSandboxOk = { ok: true; token: string };
 type EnsureSandboxErr = { ok: false; reason: string };
 
+const STALE_TOKEN_ERRORS = new Set(["TOKEN_NOT_OWNED", "INVALID_TOKEN", "SANDBOX_UNAVAILABLE"]);
+
+const isStaleTokenResult = (res: unknown): boolean =>
+  Boolean(
+    res &&
+      typeof res === "object" &&
+      (res as { ok?: unknown }).ok !== true &&
+      STALE_TOKEN_ERRORS.has(String((res as { error?: unknown }).error || ""))
+  );
+
 export class TrackSandboxHost {
   modulesContainer: unknown;
   token: string | null;
@@ -36,13 +46,22 @@ export class TrackSandboxHost {
   }
 
   async request(type: string, props: Record<string, unknown> | null) {
-    await this.ensureSandbox();
+    if (!this.token) {
+      await this.ensureSandbox();
+    }
     const bridge = getBridge();
     const req = bridge?.sandbox?.request;
     if (typeof req !== "function") {
       return { ok: false, error: "SANDBOX_BRIDGE_UNAVAILABLE" };
     }
-    return await req(this.token as string, type, props || {});
+    const res = await req(this.token as string, type, props || {});
+    if (this.disposed || !isStaleTokenResult(res)) {
+      return res;
+    }
+    // Token invalidated out-of-band (sandbox crash/respawn): re-ensure and resend once.
+    this.token = null;
+    const ensured = await this.ensureSandbox();
+    return await req(ensured.ok === true ? ensured.token : "", type, props || {});
   }
 
   initTrack({
