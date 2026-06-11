@@ -274,3 +274,30 @@ export function buildMidiConfig(
 
   return config;
 }
+
+export function createMidiConfigCache() {
+  let userDataKey: unknown = null;
+  let mappingsKey: unknown = null;
+  let inputTypeKey: unknown = null;
+  let value: ReturnType<typeof buildMidiConfig> | null = null;
+  return {
+    get(
+      userData: unknown,
+      globalMappings: unknown,
+      currentInputType: unknown = "midi"
+    ): ReturnType<typeof buildMidiConfig> {
+      if (
+        value === null ||
+        userData !== userDataKey ||
+        globalMappings !== mappingsKey ||
+        currentInputType !== inputTypeKey
+      ) {
+        value = buildMidiConfig(userData, globalMappings, currentInputType);
+        userDataKey = userData;
+        mappingsKey = globalMappings;
+        inputTypeKey = currentInputType;
+      }
+      return value;
+    },
+  };
+}

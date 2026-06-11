@@ -212,8 +212,10 @@ export class BaseThreeJsModule extends ModuleBase {
     this.controls.autoRotate = false;
     this.controls.autoRotateSpeed = 2.0;
 
-    // Add event listener for controls
-    this.controls.addEventListener("change", this.render);
+    // Render on interaction only until the shared loop takes over (it renders every frame)
+    this.controls.addEventListener("change", () => {
+      if (!this.isInitialized) this.render();
+    });
 
     // Bind resize event
     window.addEventListener("resize", this.onWindowResize);
@@ -529,9 +531,7 @@ export class BaseThreeJsModule extends ModuleBase {
         this.stopCameraAnimation();
         break;
     }
-
-    this.controls.update();
-    this.render();
+    // animate() runs controls.update() and render() right after this returns (same tick).
   }
 
   /**
