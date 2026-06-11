@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type MutableRefObject } from "react";
+import { useSetAtom } from "jotai";
 import * as Tone from "tone";
 import { produce } from "immer";
 import MidiPlayback from "../../../shared/midi/midiPlayback";
@@ -6,6 +7,7 @@ import SequencerPlayback from "../../../shared/sequencer/SequencerPlayback";
 import SequencerAudio from "../../../shared/audio/sequencerAudio";
 import { getActiveSetTracks } from "../../../shared/utils/setUtils";
 import { getRecordingForTrack, getSequencerForTrack } from "../../../shared/json/recordingUtils";
+import { sequencerCurrentStepAtom } from "../state";
 import { useLatestRef } from "./useLatestRef";
 
 type UseDashboardPlaybackArgs = {
@@ -45,7 +47,7 @@ export const useDashboardPlayback = ({
 }: UseDashboardPlaybackArgs) => {
   const [footerPlaybackState, setFooterPlaybackState] = useState<Record<string, boolean>>({});
   const [isSequencerPlaying, setIsSequencerPlaying] = useState(false);
-  const [sequencerCurrentStep, setSequencerCurrentStep] = useState(0);
+  const setSequencerCurrentStep = useSetAtom(sequencerCurrentStepAtom);
 
   const isSequencerPlayingRef = useLatestRef(isSequencerPlaying);
   const sequencerMutedRef = useLatestRef(isSequencerMuted);
@@ -93,9 +95,11 @@ export const useDashboardPlayback = ({
 
     if (track) {
       setIsProjectorReady(false);
-      sendToProjector("set-activate", {
-        setId: activeSetId,
-      });
+      if (didSetChange) {
+        sendToProjector("set-activate", {
+          setId: activeSetId,
+        });
+      }
       sendToProjector("track-activate", {
         trackName: trackObj.name,
       });
@@ -446,7 +450,6 @@ export const useDashboardPlayback = ({
   return {
     footerPlaybackState,
     isSequencerPlaying,
-    sequencerCurrentStep,
     handleSequencerToggle,
     handleFooterPlayPause,
     handleFooterStop,
