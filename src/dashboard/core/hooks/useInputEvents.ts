@@ -6,6 +6,8 @@ import {
   type MutableRefObject,
   type SetStateAction,
 } from "react";
+import { useSetAtom, type PrimitiveAtom } from "jotai";
+import { lastTrackActivityAtom, lastMethodActivityAtom } from "../state";
 import { getRecordingForTrack, setRecordingForTrack } from "../../../shared/json/recordingUtils";
 import {
   buildMidiConfig,
@@ -65,6 +67,12 @@ export const useInputEvents = ({
   // Buffer debug entries in a ring buffer; only re-render while the overlay is open.
   const debugLogBufferRef = useRef<string[]>([]);
   const isDebugOverlayOpenRef = useRef(isDebugOverlayOpen);
+  const setLastTrackActivity = useSetAtom(
+    lastTrackActivityAtom as unknown as PrimitiveAtom<string | null>
+  );
+  const setLastMethodActivity = useSetAtom(
+    lastMethodActivityAtom as unknown as PrimitiveAtom<string | null>
+  );
 
   const recordDebugEntries = useCallback(
     (entries: string[]) => {
@@ -326,6 +334,7 @@ export const useInputEvents = ({
               if (id != null && idKey && name) {
                 trackName = name;
                 setActiveTrackId(id);
+                setLastTrackActivity(name);
 
                 const wasRecording = recordingStateRef.current[idKey];
                 if (wasRecording) {
@@ -477,6 +486,10 @@ export const useInputEvents = ({
               flashChannel(channel, 100);
             });
 
+            if (channelsToFlash.length > 0) {
+              setLastMethodActivity(channelsToFlash.map((ch) => `CH ${ch}`).join(", "));
+            }
+
             if (currentActiveTrackIdKey && channelsToFlash.length > 0) {
               const recordingStateForTrack = recordingStateRef.current[currentActiveTrackIdKey];
               if (recordingStateForTrack?.isRecording) {
@@ -545,6 +558,8 @@ export const useInputEvents = ({
       setRecordingData,
       setRecordingState,
       setFlashingConstructors,
+      setLastTrackActivity,
+      setLastMethodActivity,
     ]
   );
 

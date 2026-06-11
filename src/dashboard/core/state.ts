@@ -15,6 +15,8 @@ export const recordingStateAtom = atom<Record<string, { startTime: number; isRec
   {}
 );
 export const sequencerCurrentStepAtom = atom<number>(0);
+export const lastTrackActivityAtom = atom<string | null>(null);
+export const lastMethodActivityAtom = atom<string | null>(null);
 
 export const useFlashingChannels = (): ((channelName: string, duration?: number) => void) => {
   const setFlashingChannels = useSetAtom(flashingChannelsAtom);

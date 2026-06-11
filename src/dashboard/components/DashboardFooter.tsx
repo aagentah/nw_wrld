@@ -1,6 +1,40 @@
+import { memo } from "react";
+import { useAtomValue } from "jotai";
 import { FaPlay, FaStop } from "react-icons/fa";
 import { Checkbox } from "./FormInputs";
 import { Button } from "./Button";
+import { lastTrackActivityAtom, lastMethodActivityAtom } from "../core/state";
+
+const InputActivityReadout = memo(() => {
+  const lastTrack = useAtomValue(lastTrackActivityAtom);
+  const lastMethod = useAtomValue(lastMethodActivityAtom);
+  return (
+    <div
+      className="flex items-center gap-4 text-[10px] font-mono"
+      data-testid="input-activity"
+      title="Last matched input triggers"
+    >
+      <div className="flex items-center gap-2">
+        <span className="text-neutral-600">TRACK</span>
+        <span
+          className={`uppercase ${lastTrack ? "text-neutral-300" : "text-neutral-600"}`}
+          data-testid="input-activity-track"
+        >
+          {lastTrack || "--"}
+        </span>
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="text-neutral-600">METHOD</span>
+        <span
+          className={`uppercase ${lastMethod ? "text-neutral-300" : "text-neutral-600"}`}
+          data-testid="input-activity-method"
+        >
+          {lastMethod || "--"}
+        </span>
+      </div>
+    </div>
+  );
+});
 
 type InputConfig = {
   type?: string;
@@ -108,18 +142,21 @@ export const DashboardFooter = ({
   if (!track) {
     return (
       <div className="fixed bottom-0 left-0 right-0 z-50 bg-[#101010] border-t border-neutral-800 px-6 py-4">
-        <div className="w-full flex justify-start gap-4 items-center">
-          <div className="text-neutral-300/30 text-[11px]">No track selected</div>
-          {!config?.sequencerMode && (
-            <button
-              onClick={onSettingsClick}
-              className={`text-[10px] font-mono flex items-center gap-2 cursor-pointer hover:opacity-70 transition-opacity ${getStatusColor()}`}
-              title={`${inputStatus.status}: ${getStatusText()}`}
-            >
-              <span>{getStatusIcon()}</span>
-              <span>{getStatusText()}</span>
-            </button>
-          )}
+        <div className="w-full flex justify-between gap-4 items-center">
+          <div className="flex justify-start gap-4 items-center">
+            <div className="text-neutral-300/30 text-[11px]">No track selected</div>
+            {!config?.sequencerMode && (
+              <button
+                onClick={onSettingsClick}
+                className={`text-[10px] font-mono flex items-center gap-2 cursor-pointer hover:opacity-70 transition-opacity ${getStatusColor()}`}
+                title={`${inputStatus.status}: ${getStatusText()}`}
+              >
+                <span>{getStatusIcon()}</span>
+                <span>{getStatusText()}</span>
+              </button>
+            )}
+          </div>
+          {!config?.sequencerMode && <InputActivityReadout />}
         </div>
       </div>
     );
@@ -147,54 +184,57 @@ export const DashboardFooter = ({
       </div>
 
       <div className="border-t border-neutral-800 py-4 px-6">
-        <div className="w-full flex justify-start gap-4 items-center">
-          {config?.sequencerMode || isFileMode ? (
-            <>
-              <Button
-                onClick={isPlaying ? onStop : onPlayPause}
-                className={isPlaying ? "decoration-neutral-300" : ""}
-                title={
-                  isPlaying
-                    ? "Stop playback"
-                    : config?.sequencerMode
-                      ? "Play sequencer"
-                      : "Play file"
-                }
-                icon={isPlaying ? <FaStop /> : <FaPlay />}
-                disabled={
-                  (!isProjectorReady && !isPlaying) ||
-                  (isFileMode && !trackFileAssetRelPath && !isPlaying)
-                }
-                as="button"
-                data-testid={config?.sequencerMode ? "sequencer-play-toggle" : "file-play-toggle"}
+        <div className="w-full flex justify-between gap-4 items-center">
+          <div className="flex justify-start gap-4 items-center">
+            {config?.sequencerMode || isFileMode ? (
+              <>
+                <Button
+                  onClick={isPlaying ? onStop : onPlayPause}
+                  className={isPlaying ? "decoration-neutral-300" : ""}
+                  title={
+                    isPlaying
+                      ? "Stop playback"
+                      : config?.sequencerMode
+                        ? "Play sequencer"
+                        : "Play file"
+                  }
+                  icon={isPlaying ? <FaStop /> : <FaPlay />}
+                  disabled={
+                    (!isProjectorReady && !isPlaying) ||
+                    (isFileMode && !trackFileAssetRelPath && !isPlaying)
+                  }
+                  as="button"
+                  data-testid={config?.sequencerMode ? "sequencer-play-toggle" : "file-play-toggle"}
+                >
+                  <span className="relative inline-block">{isPlaying ? "STOP" : "PLAY"}</span>
+                </Button>
+                <label
+                  className="flex items-center gap-2 cursor-pointer text-[11px] text-neutral-300 font-mono"
+                  onClickCapture={(e) => {
+                    if (e.detail === 0) return;
+                    const input = e.currentTarget.querySelector(
+                      'input[type="checkbox"]'
+                    ) as HTMLInputElement | null;
+                    if (!input) return;
+                    setTimeout(() => input.blur(), 0);
+                  }}
+                >
+                  <Checkbox checked={isMuted} onChange={(e) => onMuteChange(e.target.checked)} />
+                  <span>Mute</span>
+                </label>
+              </>
+            ) : (
+              <button
+                onClick={onSettingsClick}
+                className={`text-[10px] font-mono flex items-center gap-2 cursor-pointer hover:opacity-70 transition-opacity ${getStatusColor()}`}
+                title={`${inputStatus.status}: ${getStatusText()}`}
               >
-                <span className="relative inline-block">{isPlaying ? "STOP" : "PLAY"}</span>
-              </Button>
-              <label
-                className="flex items-center gap-2 cursor-pointer text-[11px] text-neutral-300 font-mono"
-                onClickCapture={(e) => {
-                  if (e.detail === 0) return;
-                  const input = e.currentTarget.querySelector(
-                    'input[type="checkbox"]'
-                  ) as HTMLInputElement | null;
-                  if (!input) return;
-                  setTimeout(() => input.blur(), 0);
-                }}
-              >
-                <Checkbox checked={isMuted} onChange={(e) => onMuteChange(e.target.checked)} />
-                <span>Mute</span>
-              </label>
-            </>
-          ) : (
-            <button
-              onClick={onSettingsClick}
-              className={`text-[10px] font-mono flex items-center gap-2 cursor-pointer hover:opacity-70 transition-opacity ${getStatusColor()}`}
-              title={`${inputStatus.status}: ${getStatusText()}`}
-            >
-              <span>{getStatusIcon()}</span>
-              <span>{getStatusText()}</span>
-            </button>
-          )}
+                <span>{getStatusIcon()}</span>
+                <span>{getStatusText()}</span>
+              </button>
+            )}
+          </div>
+          {!config?.sequencerMode && <InputActivityReadout />}
         </div>
       </div>
     </div>
