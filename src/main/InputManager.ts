@@ -499,7 +499,7 @@ class InputManager {
         }));
         resolve(devices);
       };
-      webMidi.enable({ callback });
+      webMidi.enable({ callback, requestMIDIAccessFunction: () => true });
     });
   }
 }
