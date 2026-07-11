@@ -71,7 +71,7 @@ const getMethodCode = (moduleName: unknown, methodName: unknown) => {
 
 type UserDataState = { config: Record<string, unknown>; sets: unknown[] } & Record<string, unknown>;
 type SetStateAction<T> = T | ((prev: T) => T);
-type SetUserData = (action: SetStateAction<UserDataState>) => void;
+export type SetUserData = (action: SetStateAction<UserDataState>) => void;
 
 const updateUserData = (setUserData: SetUserData, updater: (draft: UserDataState) => void) => {
   setUserData((prev) =>

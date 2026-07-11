@@ -7,7 +7,7 @@ type ModalProps = {
   isOpen: boolean;
   onClose: (event?: MouseEvent<HTMLDivElement>) => void;
   children: ReactNode;
-  onCloseHandler?: (event: MouseEvent<HTMLDivElement>) => void;
+  onOverlayClick?: (event: MouseEvent<HTMLDivElement>) => void;
   position?: ModalPosition;
   size?: ModalSize;
 };
@@ -35,13 +35,13 @@ export const Modal = ({
   isOpen,
   onClose,
   children,
-  onCloseHandler,
+  onOverlayClick,
   position = "center",
   size = "medium",
 }: ModalProps) => {
   if (!isOpen) return null;
 
-  const handleOverlayClick = onCloseHandler || onClose;
+  const handleOverlayClick = onOverlayClick || onClose;
   const isBottomAligned = position === "bottom";
 
   const getSizeClass = () => {

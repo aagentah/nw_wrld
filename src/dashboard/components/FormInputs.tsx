@@ -178,30 +178,6 @@ export const ColorInput = ({
   );
 };
 
-export const FileInput = ({
-  style,
-  ...props
-}: InputHTMLAttributes<HTMLInputElement> & {
-  style?: CSSProperties;
-}) => {
-  return (
-    <input
-      type="file"
-      style={{
-        fontSize: TERMINAL_STYLES.fontSize,
-        fontFamily: TERMINAL_STYLES.fontFamily,
-        color: TERMINAL_STYLES.text,
-        backgroundColor: TERMINAL_STYLES.bg,
-        border: "none",
-        outline: "none",
-        padding: "2px 0",
-        ...style,
-      }}
-      {...props}
-    />
-  );
-};
-
 export const Label = ({
   style,
   children,

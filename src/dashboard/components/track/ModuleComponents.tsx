@@ -302,7 +302,7 @@ export const NoteSelector = memo(
             const channelName = `ch${channelNumber}`;
             return {
               name: channelName,
-              number: parseInt(channelNumber),
+              number: parseInt(channelNumber, 10),
               sequences: recordingMap.get(channelName) || [],
             };
           });

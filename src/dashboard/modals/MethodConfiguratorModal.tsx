@@ -73,7 +73,7 @@ type PredefinedModule = {
   methods?: unknown[];
 };
 
-type SortableItemProps = {
+type SortableMethodItemProps = {
   id: string;
   method: MethodConfig;
   handleRemoveMethod: (methodName: string) => void;
@@ -85,7 +85,7 @@ type SortableItemProps = {
   onShowMethodCode: (methodName: string) => void;
 };
 
-const SortableItem = memo(
+const SortableMethodItem = memo(
   ({
     id,
     method,
@@ -96,7 +96,7 @@ const SortableItem = memo(
     moduleName,
     userColors,
     onShowMethodCode,
-  }: SortableItemProps) => {
+  }: SortableMethodItemProps) => {
     const toggleRandomization = useCallback(
       (optionName: string, optionDef: OptionDef | null = null) => {
         const option = method.options.find((o) => o.name === optionName);
@@ -276,7 +276,7 @@ const SortableItem = memo(
   }
 );
 
-SortableItem.displayName = "SortableItem";
+SortableMethodItem.displayName = "SortableMethodItem";
 
 type SelectedChannel = {
   trackIndex: number;
@@ -973,9 +973,8 @@ export const MethodConfiguratorModal = ({
                           (acc: MethodConfig[], l) => {
                             if (l.name === currentLayer.name) {
                               return [...acc, ...reorderedLayer];
-                            } else {
-                              return [...acc, ...l.configuredMethods];
                             }
+                            return [...acc, ...l.configuredMethods];
                           },
                           []
                         );
@@ -1000,7 +999,7 @@ export const MethodConfiguratorModal = ({
                         };
                         return (
                           <Fragment key={method.name}>
-                            <SortableItem
+                            <SortableMethodItem
                               id={method.name}
                               method={method}
                               handleRemoveMethod={removeMethod}

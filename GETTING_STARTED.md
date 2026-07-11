@@ -130,7 +130,7 @@ When the sequencer playhead hits an active cell, it triggers that channel's assi
 1. Click the **[PLAY]** button in the footer
 2. Watch the playhead move across the 16-step grid
 3. See your visuals respond to the pattern in the Projector window
-4. Adjust BPM in Settings (60-130 BPM)
+4. Adjust BPM in Settings (default 120)
 
 The pattern loops continuously until you click **[STOP]**.
 

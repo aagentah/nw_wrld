@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const path = require("node:path");
 
 const { validateOptionValue, validateRandomRange, validateMethodOptions } = require(
-  path.join(__dirname, "..", "dist", "runtime", "shared", "validation", "optionValidator.js")
+  path.join(__dirname, "..", "dist", "runtime", "shared", "validation", "optionValidation.js")
 );
 
 test("validateOptionValue preserves valid number within range", () => {

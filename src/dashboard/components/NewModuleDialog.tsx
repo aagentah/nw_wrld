@@ -4,14 +4,13 @@ import { ModalHeader } from "./ModalHeader";
 import { ModalFooter } from "./ModalFooter";
 import { TextInput, Select, Label } from "./FormInputs";
 
-type ModalProps = {
+type DialogShellProps = {
   isOpen: boolean;
-  onClose: () => void;
   children: ReactNode;
   size?: "small" | "large";
 };
 
-const Modal = ({ isOpen, children, size = "small" }: ModalProps) => {
+const DialogShell = ({ isOpen, children, size = "small" }: DialogShellProps) => {
   if (!isOpen) return null;
 
   return (
@@ -95,7 +94,7 @@ export const NewModuleDialog = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} size="small">
+    <DialogShell isOpen={isOpen} size="small">
       <ModalHeader title="CREATE MODULE FROM TEMPLATE" onClose={handleClose} />
 
       <div className="px-6 flex flex-col gap-4">
@@ -159,7 +158,7 @@ export const NewModuleDialog = ({
           Create Module
         </Button>
       </ModalFooter>
-    </Modal>
+    </DialogShell>
   );
 };
 

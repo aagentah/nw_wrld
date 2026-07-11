@@ -179,21 +179,3 @@ export function atomicWriteFileSync(filePath: string, data: string) {
     throw error;
   }
 }
-
-export async function cleanupStaleTempFiles(directory: string, minAgeMs = 60_000) {
-  try {
-    const files = await fs.promises.readdir(directory);
-    const now = Date.now();
-    const tempFiles = files.filter((f: string) => f.includes(".tmp."));
-
-    for (const file of tempFiles) {
-      try {
-        const fullPath = path.join(directory, file);
-        const stat = await fs.promises.stat(fullPath);
-        if (now - stat.mtimeMs >= minAgeMs) {
-          await fs.promises.unlink(fullPath);
-        }
-      } catch {}
-    }
-  } catch {}
-}

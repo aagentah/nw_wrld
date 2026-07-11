@@ -1,5 +1,3 @@
-// src/ModuleBase.js
-
 export class ModuleBase {
   elem: HTMLElement | null;
   name: string;
@@ -258,7 +256,7 @@ export class ModuleBase {
   /**
    * Adjusts the opacity of the element.
    * @param {Object} options
-   * @param {number} options.value - The opacity value between 0 and 1 (default: 1).
+   * @param {number} options.opacity - The opacity value between 0 and 1 (default: 1).
    */
   opacity(options: { opacity?: number } = {}) {
     const { opacity = 1 } = options;
@@ -279,7 +277,7 @@ export class ModuleBase {
    * After the duration, the rotation stops, and the element remains in its final rotated position.
    * @param {Object} options
    * @param {string} options.direction - "clockwise" or "counter-clockwise" (default: "clockwise").
-   * @param {number} options.speed - The rotation speed in degrees per second (default: 60).
+   * @param {number} options.speed - The rotation speed multiplier (default: 1).
    * @param {number} options.duration - Duration in milliseconds to rotate before stopping (default: 0, which means infinite rotation).
    */
   rotate(options: { direction?: string; speed?: number; duration?: number } = {}) {
@@ -591,16 +589,6 @@ export class ModuleBase {
 
     this.viewportLineElem = svg;
     this.externalElements.push(svg);
-
-    console.log(
-      `Module "${
-        this.constructor.name
-      }" viewport line drawn from (${startX.toFixed(1)}, ${startY.toFixed(
-        1
-      )}) to (${endX.toFixed(1)}, ${endY.toFixed(
-        1
-      )}) via closest side: ${closestSide}, length: ${clampedLength}%.`
-    );
   }
 
   /**

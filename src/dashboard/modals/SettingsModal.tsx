@@ -130,93 +130,6 @@ const DraftIntInput = memo(({ value, fallback, onCommit, ...props }: DraftIntInp
   );
 });
 
-type DraftFloatInputProps = {
-  value: number;
-  fallback: number;
-  onCommit: (value: number) => void;
-  min?: number;
-  max?: number;
-  step?: number;
-  className?: string;
-  style?: React.CSSProperties;
-  "data-testid"?: string;
-};
-
-const DraftFloatInput = memo(({ value, fallback, onCommit, ...props }: DraftFloatInputProps) => {
-  const [draft, setDraft] = useState<string | null>(null);
-  const [isFocused, setIsFocused] = useState(false);
-  const skipCommitRef = useRef(false);
-
-  useEffect(() => {
-    if (!isFocused) setDraft(null);
-  }, [isFocused, value]);
-
-  const displayed = draft !== null ? draft : String(value ?? "");
-
-  const commitIfValid = useCallback(
-    (raw: string) => {
-      const s = String(raw);
-      const isIntermediate =
-        s === "" || s === "-" || s === "." || s === "-." || s.endsWith(".") || /e[+-]?$/i.test(s);
-      if (isIntermediate) return;
-      const n = parseFloat(s);
-      if (!Number.isFinite(n)) return;
-      onCommit(n);
-    },
-    [onCommit]
-  );
-
-  const commitOnBlur = useCallback(() => {
-    if (draft === null) return;
-    const s = String(draft);
-    const isIntermediate =
-      s === "" || s === "-" || s === "." || s === "-." || s.endsWith(".") || /e[+-]?$/i.test(s);
-    if (isIntermediate) {
-      onCommit(fallback);
-      return;
-    }
-    const n = parseFloat(s);
-    if (!Number.isFinite(n)) {
-      onCommit(fallback);
-      return;
-    }
-    onCommit(n);
-  }, [draft, fallback, onCommit]);
-
-  return (
-    <NumberInput
-      {...props}
-      value={displayed}
-      onFocus={() => {
-        skipCommitRef.current = false;
-        setIsFocused(true);
-        setDraft(String(value ?? ""));
-      }}
-      onChange={(e: ChangeEvent<HTMLInputElement>) => {
-        const next = e.target.value;
-        setDraft(next);
-        commitIfValid(next);
-      }}
-      onBlur={() => {
-        setIsFocused(false);
-        if (skipCommitRef.current) {
-          skipCommitRef.current = false;
-          return;
-        }
-        commitOnBlur();
-      }}
-      onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === "Enter") e.currentTarget.blur();
-        if (e.key === "Escape") {
-          skipCommitRef.current = true;
-          setDraft(null);
-          e.currentTarget.blur();
-        }
-      }}
-    />
-  );
-});
-
 type UserColorsProps = {
   config: { userColors?: string[] };
   updateConfig: (updates: { userColors: string[] }) => void;
@@ -796,7 +709,7 @@ export const SettingsModal = ({
                             onChange={(e: ChangeEvent<HTMLInputElement>) =>
                               setInputConfig({
                                 ...inputConfig,
-                                port: parseInt(e.target.value) || 8000,
+                                port: parseInt(e.target.value, 10) || 8000,
                               })
                             }
                             className="py-1 w-full"

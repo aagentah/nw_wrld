@@ -96,11 +96,11 @@ export const useDashboardAudioCapture = ({
   useEffect(() => {
     const stop = async () => {
       runIdRef.current += 1;
-      const onVis = visibilityHandlerRef.current;
+      const storedVisibilityHandler = visibilityHandlerRef.current;
       visibilityHandlerRef.current = null;
-      if (typeof onVis === "function") {
+      if (typeof storedVisibilityHandler === "function") {
         try {
-          document.removeEventListener("visibilitychange", onVis);
+          document.removeEventListener("visibilitychange", storedVisibilityHandler);
         } catch {}
       }
       if (rafRef.current != null) {
@@ -410,7 +410,7 @@ export const useDashboardAudioCapture = ({
           tick().catch(() => {});
         });
 
-        const onVisibilityChange = () => {
+        const handleVisibilityChange = () => {
           try {
             if (!enabled) return;
             if (document.hidden) return;
@@ -422,8 +422,8 @@ export const useDashboardAudioCapture = ({
           } catch {}
         };
         try {
-          visibilityHandlerRef.current = onVisibilityChange;
-          document.addEventListener("visibilitychange", onVisibilityChange);
+          visibilityHandlerRef.current = handleVisibilityChange;
+          document.addEventListener("visibilitychange", handleVisibilityChange);
         } catch {}
       } catch (e) {
         const message = e instanceof Error ? e.message : String(e);

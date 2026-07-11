@@ -210,7 +210,7 @@ export const AddModuleModal = ({
       if (typeof trackUnknown !== "object" || !trackUnknown) return;
       const t = trackUnknown as Record<string, unknown>;
 
-      const instanceId = `inst_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const instanceId = `inst_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
       const modulesArray = Array.isArray(t.modules) ? t.modules : [];
       modulesArray.push({
         id: instanceId,
@@ -470,7 +470,7 @@ export const AddModuleModal = ({
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} onCloseHandler={handleClose} size="medium">
+    <Modal isOpen={isOpen} onClose={onClose} onOverlayClick={handleClose} size="medium">
       <ModalHeader title={modalTitle} onClose={handleClose} />
 
       <div className="px-6">

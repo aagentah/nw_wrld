@@ -228,7 +228,7 @@ See the [Module Development Guide](MODULE_DEVELOPMENT.md#sdk-api-reference) for 
 
 Switch between modes in **Settings → Signal Source**.
 
-**Sequencer Mode (Default)** - Program patterns with a 16-step grid per channel. Perfect for getting started, testing modules, and creating standalone pieces without external hardware. Adjustable BPM (60-130), patterns loop continuously and save with your tracks.
+**Sequencer Mode (Default)** - Program patterns with a 16-step grid per channel. Perfect for getting started, testing modules, and creating standalone pieces without external hardware. Adjustable BPM (default 120), patterns loop continuously and save with your tracks.
 
 **External Modes (Advanced)** - Drive channels from MIDI, OSC, live audio input, or an uploaded audio file. For the per-source breakdown and routing details, see [Advanced: External Input Control](#advanced-external-input-control) above. Configure global mappings in Settings for consistent control across all tracks.
 
