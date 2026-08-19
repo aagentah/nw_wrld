@@ -32,6 +32,7 @@ Anything risky, or areas to pay attention to:
 ## Review context (please read / use as ground truth)
 
 - `README.md`
+- `GETTING_STARTED.md`
 - `MODULE_DEVELOPMENT.md`
 - `CONTRIBUTING.md`
 - `RUNTIME_TS_TESTING_GUIDELINES.md`

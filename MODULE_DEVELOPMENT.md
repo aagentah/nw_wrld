@@ -17,6 +17,8 @@ This guide covers creating custom visual modules for nw_wrld, including the work
 11. [Debugging Modules](#debugging-modules)
 12. [Best Practices](#best-practices)
 13. [Performance Tips](#performance-tips)
+14. [Testing Your Module](#testing-your-module)
+15. [Further Learning](#further-learning)
 
 ---
 
@@ -358,7 +360,7 @@ Supported option fields:
 - **`allowRandomization`** (optional, boolean): enables the dice/random UI for this option
 - **`assetBaseDir`** (optional, string): for `assetFile` / `assetDir` options (e.g. `"images"`, `"models"`, `"json"`, `"fonts"`)
 - **`assetExtensions`** (optional, string[]): for `assetFile` options (e.g. `[".png", ".jpg"]`)
-- **`allowCustom`** (optional, boolean): for asset options; when true, users can type a custom path/list instead of picking
+- **`allowCustom`** (optional, boolean): for asset options; when true, users can type a custom path/list instead of picking. Defaults to `true`; set `allowCustom: false` to restrict users to the picker.
 
 ### Units and numeric conventions (recommended)
 
@@ -456,10 +458,11 @@ class MyModule extends ModuleBase {
 - `opacity({ opacity })` - Set opacity
 - `rotate({ direction, speed, duration })` - Rotate module (duration is milliseconds)
 - `randomZoom({ scaleFrom, scaleTo, position })` - Random zoom effect
-- `matrix({ matrix, border })` - Position using matrix grid
 - `viewportLine({ x, y, length, opacity })` - Draw a viewport line (x/y/length are percentages)
 - `background({ color })` - Set background color
 - `invert({ duration })` - Invert colors (duration is milliseconds)
+
+**Note:** `matrix({ matrix, border })` is a built-in triggerable method handled by the projector layout layer: declare and trigger it, but do not call `this.matrix()` from module code (it throws a TypeError).
 
 #### BaseThreeJsModule
 
@@ -498,7 +501,17 @@ class My3DModule extends BaseThreeJsModule {
 - `this.scene` - Three.js scene
 - `this.camera` - Three.js camera
 - `this.renderer` - Three.js renderer
-- `this.controls` - Orbit controls (if enabled)
+- `this.controls` - Orbit controls (created automatically; damping, pan, rotate, and zoom enabled by default)
+
+**Built-in BaseThreeJsModule Methods:**
+
+In addition to the ModuleBase methods, `BaseThreeJsModule` declares these triggerable methods:
+
+- `zoomLevel({ zoomLevel })` - Camera zoom (number, default `75`, `0` to `100`, unit `%`)
+- `viewDirection({ viewDirection })` - Camera view direction (select, default `"front"`, values: `front`, `top`, `right`, `back`, `bottom`, `left`)
+- `cameraAnimation({ cameraAnimation })` - Camera animation (select, default `"none"`, values: `none`, `pan-forward`, `pan-backward`, `pan-left`, `pan-right`, `pan-up`, `pan-down`, `rotate-left`, `rotate-right`, `rotate-up`, `rotate-down`, `rotate-clockwise`, `rotate-anticlockwise`, `rotate-random`)
+- `cameraSpeed({ cameraSpeed })` - Camera animation speed multiplier (number, default `1.0`, `0.01` to `10`, unit `×`)
+- `displacementParams({ amplitude, oscTime, x, y, z })` - Vertex displacement parameters (all numbers: `amplitude` default `1`, `0` to `50`; `oscTime` default `1.0`, `0.01` to `10`; `x`/`y`/`z` default `1`, `-5` to `5`)
 
 ### Asset Loading Methods
 
@@ -610,6 +623,8 @@ MyProject/
     │   └── blueprint.png
     ├── models/          # 3D models (OBJ, PLY, PCD, GLTF/GLB, STL)
     │   └── cube.obj
+    ├── fonts/           # Fonts for text modules
+    │   └── RobotoMono-VariableFont_wght.ttf
     └── json/            # JSON data files
         └── meteor.json
 ```
@@ -618,7 +633,7 @@ MyProject/
 
 1. Navigate to your project folder
 2. Open the `assets/` directory
-3. Add files to `images/` or `json/` subdirectories
+3. Add files to the `images/`, `models/`, `fonts/`, or `json/` subdirectories
 4. Reference them in your modules using the SDK
 
 ### Loading Images
@@ -990,6 +1005,12 @@ The following libraries are available globally in workspace modules:
 - **p5** - `globalThis.p5` - Creative coding and canvas drawing
 - **THREE** - `globalThis.THREE` - 3D graphics
 - **d3** - `globalThis.d3` - Data visualization
+- **Noise** - `globalThis.Noise` - Perlin/simplex noise (noisejs)
+- **OBJLoader** - `globalThis.OBJLoader` - Three.js OBJ model loader
+- **PLYLoader** - `globalThis.PLYLoader` - Three.js PLY model loader
+- **PCDLoader** - `globalThis.PCDLoader` - Three.js PCD point-cloud loader
+- **GLTFLoader** - `globalThis.GLTFLoader` - Three.js GLTF/GLB model loader
+- **STLLoader** - `globalThis.STLLoader` - Three.js STL model loader
 
 ---
 

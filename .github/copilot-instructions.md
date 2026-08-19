@@ -5,6 +5,7 @@ You are reviewing changes in `nw_wrld`, an Electron app with a deliberate archit
 #### Mandatory context (read/assume these are authoritative)
 
 - `README.md`
+- `GETTING_STARTED.md`
 - `MODULE_DEVELOPMENT.md`
 - `CONTRIBUTING.md`
 - `RUNTIME_TS_TESTING_GUIDELINES.md`

@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Optional tag to build (e.g. v0.4.0-beta). If empty, builds the selected branch ref."
+        description: "Optional tag to build (e.g. v0.5.1-beta). If empty, builds the selected branch ref."
         required: false
         type: string
   push:

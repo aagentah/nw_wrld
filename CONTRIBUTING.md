@@ -211,7 +211,8 @@ export default MyModule;
 - [ ] Run the app and verify no console errors
 - [ ] Test on your target platform (Mac/Windows)
 - [ ] Update documentation if needed
-- [ ] Add yourself to contributors if it's your first PR
+
+Merged contributions appear automatically on the [GitHub contributors page](https://github.com/aagentah/nw_wrld/graphs/contributors).
 
 ### Commit Messages
 
@@ -498,7 +499,6 @@ Open Developer Tools and check for:
 
 Contributors are recognized in:
 
-- README.md contributors section
 - Release notes for significant contributions
 - GitHub contributors page
 

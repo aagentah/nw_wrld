@@ -15,8 +15,10 @@ This guide covers installation, setup, and basic usage of nw_wrld.
 9. [Editing Modules](#editing-modules)
 10. [Working with Assets](#working-with-assets)
 11. [Advanced: Connect External MIDI/OSC](#advanced-connect-external-midiosc)
-12. [Troubleshooting](#troubleshooting)
-13. [Next Steps](#next-steps)
+12. [Sending MIDI from Strudel (Steps)](#sending-midi-from-strudel-steps)
+13. [Troubleshooting](#troubleshooting)
+14. [Next Steps](#next-steps)
+15. [Further Reading](#further-reading)
 
 ---
 
@@ -56,8 +58,10 @@ Your project folder structure will look like this:
 ```
 MyProject/
 ├── modules/           # Visual modules (22 starter modules included)
-├── assets/            # Images and JSON data
+├── assets/            # Images, models, fonts, and JSON data
 │   ├── images/
+│   ├── models/
+│   ├── fonts/
 │   └── json/
 └── nw_wrld_data/      # App data (auto-managed)
 ```
@@ -75,7 +79,7 @@ If your project folder is deleted, moved, or disconnected (e.g., external drive 
 
 1. In the Dashboard, click **[CREATE TRACK]**
 2. Name your track (e.g., "My First Track")
-3. Click **[CREATE]**
+3. Click **[CREATE TRACK]**
 
 Tracks are containers for visual modules and sequencer patterns.
 
@@ -113,11 +117,10 @@ Tracks are containers for visual modules and sequencer patterns.
 
 ## Step 5: Assign Methods to Channels
 
-1. Click on a channel row to select it
-2. Click **[ADD METHOD]** in the right panel
-3. Select a method (e.g., `color`, `scale`, `rotate`, `show`)
-4. Configure method parameters in the modal
-5. Click **[SAVE]**
+1. Click on a channel row to open the method configurator
+2. Use the **add method** dropdown to add a method (e.g., `color`, `scale`, `rotate`, `show`)
+3. Configure method parameters inline - changes save automatically
+4. Close the modal when you're done (the footer buttons are **[EDIT CHANNEL]** and **[DELETE CHANNEL]**)
 
 **What are methods?** Methods are actions you can trigger on modules. Built-in methods include `show`, `hide`, `scale`, `rotate`, `opacity`, and more. Each module can also define custom methods.
 
@@ -178,11 +181,7 @@ The Module Editor modal does not edit modules in-app. It shows the module's sour
 Open `modules/Text.js` in your project folder and find the color option:
 
 ```javascript
-{
-  name: "color",
-  defaultVal: "#FFFFFF",  // Change this to "#00FF00" for green
-  type: "color",
-}
+{ name: "color", defaultVal: "#ffffff", type: "color" } // change "#ffffff" to "#00ff00" for green
 ```
 
 Save the file and the module reloads automatically.
@@ -212,6 +211,10 @@ MyProject/
 └── assets/
     ├── images/
     │   └── blueprint.png    # Included starter image
+    ├── models/              # 3D models (OBJ, PLY, PCD, GLTF/GLB, STL)
+    │   └── cube.obj         # Included starter model
+    ├── fonts/               # Fonts for text modules
+    │   └── RobotoMono-VariableFont_wght.ttf
     └── json/
         └── meteor.json       # Included starter dataset
 ```
@@ -219,7 +222,7 @@ MyProject/
 ### Adding Your Own Assets
 
 1. Navigate to your project folder
-2. Add files to `assets/images/` or `assets/json/`
+2. Add files to `assets/images/`, `assets/models/`, `assets/fonts/`, or `assets/json/`
 3. Reference them in your modules using the SDK
 
 ### Loading Assets in Modules
@@ -405,8 +408,8 @@ Try these starter modules to see different visual styles:
 
 ### Experiment with Method Parameters
 
-1. Select a channel with an assigned method
-2. Click **Edit Method** to change parameters
+1. Click a channel with an assigned method to open the method configurator
+2. Change the method's parameters inline (they save automatically)
 3. Try different colors, sizes, durations, and intensities
 4. See how parameters affect the visuals
 

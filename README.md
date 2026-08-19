@@ -216,7 +216,7 @@ See the [Module Development Guide](MODULE_DEVELOPMENT.md) for complete documenta
 
 ## Built-in ModuleBase Methods
 
-When you extend `ModuleBase`, you inherit powerful methods for free: `show`, `hide`, `offset`, `scale`, `opacity`, `rotate`, `randomZoom`, `matrix`, `viewportLine`, `background`, and `invert`.
+When you extend `ModuleBase`, you inherit powerful methods for free: `show`, `hide`, `offset`, `scale`, `opacity`, `rotate`, `randomZoom`, `viewportLine`, `background`, and `invert`. A built-in `matrix` method is also available as a triggerable method, handled by the projector layout layer: declare and trigger it, but do not call it from module code.
 
 These methods can be triggered via the sequencer or external signal sources (MIDI/OSC/audio/file), giving you instant control over positioning, visibility, transformations, and effects.
 
@@ -292,6 +292,10 @@ MyProject/
 │   ├── images/
 │   │   ├── blueprint.png      # Included starter asset
 │   │   └── your-image.png     # Add your own images
+│   ├── models/                 # 3D models (OBJ, PLY, PCD, GLTF/GLB, STL)
+│   │   └── cube.obj            # Included starter model
+│   ├── fonts/                  # Fonts for text modules
+│   │   └── RobotoMono-VariableFont_wght.ttf
 │   └── json/
 │       ├── meteor.json         # Included starter dataset
 │       └── your-data.json      # Add your own data
@@ -312,8 +316,7 @@ nw_wrld/
 │   ├── dashboard/              # React UI for control
 │   │   ├── Dashboard.js        # Main dashboard logic
 │   │   ├── modals/             # UI modals
-│   │   ├── components/         # Reusable components
-│   │   └── styles/             # Dashboard styles
+│   │   └── components/         # Reusable components
 │   │
 │   ├── projector/              # Visual output window
 │   │   ├── Projector.ts        # Main projector logic
@@ -332,7 +335,8 @@ nw_wrld/
 │       ├── config/             # Default configuration
 │       ├── sequencer/          # Sequencer playback engine
 │       ├── midi/               # MIDI utilities
-│       └── audio/              # Audio feedback
+│       ├── audio/              # Audio feedback
+│       └── styles/             # Shared styles (_main.css)
 │
 ├── index.js                    # Thin bootstrap into the compiled main process
 ├── package.json
@@ -429,10 +433,10 @@ This creates Linux artifacts (typically `.AppImage` and `.deb`) in the `release/
 
 ### Automated Releases
 
-The project uses GitHub Actions to automatically build and attach release artifacts (macOS DMGs for arm64 + x64, Windows portable `.exe`, and Linux `.AppImage` + `.deb`). A `SHA256SUMS` file is also attached for verifying downloads:
+The project uses GitHub Actions to automatically build and attach release artifacts (a single universal macOS DMG covering arm64 + x64, Windows portable `.exe`, and Linux `.AppImage` + `.deb`). A `SHA256SUMS` file is also attached for verifying downloads:
 
-1. Tag a new version: `git tag v1.0.0`
-2. Push the tag: `git push origin v1.0.0`
+1. Tag a new version: `git tag v0.5.1-beta`
+2. Push the tag: `git push origin v0.5.1-beta`
 3. GitHub Actions builds the artifacts and creates a release automatically
 
 See `.github/workflows/release.yml` for the CI configuration.
@@ -457,6 +461,7 @@ This project is licensed under the GPL-3.0 License - see the [LICENSE](LICENSE) 
 
 - [Getting Started Guide](GETTING_STARTED.md)
 - [Module Development Guide](MODULE_DEVELOPMENT.md)
+- [Runtime TS Testing Guidelines](RUNTIME_TS_TESTING_GUIDELINES.md)
 - [E2E Testing Guidelines](E2E_TESTING_GUIDELINES.md)
 - [Contributing Guide](CONTRIBUTING.md)
 
