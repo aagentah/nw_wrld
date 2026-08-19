@@ -242,6 +242,8 @@ export const SelectTrackModal = ({
     });
   };
 
+  if (!isOpen) return null;
+
   return (
     <>
       <Modal isOpen={isOpen} onClose={onClose} size="small">

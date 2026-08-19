@@ -507,11 +507,14 @@ class InputManager {
   }
 
   async disconnect() {
+    // Always tear down the WebMidi singleton listeners, even when a failed init left
+    // currentSource null; otherwise a dead manager keeps handlers registered and leaks
+    // across workspace switches.
+    this.teardownMidiWebMidiListeners();
     try {
       if (this.currentSource) {
         switch (this.currentSource.type) {
           case "midi":
-            this.teardownMidiWebMidiListeners();
             if (this.currentSource.instance) {
               try {
                 this.currentSource.instance.removeListener();

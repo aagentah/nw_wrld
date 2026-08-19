@@ -415,6 +415,8 @@ export const useDashboardPlayback = ({
           engine.stop();
         }
       });
+      sequencerEngineRef.current?.stop();
+      sequencerAudioRef.current?.cleanup();
     };
   }, []);
 

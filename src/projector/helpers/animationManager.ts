@@ -74,6 +74,10 @@ class AnimationManager {
       }
     });
 
+    if (this.subscribers.size === 0) {
+      this.rafId = null;
+      return;
+    }
     this.rafId = requestAnimationFrame(this.tickBound);
   }
 

@@ -148,6 +148,8 @@ export const ReleaseNotesModal = ({ isOpen, onClose }: ReleaseNotesModalProps) =
   const releasesPageUrl =
     repoInfo?.owner && repoInfo?.repo ? `https://github.com/${repoInfo.owner}/${repoInfo.repo}/releases` : null;
 
+  if (!isOpen) return null;
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="large">
       <ModalHeader title="RELEASES" onClose={onClose} />

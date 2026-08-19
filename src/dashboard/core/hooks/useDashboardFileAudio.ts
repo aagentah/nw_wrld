@@ -231,9 +231,9 @@ export const useDashboardFileAudio = ({
     };
 
     const gains: Record<Band, number> = {
-      low: readLocalStorageNumber("nwWrld.fileAudio.gain.low", 6.0),
-      medium: readLocalStorageNumber("nwWrld.fileAudio.gain.medium", 14.0),
-      high: readLocalStorageNumber("nwWrld.fileAudio.gain.high", 18.0),
+      low: readLocalStorageNumber("nwWrld.fileAudio.gain.low", DEFAULT_GAINS.low),
+      medium: readLocalStorageNumber("nwWrld.fileAudio.gain.medium", DEFAULT_GAINS.medium),
+      high: readLocalStorageNumber("nwWrld.fileAudio.gain.high", DEFAULT_GAINS.high),
     };
 
     if (debugRef.current) {

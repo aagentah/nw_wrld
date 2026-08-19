@@ -6,10 +6,10 @@ export class ModuleBase {
   currentScale: number;
   currentOpacity: number;
   viewportLineElem: SVGSVGElement | null;
-  rotateTimeout: ReturnType<typeof setTimeout> | null;
   rotationInterval: number | null;
   rotationTimeout: ReturnType<typeof setTimeout> | null;
   currentRotation: number;
+  pendingTimeouts: Set<ReturnType<typeof setTimeout>>;
   externalElements: Array<HTMLElement | SVGElement>;
 
   static methods = [
@@ -154,10 +154,10 @@ export class ModuleBase {
     this.currentScale = 1;
     this.currentOpacity = 1;
     this.viewportLineElem = null;
-    this.rotateTimeout = null;
     this.rotationInterval = null;
     this.rotationTimeout = null;
     this.currentRotation = 0;
+    this.pendingTimeouts = new Set();
     this.externalElements = [];
 
     if (this.elem) {
@@ -165,6 +165,14 @@ export class ModuleBase {
       this.elem.style.opacity = String(this.currentOpacity);
       this.updateTransform();
     }
+  }
+
+  scheduleTimeout(fn: () => void, ms: number) {
+    const id = setTimeout(() => {
+      this.pendingTimeouts.delete(id);
+      fn();
+    }, ms);
+    this.pendingTimeouts.add(id);
   }
 
   show(options: { duration?: number } = {}) {
@@ -182,7 +190,7 @@ export class ModuleBase {
       }
 
       if (duration > 0) {
-        setTimeout(() => {
+        this.scheduleTimeout(() => {
           moduleElem.style.visibility = "hidden";
           if (this.externalElements && Array.isArray(this.externalElements)) {
             this.externalElements.forEach((elem) => {
@@ -213,7 +221,7 @@ export class ModuleBase {
       }
 
       if (duration > 0) {
-        setTimeout(() => {
+        this.scheduleTimeout(() => {
           moduleElem.style.visibility = "visible";
           if (this.externalElements && Array.isArray(this.externalElements)) {
             this.externalElements.forEach((elem) => {
@@ -620,7 +628,7 @@ export class ModuleBase {
       moduleElem.style.filter = "invert(1)";
 
       if (duration > 0) {
-        setTimeout(() => {
+        this.scheduleTimeout(() => {
           moduleElem.style.filter = "none";
         }, duration);
       }
@@ -630,6 +638,9 @@ export class ModuleBase {
   }
 
   destroy() {
+    this.pendingTimeouts.forEach((id) => clearTimeout(id));
+    this.pendingTimeouts.clear();
+
     // Stop rotation animation if running
     this.stopRotate();
 

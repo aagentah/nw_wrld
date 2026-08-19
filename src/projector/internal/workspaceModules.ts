@@ -42,6 +42,21 @@ export async function loadWorkspaceModuleSource(
     throw new Error(`[Projector] Workspace module bridge is unavailable.`);
   }
 
+  // Stat first (getModuleUrl) so cache hits skip the full read + IPC string
+  // transfer; keying required the mtime, which the read used to be the only
+  // source of, making the cache never save the I/O it existed to avoid.
+  if (typeof bridge.workspace.getModuleUrl === "function") {
+    const statInfo = (await bridge.workspace.getModuleUrl(safeModuleType)) as {
+      mtimeMs?: unknown;
+    } | null;
+    if (statInfo && typeof statInfo.mtimeMs === "number") {
+      const cached = this.workspaceModuleSourceCache.get(
+        `${safeModuleType}:${statInfo.mtimeMs}`
+      );
+      if (cached) return cached;
+    }
+  }
+
   const info = (await bridge.workspace.readModuleWithMeta(
     safeModuleType
   )) as ReadModuleWithMetaResult | null;

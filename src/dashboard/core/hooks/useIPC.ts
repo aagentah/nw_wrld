@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 const getMessaging = () => globalThis.nwWrldBridge?.messaging;
 
@@ -62,22 +62,27 @@ export const useIPCListener = (
   handler: (...args: unknown[]) => void,
   deps: ReadonlyArray<unknown> = []
 ) => {
+  // Subscribe once per channel and read the handler through a ref: inline
+  // handlers used to force an ipcRenderer removeListener/on pair every render.
+  const handlerRef = useRef(handler);
+  handlerRef.current = handler;
   useEffect(() => {
     const messaging = getMessaging();
     if (!messaging) return;
+    const invoke = (...args: unknown[]) => handlerRef.current(...args);
     let cleanup: void | (() => void);
     if (channel === "from-projector") {
-      cleanup = messaging.onFromProjector?.(handler);
+      cleanup = messaging.onFromProjector?.(invoke);
     } else if (channel === "from-dashboard") {
-      cleanup = messaging.onFromDashboard?.(handler);
+      cleanup = messaging.onFromDashboard?.(invoke);
     } else if (channel === "input-event") {
-      cleanup = messaging.onInputEvent?.(handler);
+      cleanup = messaging.onInputEvent?.(invoke);
     } else if (channel === "input-status") {
-      cleanup = messaging.onInputStatus?.(handler);
+      cleanup = messaging.onInputStatus?.(invoke);
     } else if (channel === "workspace:modulesChanged") {
-      cleanup = messaging.onWorkspaceModulesChanged?.(handler);
+      cleanup = messaging.onWorkspaceModulesChanged?.(invoke);
     } else if (channel === "workspace:lostSync") {
-      cleanup = messaging.onWorkspaceLostSync?.(handler);
+      cleanup = messaging.onWorkspaceLostSync?.(invoke);
     } else {
       console.warn(`[useIPCListener] Unknown channel: ${channel}`);
       return;
@@ -85,6 +90,6 @@ export const useIPCListener = (
     return () => {
       if (typeof cleanup === "function") cleanup();
     };
-  }, [channel, handler, ...deps]);
+  }, [channel, ...deps]);
 };
 

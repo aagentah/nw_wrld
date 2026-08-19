@@ -185,6 +185,10 @@ export const useDashboardAudioCapture = ({
         analyserRef.current = analyser;
 
         const bins = new Float32Array(analyser.frequencyBinCount);
+        // localStorage reads are synchronous disk hits; sampled once per start() so the
+        // 60fps tick below never touches them (the debug knobs need a capture restart).
+        const lsThresholdAtStart = readLocalStorageNumber("nwWrld.audio.threshold", NaN);
+        const lsMinIntervalAtStart = readLocalStorageNumber("nwWrld.audio.minIntervalMs", NaN);
         const getThreshold = (band: Band) => {
           const thrObj =
             thresholdsRef.current && typeof thresholdsRef.current === "object"
@@ -196,9 +200,8 @@ export const useDashboardAudioCapture = ({
             (typeof thrObj.low === "number" ||
               typeof thrObj.medium === "number" ||
               typeof thrObj.high === "number");
-          const lsThreshold = readLocalStorageNumber("nwWrld.audio.threshold", NaN);
-          if (!hasAnyDirect && Number.isFinite(lsThreshold)) {
-            return Math.max(0, Math.min(1, lsThreshold));
+          if (!hasAnyDirect && Number.isFinite(lsThresholdAtStart)) {
+            return Math.max(0, Math.min(1, lsThresholdAtStart));
           }
           return typeof direct === "number" && Number.isFinite(direct)
             ? Math.max(0, Math.min(1, direct))
@@ -208,15 +211,14 @@ export const useDashboardAudioCapture = ({
           const direct = minIntervalMsRef.current;
           if (typeof direct === "number" && Number.isFinite(direct))
             return Math.max(0, Math.min(10_000, direct));
-          const ls = readLocalStorageNumber("nwWrld.audio.minIntervalMs", NaN);
-          if (Number.isFinite(ls)) return Math.max(0, Math.min(10_000, ls));
+          if (Number.isFinite(lsMinIntervalAtStart)) return Math.max(0, Math.min(10_000, lsMinIntervalAtStart));
           return AUDIO_DEFAULTS.minIntervalMs;
         };
 
         const gains: Record<Band, number> = {
-          low: readLocalStorageNumber("nwWrld.audio.gain.low", 6.0),
-          medium: readLocalStorageNumber("nwWrld.audio.gain.medium", 14.0),
-          high: readLocalStorageNumber("nwWrld.audio.gain.high", 18.0),
+          low: readLocalStorageNumber("nwWrld.audio.gain.low", DEFAULT_GAINS.low),
+          medium: readLocalStorageNumber("nwWrld.audio.gain.medium", DEFAULT_GAINS.medium),
+          high: readLocalStorageNumber("nwWrld.audio.gain.high", DEFAULT_GAINS.high),
         };
 
         if (debugRef.current) {

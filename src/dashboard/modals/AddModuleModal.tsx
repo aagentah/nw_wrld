@@ -464,6 +464,8 @@ export const AddModuleModal = ({
     };
   }, [cancelScheduledPreviewClear]);
 
+  if (!isOpen) return null;
+
   if (mode === "add-to-track") {
     if (trackIndex === null || trackIndex === undefined) return null;
     if (!track || !track.modules) return null;
