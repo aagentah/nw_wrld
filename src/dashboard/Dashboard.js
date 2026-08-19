@@ -81,15 +81,10 @@ const Dashboard = () => {
     selectedTrackForModuleMenu,
     setSelectedTrackForModuleMenu,
     openAddModuleModal,
-    handleCreateNewModule,
-    handleCreateModule,
     handleEditModule,
     handleCloseModuleEditor,
     isModuleEditorOpen,
     editingModuleName,
-    editingTemplateType,
-    isNewModuleDialogOpen,
-    setIsNewModuleDialogOpen,
     confirmationModal,
     setConfirmationModal,
     openAlertModal,
@@ -513,15 +508,10 @@ const Dashboard = () => {
         predefinedModules={predefinedModules}
         selectedTrackForModuleMenu={selectedTrackForModuleMenu}
         setSelectedTrackForModuleMenu={setSelectedTrackForModuleMenu}
-        onCreateNewModule={handleCreateNewModule}
         onEditModule={handleEditModule}
         isModuleEditorOpen={isModuleEditorOpen}
         onCloseModuleEditor={handleCloseModuleEditor}
         editingModuleName={editingModuleName}
-        editingTemplateType={editingTemplateType}
-        isNewModuleDialogOpen={isNewModuleDialogOpen}
-        onCloseNewModuleDialog={() => setIsNewModuleDialogOpen(false)}
-        onCreateModule={handleCreateModule}
         debugLogs={debugLogs}
         perfStats={perfStats}
         selectedChannel={selectedChannel}

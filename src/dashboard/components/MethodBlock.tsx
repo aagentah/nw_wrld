@@ -41,11 +41,9 @@ type MethodBlockProps = {
   method: MethodValue;
   mode?: "dashboard" | "editor";
   moduleMethods?: ModuleMethodDef[];
-  moduleName?: string | null;
   userColors?: string[];
   dragHandleProps?: Record<string, unknown> | null;
   onRemove?: ((methodName: string) => void) | null;
-  onShowCode?: ((methodName: string) => void) | null;
   onTrigger?: ((method: MethodValue) => void) | null;
   onOptionChange?: ((methodName: string, optionName: string, value: unknown) => void) | null;
   onToggleRandom?: ((optionName: string, optionDef?: MethodOptionDef | null) => void) | null;
@@ -172,11 +170,9 @@ export const MethodBlock = memo(
     method,
     mode = "dashboard",
     moduleMethods = [],
-    moduleName: _moduleName = null,
     userColors = [],
     dragHandleProps = null,
     onRemove = null,
-    onShowCode: _onShowCode = null,
     onTrigger = null,
     onOptionChange = null,
     onToggleRandom = null,

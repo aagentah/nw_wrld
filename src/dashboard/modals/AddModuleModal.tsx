@@ -57,7 +57,6 @@ type AddModuleModalProps = {
   setUserData: (updater: unknown) => void;
   predefinedModules: PredefinedModule[];
   skippedWorkspaceModules?: Array<{ file: string; reason: string }>;
-  onCreateNewModule?: () => void;
   onEditModule: (moduleId: string) => void;
   onConfirmRewrite?: (message: string, onConfirm: () => void, options?: { title?: string }) => void;
   mode?: "add-to-track" | "manage-modules";
@@ -71,7 +70,6 @@ export const AddModuleModal = ({
   setUserData,
   predefinedModules,
   skippedWorkspaceModules,
-  onCreateNewModule: _onCreateNewModule,
   onEditModule,
   onConfirmRewrite,
   mode = "add-to-track",

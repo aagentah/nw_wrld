@@ -11,7 +11,6 @@ import { MethodConfiguratorModal } from "../modals/MethodConfiguratorModal";
 import { EditChannelModal } from "../modals/EditChannelModal";
 import { ConfirmationModal } from "../modals/ConfirmationModal";
 import { ModuleEditorModal } from "../modals/ModuleEditorModal";
-import { NewModuleDialog } from "./NewModuleDialog";
 import type { AudioCaptureState } from "../core/hooks/useDashboardAudioCapture";
 import type { FileAudioState } from "../core/hooks/useDashboardFileAudio";
 import type { Confirmation } from "../core/hooks/useDashboardUiState";
@@ -76,15 +75,10 @@ type DashboardModalLayerProps = {
   predefinedModules: PredefinedModules;
   selectedTrackForModuleMenu: number | null;
   setSelectedTrackForModuleMenu: (next: number | null) => void;
-  onCreateNewModule: () => void;
   onEditModule: (moduleName: string) => void;
   isModuleEditorOpen: boolean;
   onCloseModuleEditor: () => void;
   editingModuleName: string | null;
-  editingTemplateType: "basic" | "threejs" | "p5js" | null;
-  isNewModuleDialogOpen: boolean;
-  onCloseNewModuleDialog: () => void;
-  onCreateModule: (moduleName: string, templateType: string) => void;
 
   debugLogs: string[];
   perfStats: { fps: number; frameMsAvg: number; longFramePct: number; at: number } | null;
@@ -166,15 +160,10 @@ export const DashboardModalLayer = ({
   predefinedModules,
   selectedTrackForModuleMenu,
   setSelectedTrackForModuleMenu,
-  onCreateNewModule,
   onEditModule,
   isModuleEditorOpen,
   onCloseModuleEditor,
   editingModuleName,
-  editingTemplateType,
-  isNewModuleDialogOpen,
-  onCloseNewModuleDialog,
-  onCreateModule,
   debugLogs,
   perfStats,
   selectedChannel,
@@ -281,7 +270,6 @@ export const DashboardModalLayer = ({
         userData={userData}
         setUserData={setUserData}
         predefinedModules={predefinedModules}
-        onCreateNewModule={onCreateNewModule}
         onEditModule={onEditModule}
         onConfirmRewrite={openConfirmationModal}
         skippedWorkspaceModules={workspaceModuleSkipped}
@@ -294,7 +282,6 @@ export const DashboardModalLayer = ({
         userData={userData}
         setUserData={setUserData}
         predefinedModules={predefinedModules}
-        onCreateNewModule={onCreateNewModule}
         onEditModule={onEditModule}
         onConfirmRewrite={openConfirmationModal}
         skippedWorkspaceModules={workspaceModuleSkipped}
@@ -304,14 +291,7 @@ export const DashboardModalLayer = ({
         isOpen={isModuleEditorOpen}
         onClose={onCloseModuleEditor}
         moduleName={editingModuleName}
-        templateType={editingTemplateType}
         predefinedModules={predefinedModules}
-        workspacePath={workspacePath}
-      />
-      <NewModuleDialog
-        isOpen={isNewModuleDialogOpen}
-        onClose={onCloseNewModuleDialog}
-        onCreateModule={onCreateModule}
         workspacePath={workspacePath}
       />
       <DebugOverlayModal

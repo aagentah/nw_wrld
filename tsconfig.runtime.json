@@ -20,7 +20,6 @@
     "src/shared/validation/inputConfigValidation.ts",
     "src/shared/validation/inputEventValidation.ts",
     "src/shared/validation/jsonBridgeValidation.ts",
-    "src/shared/validation/methodCodeRequestValidation.ts",
     "src/shared/validation/oscValidation.ts",
     "src/shared/validation/openExternalValidation.ts",
     "src/shared/validation/optionValidation.ts",

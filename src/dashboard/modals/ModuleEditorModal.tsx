@@ -21,211 +21,18 @@ type PredefinedModule = {
   methods?: ModuleMethod[];
 };
 
-type TemplateType = "basic" | "threejs" | "p5js";
-
 type ModuleEditorModalProps = {
   isOpen: boolean;
   onClose: () => void;
   moduleName: string | null;
-  templateType?: TemplateType | null;
   predefinedModules?: PredefinedModule[];
   workspacePath?: string | null;
-};
-
-const TEMPLATES = {
-  basic: (moduleName) => `/*
-@nwWrld name: ${moduleName}
-@nwWrld category: Custom
-@nwWrld imports: ModuleBase
-*/
-
-class ${moduleName} extends ModuleBase {
-  static methods = [
-    {
-      name: "exampleMethod",
-      executeOnLoad: false,
-      options: [
-        {
-          name: "param1",
-          defaultVal: 100,
-          type: "number",
-        },
-      ],
-    },
-  ];
-
-  constructor(container) {
-    super(container);
-    this.init();
-  }
-
-  init() {
-    if (!this.elem) return;
-    const html = \`
-      <div style="
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        font-size: 3rem;
-        color: white;
-      ">
-        ${moduleName}
-      </div>
-    \`;
-    this.elem.insertAdjacentHTML("beforeend", html);
-  }
-
-  exampleMethod({ param1 = 100 }) {
-    void param1;
-  }
-
-  destroy() {
-    super.destroy();
-  }
-}
-
-export default ${moduleName};
-`,
-
-  threejs: (moduleName) => `/*
-@nwWrld name: ${moduleName}
-@nwWrld category: 3D
-@nwWrld imports: BaseThreeJsModule, THREE
-*/
-
-class ${moduleName} extends BaseThreeJsModule {
-  static methods = [
-    {
-      name: "exampleMethod",
-      executeOnLoad: false,
-      options: [
-        {
-          name: "param1",
-          defaultVal: 1.0,
-          type: "number",
-        },
-      ],
-    },
-  ];
-
-  constructor(container) {
-    super(container);
-    this.customGroup = new THREE.Group();
-    this.init();
-  }
-
-  init() {
-    if (this.destroyed) return;
-    if (!this.scene || !this.camera) return;
-
-    const geometry = new THREE.BoxGeometry(1, 1, 1);
-    const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-    this.cube = new THREE.Mesh(geometry, material);
-    this.customGroup.add(this.cube);
-    this.scene.add(this.customGroup);
-
-    this.camera.position.z = 5;
-
-    this.setCustomAnimate(this.animateLoop.bind(this));
-  }
-
-  animateLoop() {
-    if (this.cube) {
-      this.cube.rotation.x += 0.01;
-      this.cube.rotation.y += 0.01;
-    }
-  }
-
-  exampleMethod({ param1 = 1.0 }) {
-    if (this.cube) {
-      this.cube.scale.set(param1, param1, param1);
-    }
-  }
-
-  destroy() {
-    if (this.destroyed) return;
-    if (this.cube) {
-      this.customGroup.remove(this.cube);
-      this.cube.geometry.dispose();
-      this.cube.material.dispose();
-    }
-    super.destroy();
-  }
-}
-
-export default ${moduleName};
-`,
-
-  p5js: (moduleName) => `/*
-@nwWrld name: ${moduleName}
-@nwWrld category: 2D
-@nwWrld imports: ModuleBase, p5
-*/
-
-class ${moduleName} extends ModuleBase {
-  static methods = [
-    {
-      name: "exampleMethod",
-      executeOnLoad: false,
-      options: [
-        {
-          name: "param1",
-          defaultVal: 255,
-          type: "number",
-        },
-      ],
-    },
-  ];
-
-  constructor(container) {
-    super(container);
-    this.p5Instance = null;
-    this.param1Value = 255;
-    this.init();
-  }
-
-  init() {
-    if (!this.elem) return;
-    const sketch = (p) => {
-      p.setup = () => {
-        p.createCanvas(this.elem.offsetWidth, this.elem.offsetHeight);
-        p.background(0);
-      };
-
-      p.draw = () => {
-        p.background(0, 10);
-        p.fill(this.param1Value);
-        p.noStroke();
-        p.ellipse(p.mouseX, p.mouseY, 50, 50);
-      };
-    };
-
-    this.p5Instance = new p5(sketch, this.elem);
-  }
-
-  exampleMethod({ param1 = 255 }) {
-    this.param1Value = param1;
-  }
-
-  destroy() {
-    if (this.p5Instance) {
-      this.p5Instance.remove();
-      this.p5Instance = null;
-    }
-    super.destroy();
-  }
-}
-
-export default ${moduleName};
-`,
 };
 
 export const ModuleEditorModal = ({
   isOpen,
   onClose,
   moduleName,
-  templateType = null,
   predefinedModules = [],
   workspacePath = null,
 }: ModuleEditorModalProps) => {
@@ -268,185 +75,7 @@ export const ModuleEditorModal = ({
 
     setIsLoading(true);
 
-    if (templateType && moduleName) {
-      const WORKSPACE_TEMPLATES = {
-        basic: (n) =>
-          [
-            "/*",
-            `@nwWrld name: ${n}`,
-            "@nwWrld category: Custom",
-            "@nwWrld imports: ModuleBase",
-            "*/",
-            "",
-            `class ${n} extends ModuleBase {`,
-            "",
-            "  static methods = [",
-            "    ...((ModuleBase && ModuleBase.methods) || []),",
-            "    {",
-            '      name: "exampleMethod",',
-            "      executeOnLoad: false,",
-            "      options: [",
-            '        { name: "param1", defaultVal: 100, type: "number" },',
-            "      ],",
-            "    },",
-            "  ];",
-            "",
-            "  constructor(container) {",
-            "    super(container);",
-            "    this.init();",
-            "  }",
-            "",
-            "  init() {",
-            "    const html = `",
-            '      <div style="',
-            "        position: absolute;",
-            "        top: 50%;",
-            "        left: 50%;",
-            "        transform: translate(-50%, -50%);",
-            "        font-size: 3rem;",
-            "        color: white;",
-            '      ">',
-            `        ${n}`,
-            "      </div>",
-            "    `;",
-            "    if (this.elem) {",
-            '      this.elem.insertAdjacentHTML("beforeend", html);',
-            "    }",
-            "  }",
-            "",
-            "  exampleMethod({ param1 = 100 } = {}) {",
-            "  }",
-            "",
-            "  destroy() {",
-            "    super.destroy();",
-            "  }",
-            "}",
-            "",
-            `export default ${n};`,
-            "",
-          ].join("\n"),
-        threejs: (n) =>
-          [
-            "/*",
-            `@nwWrld name: ${n}`,
-            "@nwWrld category: 3D",
-            "@nwWrld imports: BaseThreeJsModule, THREE",
-            "*/",
-            "",
-            `class ${n} extends BaseThreeJsModule {`,
-            "",
-            "  static methods = [",
-            "    ...((BaseThreeJsModule && BaseThreeJsModule.methods) || []),",
-            "  ];",
-            "",
-            "  constructor(container) {",
-            "    super(container);",
-            "    if (!THREE) return;",
-            "    const geometry = new THREE.BoxGeometry(1, 1, 1);",
-            "    const material = new THREE.MeshStandardMaterial({ color: 0x00ff00 });",
-            "    this.cube = new THREE.Mesh(geometry, material);",
-            "    const light = new THREE.DirectionalLight(0xffffff, 2);",
-            "    light.position.set(2, 2, 4);",
-            "    this.scene.add(light);",
-            "    this.setModel(this.cube);",
-            "    this.setCustomAnimate(() => {",
-            "      if (!this.cube) return;",
-            "      this.cube.rotation.x += 0.01;",
-            "      this.cube.rotation.y += 0.01;",
-            "    });",
-            "  }",
-            "",
-            "  destroy() {",
-            "    this.cube = null;",
-            "    super.destroy();",
-            "  }",
-            "}",
-            "",
-            `export default ${n};`,
-            "",
-          ].join("\n"),
-        p5js: (n) =>
-          [
-            "/*",
-            `@nwWrld name: ${n}`,
-            "@nwWrld category: 2D",
-            "@nwWrld imports: ModuleBase, p5",
-            "*/",
-            "",
-            `class ${n} extends ModuleBase {`,
-            "",
-            "  static methods = [",
-            "    ...((ModuleBase && ModuleBase.methods) || []),",
-            "  ];",
-            "",
-            "  constructor(container) {",
-            "    super(container);",
-            "    this.p5Instance = null;",
-            "    this.param1Value = 255;",
-            "    this.init();",
-            "  }",
-            "",
-            "  init() {",
-            "    if (!p5) return;",
-            "    const sketch = (p) => {",
-            "      p.setup = () => {",
-            "        p.createCanvas(this.elem.offsetWidth, this.elem.offsetHeight);",
-            "        p.background(0);",
-            "      };",
-            "      p.draw = () => {",
-            "        p.background(0, 10);",
-            "        p.fill(this.param1Value);",
-            "        p.noStroke();",
-            "        p.ellipse(p.mouseX, p.mouseY, 50, 50);",
-            "      };",
-            "    };",
-            "    this.p5Instance = new p5(sketch, this.elem);",
-            "  }",
-            "",
-            "  destroy() {",
-            "    if (this.p5Instance) {",
-            "      this.p5Instance.remove();",
-            "      this.p5Instance = null;",
-            "    }",
-            "    super.destroy();",
-            "  }",
-            "}",
-            "",
-            `export default ${n};`,
-            "",
-          ].join("\n"),
-      };
-
-      const template = (workspacePath ? WORKSPACE_TEMPLATES : TEMPLATES)[
-        templateType
-      ](moduleName);
-      setCode(template);
-      setIsLoading(false);
-      try {
-        const bridge = getBridge();
-        if (
-          bridge &&
-          bridge.workspace &&
-          typeof bridge.workspace.moduleExists === "function" &&
-          typeof bridge.workspace.writeModuleTextSync === "function"
-        ) {
-          if (!bridge.workspace.moduleExists(moduleName)) {
-            const res = bridge.workspace.writeModuleTextSync(
-              moduleName,
-              template
-            );
-            if (res && res.ok === false) {
-              setError(
-                `Failed to create module: ${res.reason || "write failed"}`
-              );
-            }
-          }
-        }
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        setError(`Failed to create module: ${msg}`);
-      }
-    } else if (moduleName) {
+    if (moduleName) {
       (async () => {
         try {
           const bridge = getBridge();
@@ -470,7 +99,7 @@ export const ModuleEditorModal = ({
         }
       })();
     }
-  }, [isOpen, moduleName, templateType, workspacePath]);
+  }, [isOpen, moduleName, workspacePath]);
 
   const triggerPreview = useCallback(() => {
     if (!moduleName || !moduleData) return;
@@ -634,7 +263,6 @@ export const ModuleEditorModal = ({
                     method={method}
                     mode="editor"
                     moduleMethods={moduleData?.methods || []}
-                    moduleName={moduleName}
                     onTrigger={handleMethodTrigger}
                     onOptionChange={handleOptionChange}
                   />

@@ -1,7 +1,6 @@
 import {
   memo,
   Fragment,
-  useState,
   useMemo,
   useCallback,
   useEffect,
@@ -28,7 +27,6 @@ import { updateActiveSet, getMethodsByLayer } from "../core/utils";
 import { getActiveSetTracks } from "../../shared/utils/setUtils";
 import { getBaseMethodNames } from "../utils/moduleUtils";
 import { HELP_TEXT } from "../../shared/helpText";
-import { MethodCodeModal } from "./MethodCodeModal";
 
 type MethodOption = {
   name: string;
@@ -75,9 +73,7 @@ type SortableMethodItemProps = {
   changeOption: (methodName: string, optionName: string, value: unknown, field?: string) => void;
   addMissingOption: (methodName: string, optionName: string) => void;
   moduleMethods: ModuleMethod[];
-  moduleName: string | null;
   userColors: string[];
-  onShowMethodCode: (methodName: string) => void;
 };
 
 const SortableMethodItem = memo(
@@ -88,9 +84,7 @@ const SortableMethodItem = memo(
     changeOption,
     addMissingOption,
     moduleMethods,
-    moduleName,
     userColors,
-    onShowMethodCode,
   }: SortableMethodItemProps) => {
     const toggleRandomization = useCallback(
       (optionName: string, optionDef: OptionDef | null = null) => {
@@ -233,11 +227,9 @@ const SortableMethodItem = memo(
                 method={method}
                 mode="dashboard"
                 moduleMethods={moduleMethods}
-                moduleName={moduleName}
                 userColors={userColors}
                 dragHandleProps={dragHandleProps}
                 onRemove={handleRemoveMethod}
-                onShowCode={onShowMethodCode}
                 onOptionChange={handleOptionChange}
                 onToggleRandom={(optionName: string, optionDef?: OptionDef | null) =>
                   toggleRandomization(optionName, optionDef || null)
@@ -304,10 +296,6 @@ export const MethodConfiguratorModal = ({
 }: MethodConfiguratorModalProps) => {
   const [userData, setUserData] = useAtom(userDataAtom);
   const [selectedChannel] = useAtom(selectedChannelAtom);
-  const [selectedMethodForCode, setSelectedMethodForCode] = useState<{
-    moduleName: string | null;
-    methodName: string;
-  } | null>(null);
   const sendToProjector = useIPCSend("dashboard-to-projector");
   const { moduleBase, threeBase } = useMemo(() => getBaseMethodNames(), []);
   const lastNormalizedKeyRef = useRef<string | null>(null);
@@ -975,12 +963,6 @@ export const MethodConfiguratorModal = ({
                   >
                     <div className="flex items-start overflow-x-auto pt-4">
                       {layer.configuredMethods.map((method, methodIndex) => {
-                        const handleShowMethodCode = (methodName: string) => {
-                          setSelectedMethodForCode({
-                            moduleName: module?.id || module?.name || null,
-                            methodName,
-                          });
-                        };
                         return (
                           <Fragment key={method.name}>
                             <SortableMethodItem
@@ -990,9 +972,7 @@ export const MethodConfiguratorModal = ({
                               changeOption={changeOption}
                               addMissingOption={addMissingOption}
                               moduleMethods={normalizedModuleMethods}
-                              moduleName={module ? module.name : null}
                               userColors={userColors}
-                              onShowMethodCode={handleShowMethodCode}
                             />
                             {methodIndex < layer.configuredMethods.length - 1 && (
                               <div className="flex-shrink-0 flex items-center w-4 min-h-[40px]">
@@ -1051,13 +1031,6 @@ export const MethodConfiguratorModal = ({
           </ModalFooter>
         )}
       </Modal>
-
-      <MethodCodeModal
-        isOpen={!!selectedMethodForCode}
-        onClose={() => setSelectedMethodForCode(null)}
-        moduleName={selectedMethodForCode?.moduleName}
-        methodName={selectedMethodForCode?.methodName}
-      />
     </>
   );
 };

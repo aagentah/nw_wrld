@@ -74,26 +74,6 @@ const getMethodsByLayer = (module: unknown, moduleBase: string[], threeBase: str
   return layers;
 };
 
-const getMethodCode = (moduleName: unknown, methodName: unknown) => {
-  try {
-    const bridge = globalThis.nwWrldBridge;
-    if (!bridge || !bridge.app || typeof bridge.app.getMethodCode !== "function") {
-      return { code: null, filePath: null };
-    }
-    const res = bridge.app.getMethodCode(moduleName, methodName) as
-      | { code?: unknown; filePath?: unknown }
-      | null
-      | undefined;
-    return {
-      code: (res && typeof res.code === "string" ? res.code : null) || null,
-      filePath: (res && typeof res.filePath === "string" ? res.filePath : null) || null,
-    };
-  } catch (error) {
-    console.error("Error extracting method code:", error);
-    return { code: null, filePath: null };
-  }
-};
-
 type UserDataState = { config: Record<string, unknown>; sets: unknown[] } & Record<string, unknown>;
 type SetStateAction<T> = T | ((prev: T) => T);
 export type SetUserData = (action: SetStateAction<UserDataState>) => void;
@@ -260,7 +240,6 @@ const updateActiveSet = (
 
 export {
   getMethodsByLayer,
-  getMethodCode,
   updateUserData,
   loadUserData,
   saveUserData,
