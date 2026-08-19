@@ -189,7 +189,7 @@ export const EditTrackModal = ({
 
   const uploadFileToAssets = useCallback(async (file: File) => {
     setFileUploadError(null);
-    const bridge = (globalThis as unknown as { nwWrldBridge?: unknown }).nwWrldBridge;
+    const bridge = (globalThis as { nwWrldBridge?: unknown }).nwWrldBridge;
     const bridgeObj =
       bridge && typeof bridge === "object" ? (bridge as Record<string, unknown>) : null;
     const workspace =

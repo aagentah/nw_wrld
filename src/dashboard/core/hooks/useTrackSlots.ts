@@ -1,10 +1,5 @@
 import { useMemo, useCallback } from "react";
-
-type JsonRecord = Record<string, unknown>;
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
+import { isRecord, type JsonRecord } from "../../../shared/utils/duplicateUtils";
 
 type InputType = string;
 

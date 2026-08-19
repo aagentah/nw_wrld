@@ -190,7 +190,7 @@ function normalizeTrack(value: Jsonish): Jsonish | null {
 
   if (needsSignal) {
     ensure();
-    out.signal = nextSignal as unknown as Jsonish;
+    out.signal = nextSignal as Jsonish;
   }
 
   return changed ? out : value;

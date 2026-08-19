@@ -1,7 +1,7 @@
 import { useCallback, useState, type Dispatch, type SetStateAction } from "react";
 import { updateActiveSet } from "../utils";
 
-type Confirmation = {
+export type Confirmation = {
   title?: string;
   message: string;
   onConfirm?: () => void;
@@ -68,7 +68,7 @@ export const useDashboardUiState = ({ selectedChannel, setUserData, activeSetId 
 
   const handleCreateModule = (moduleName: string, templateType: string) => {
     setEditingModuleName(moduleName);
-    setEditingTemplateType(templateType as unknown as "basic" | "threejs" | "p5js");
+    setEditingTemplateType(templateType as "basic" | "threejs" | "p5js");
     setIsModuleEditorOpen(true);
   };
 
@@ -105,7 +105,7 @@ export const useDashboardUiState = ({ selectedChannel, setUserData, activeSetId 
       if (!selectedChannel) return;
       setEditChannelModalState({
         isOpen: true,
-        trackIndex: (selectedChannel as unknown as { trackIndex: number }).trackIndex,
+        trackIndex: (selectedChannel as { trackIndex: number }).trackIndex,
         channelNumber,
       });
     },
@@ -117,10 +117,10 @@ export const useDashboardUiState = ({ selectedChannel, setUserData, activeSetId 
       if (!selectedChannel) return;
       openConfirmationModal(`Are you sure you want to delete Channel ${channelNumber}?`, () => {
         updateActiveSet(setUserData, activeSetId, (activeSet) => {
-          const tracks = (activeSet as unknown as { tracks: unknown[] }).tracks;
+          const tracks = (activeSet as { tracks: unknown[] }).tracks;
           const currentTrack = tracks[
-            (selectedChannel as unknown as { trackIndex: number }).trackIndex
-          ] as unknown as {
+            (selectedChannel as { trackIndex: number }).trackIndex
+          ] as {
             channelMappings: Record<string, unknown>;
             modulesData: Record<string, { methods?: Record<string, unknown> }>;
           };

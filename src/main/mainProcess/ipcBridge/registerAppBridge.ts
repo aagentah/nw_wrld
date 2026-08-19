@@ -8,7 +8,7 @@ import {
   escapeRegExpLiteral,
   normalizeGetMethodCodeArgs,
 } from "../../../shared/validation/methodCodeRequestValidation";
-import { getProjectDirForEvent, type SenderEvent } from "./projectContext";
+import { getProjectDirForEvent } from "./projectContext";
 
 export function registerAppBridge(): void {
   ipcMain.on("bridge:app:getBaseMethodNames", (event) => {
@@ -142,7 +142,7 @@ export function registerAppBridge(): void {
       let fileContent: string | null = null;
       const searchOrder: string[] = [];
 
-      const projectDir = getProjectDirForEvent(event as unknown as SenderEvent);
+      const projectDir = getProjectDirForEvent(event);
       const safeModule = safeModuleName(moduleName);
       if (projectDir && isExistingDirectory(projectDir) && safeModule) {
         const modulesDir = path.join(projectDir, "modules");

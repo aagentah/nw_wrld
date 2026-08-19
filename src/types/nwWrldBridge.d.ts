@@ -9,6 +9,7 @@ declare global {
             getKickMp3ArrayBuffer?: () => ArrayBuffer | null;
             getMethodCode?: (moduleName: unknown, methodName: unknown) => unknown;
             getVersion?: () => string | null;
+            openProjectorDevTools?: () => void;
             getRepositoryUrl?: () => string | null;
           };
           messaging?: {

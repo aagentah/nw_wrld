@@ -20,7 +20,7 @@ import {
   resolveWithinDir,
   safeModuleName,
 } from "../pathSafety";
-import { getProjectDirForEvent, type SenderEvent } from "./projectContext";
+import { getProjectDirForEvent } from "./projectContext";
 import { broadcastWorkspaceModulesChanged } from "../workspace";
 
 const MODULE_METADATA_MAX_BYTES = 16 * 1024;
@@ -104,7 +104,7 @@ const scanWorkspaceModuleSummaries = async (modulesDir: string) => {
 
 export function registerWorkspaceBridge(): void {
   ipcMain.handle("bridge:workspace:listModuleFiles", async (event) => {
-    const projectDir = getProjectDirForEvent(event as unknown as SenderEvent);
+    const projectDir = getProjectDirForEvent(event);
     if (!projectDir || !isExistingDirectory(projectDir)) return [];
     const modulesDir = path.join(projectDir, "modules");
     try {
@@ -116,7 +116,7 @@ export function registerWorkspaceBridge(): void {
   });
 
   ipcMain.handle("bridge:workspace:listModuleSummaries", async (event) => {
-    const projectDir = getProjectDirForEvent(event as unknown as SenderEvent);
+    const projectDir = getProjectDirForEvent(event);
     if (!projectDir || !isExistingDirectory(projectDir)) return [];
     const modulesDir = path.join(projectDir, "modules");
     const res = await scanWorkspaceModuleSummaries(modulesDir);
@@ -124,7 +124,7 @@ export function registerWorkspaceBridge(): void {
   });
 
   ipcMain.handle("bridge:workspace:listModuleSummariesWithSkipped", async (event) => {
-    const projectDir = getProjectDirForEvent(event as unknown as SenderEvent);
+    const projectDir = getProjectDirForEvent(event);
     if (!projectDir || !isExistingDirectory(projectDir)) {
       return normalizeWorkspaceModuleScanResult(null);
     }
@@ -133,7 +133,7 @@ export function registerWorkspaceBridge(): void {
   });
 
   ipcMain.handle("bridge:workspace:readModuleWithMeta", async (event, moduleName) => {
-    const projectDir = getProjectDirForEvent(event as unknown as SenderEvent);
+    const projectDir = getProjectDirForEvent(event);
     if (!projectDir || !isExistingDirectory(projectDir)) return null;
     const safe = safeModuleName(moduleName);
     if (!safe) return null;
@@ -152,7 +152,7 @@ export function registerWorkspaceBridge(): void {
   });
 
   ipcMain.handle("bridge:workspace:getModuleUrl", async (event, moduleName) => {
-    const projectDir = getProjectDirForEvent(event as unknown as SenderEvent);
+    const projectDir = getProjectDirForEvent(event);
     if (!projectDir || !isExistingDirectory(projectDir)) return null;
     const safe = safeModuleName(moduleName);
     if (!safe) return null;
@@ -169,7 +169,7 @@ export function registerWorkspaceBridge(): void {
   });
 
   ipcMain.handle("bridge:workspace:readModuleText", async (event, moduleName) => {
-    const projectDir = getProjectDirForEvent(event as unknown as SenderEvent);
+    const projectDir = getProjectDirForEvent(event);
     if (!projectDir || !isExistingDirectory(projectDir)) return null;
     const safe = safeModuleName(moduleName);
     if (!safe) return null;
@@ -184,7 +184,7 @@ export function registerWorkspaceBridge(): void {
   });
 
   ipcMain.on("bridge:workspace:writeModuleTextSync", (event, moduleName, text) => {
-    const projectDir = getProjectDirForEvent(event as unknown as SenderEvent);
+    const projectDir = getProjectDirForEvent(event);
     if (!projectDir || !isExistingDirectory(projectDir)) {
       event.returnValue = { ok: false, reason: "PROJECT_DIR_MISSING" };
       return;
@@ -215,7 +215,7 @@ export function registerWorkspaceBridge(): void {
   });
 
   ipcMain.on("bridge:workspace:moduleExists", (event, moduleName) => {
-    const projectDir = getProjectDirForEvent(event as unknown as SenderEvent);
+    const projectDir = getProjectDirForEvent(event);
     if (!projectDir || !isExistingDirectory(projectDir)) {
       event.returnValue = false;
       return;
@@ -239,7 +239,7 @@ export function registerWorkspaceBridge(): void {
   });
 
   ipcMain.on("bridge:workspace:showModuleInFolder", (event, moduleName) => {
-    const projectDir = getProjectDirForEvent(event as unknown as SenderEvent);
+    const projectDir = getProjectDirForEvent(event);
     if (!projectDir || !isExistingDirectory(projectDir)) return;
     const safe = safeModuleName(moduleName);
     if (!safe) return;
@@ -252,7 +252,7 @@ export function registerWorkspaceBridge(): void {
   });
 
   ipcMain.handle("bridge:workspace:rewriteStarterModule", async (event, moduleName) => {
-    const projectDir = getProjectDirForEvent(event as unknown as SenderEvent);
+    const projectDir = getProjectDirForEvent(event);
     if (!projectDir || !isExistingDirectory(projectDir)) {
       return { ok: false, reason: "PROJECT_DIR_MISSING" };
     }
@@ -272,7 +272,7 @@ export function registerWorkspaceBridge(): void {
   });
 
   ipcMain.on("bridge:workspace:assetUrl", (event, relPath) => {
-    const projectDir = getProjectDirForEvent(event as unknown as SenderEvent);
+    const projectDir = getProjectDirForEvent(event);
     if (!projectDir || !isExistingDirectory(projectDir)) {
       event.returnValue = null;
       return;
@@ -291,7 +291,7 @@ export function registerWorkspaceBridge(): void {
   });
 
   ipcMain.handle("bridge:workspace:listAssets", async (event, relDir) => {
-    const projectDir = getProjectDirForEvent(event as unknown as SenderEvent);
+    const projectDir = getProjectDirForEvent(event);
     if (!projectDir || !isExistingDirectory(projectDir)) {
       return { ok: false, files: [], dirs: [] };
     }
@@ -318,7 +318,7 @@ export function registerWorkspaceBridge(): void {
   });
 
   ipcMain.handle("bridge:workspace:readAssetText", async (event, relPath) => {
-    const projectDir = getProjectDirForEvent(event as unknown as SenderEvent);
+    const projectDir = getProjectDirForEvent(event);
     if (!projectDir || !isExistingDirectory(projectDir)) return null;
     const assetsDir = path.join(projectDir, "assets");
     const fullPath = resolveWithinDir(assetsDir, String(relPath || ""));
@@ -331,7 +331,7 @@ export function registerWorkspaceBridge(): void {
   });
 
   ipcMain.handle("bridge:workspace:readAssetArrayBuffer", async (event, relPath) => {
-    const projectDir = getProjectDirForEvent(event as unknown as SenderEvent);
+    const projectDir = getProjectDirForEvent(event);
     if (!projectDir || !isExistingDirectory(projectDir)) return null;
     const assetsDir = path.join(projectDir, "assets");
     const fullPath = resolveWithinDir(assetsDir, String(relPath || ""));
@@ -345,7 +345,7 @@ export function registerWorkspaceBridge(): void {
   });
 
   ipcMain.handle("bridge:workspace:writeAudioAsset", async (event, payload: unknown) => {
-    const projectDir = getProjectDirForEvent(event as unknown as SenderEvent);
+    const projectDir = getProjectDirForEvent(event);
     if (!projectDir || !isExistingDirectory(projectDir)) return { ok: false, reason: "PROJECT_DIR_MISSING" };
 
     const p = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : null;

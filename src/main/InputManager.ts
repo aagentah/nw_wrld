@@ -81,9 +81,9 @@ type CurrentSource =
 type WebMidiProvider = typeof WebMidi;
 
 const getWebMidiProvider = () => {
-  const g = globalThis as unknown as { __nwWrldWebMidiOverride?: unknown };
+  const g = globalThis as { __nwWrldWebMidiOverride?: unknown };
   if (g.__nwWrldWebMidiOverride) return g.__nwWrldWebMidiOverride as WebMidiProvider;
-  return WebMidi as unknown as WebMidiProvider;
+  return WebMidi;
 };
 
 const webMidiEnableInFlightByProvider: WeakMap<object, Promise<void>> = new WeakMap();
@@ -93,7 +93,7 @@ const enableWebMidi = (webMidi: WebMidiProvider): Promise<void> => {
     if (webMidi.enabled) return Promise.resolve();
   } catch {}
 
-  const key = webMidi as unknown as object;
+  const key = webMidi;
   const inFlight = webMidiEnableInFlightByProvider.get(key);
   if (inFlight) return inFlight;
 

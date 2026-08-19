@@ -3,15 +3,10 @@ import type { Dispatch, SetStateAction, MutableRefObject } from "react";
 import { getProjectDir } from "../../../shared/utils/projectDir";
 import { updateUserData } from "../utils";
 import { useIPCListener } from "./useIPC";
+import { isRecord, type JsonRecord } from "../../../shared/utils/duplicateUtils";
 
 type ModuleStatus = "uninspected" | "ready" | "failed";
 type StarterSyncStatus = "inSync" | "outOfSync";
-
-type JsonRecord = Record<string, unknown>;
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
 
 type ModuleEntry = {
   id: string;

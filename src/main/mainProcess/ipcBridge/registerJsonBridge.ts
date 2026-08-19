@@ -11,7 +11,7 @@ import {
   getJsonStatusForProject,
   maybeMigrateLegacyJsonFileForBridge,
 } from "../workspace";
-import { getProjectDirForEvent, type SenderEvent } from "./projectContext";
+import { getProjectDirForEvent } from "./projectContext";
 
 type Jsonish = string | number | boolean | null | undefined | object;
 
@@ -28,7 +28,7 @@ const stripIsDefaultDataFlag = (v: unknown): unknown => {
 
 export function registerJsonBridge(): void {
   ipcMain.handle("bridge:json:read", async (event, filename, defaultValue) => {
-    const projectDir = getProjectDirForEvent(event as unknown as SenderEvent);
+    const projectDir = getProjectDirForEvent(event);
     const safeName = safeJsonFilename(filename);
     if (!safeName) return defaultValue;
     if (projectDir && isExistingDirectory(projectDir)) {
@@ -51,8 +51,8 @@ export function registerJsonBridge(): void {
           const parsed = JSON.parse(rawPrimary) as unknown;
           return sanitizeJsonForBridge(
             safeName,
-            parsed as unknown as Jsonish,
-            defaultValue as unknown as Jsonish
+            parsed as Jsonish,
+            defaultValue as Jsonish
           );
         } catch {
           try {
@@ -68,28 +68,28 @@ export function registerJsonBridge(): void {
         const parsed = JSON.parse(raw) as unknown;
         return sanitizeJsonForBridge(
           safeName,
-          parsed as unknown as Jsonish,
-          defaultValue as unknown as Jsonish
+          parsed as Jsonish,
+          defaultValue as Jsonish
         );
       } catch {}
 
       const safeDefault = stripIsDefaultDataFlag(defaultValue);
       return sanitizeJsonForBridge(
         safeName,
-        safeDefault as unknown as Jsonish,
-        defaultValue as unknown as Jsonish
+        safeDefault as Jsonish,
+        defaultValue as Jsonish
       );
     }
     const value = await readJsonWithBackup(filePath, defaultValue);
     return sanitizeJsonForBridge(
       safeName,
-      value as unknown as Jsonish,
-      defaultValue as unknown as Jsonish
+      value as Jsonish,
+      defaultValue as Jsonish
     );
   });
 
   ipcMain.on("bridge:json:readSync", (event, filename, defaultValue) => {
-    const projectDir = getProjectDirForEvent(event as unknown as SenderEvent);
+    const projectDir = getProjectDirForEvent(event);
     const safeName = safeJsonFilename(filename);
     if (!safeName) {
       event.returnValue = defaultValue;
@@ -115,8 +115,8 @@ export function registerJsonBridge(): void {
           const parsed = JSON.parse(rawPrimary) as unknown;
           event.returnValue = sanitizeJsonForBridge(
             safeName,
-            parsed as unknown as Jsonish,
-            defaultValue as unknown as Jsonish
+            parsed as Jsonish,
+            defaultValue as Jsonish
           );
           return;
         } catch {
@@ -133,8 +133,8 @@ export function registerJsonBridge(): void {
         const parsed = JSON.parse(raw) as unknown;
         event.returnValue = sanitizeJsonForBridge(
           safeName,
-          parsed as unknown as Jsonish,
-          defaultValue as unknown as Jsonish
+          parsed as Jsonish,
+          defaultValue as Jsonish
         );
         return;
       } catch {}
@@ -142,21 +142,21 @@ export function registerJsonBridge(): void {
       const safeDefault = stripIsDefaultDataFlag(defaultValue);
       event.returnValue = sanitizeJsonForBridge(
         safeName,
-        safeDefault as unknown as Jsonish,
-        defaultValue as unknown as Jsonish
+        safeDefault as Jsonish,
+        defaultValue as Jsonish
       );
       return;
     }
     const value = readJsonWithBackupSync(filePath, defaultValue);
     event.returnValue = sanitizeJsonForBridge(
       safeName,
-      value as unknown as Jsonish,
-      defaultValue as unknown as Jsonish
+      value as Jsonish,
+      defaultValue as Jsonish
     );
   });
 
   ipcMain.handle("bridge:json:write", async (event, filename, data) => {
-    const projectDir = getProjectDirForEvent(event as unknown as SenderEvent);
+    const projectDir = getProjectDirForEvent(event);
     const safeName = safeJsonFilename(filename);
     if (!safeName) return { ok: false, reason: "INVALID_FILENAME" };
     const status = getJsonStatusForProject(projectDir);
@@ -176,7 +176,7 @@ export function registerJsonBridge(): void {
   });
 
   ipcMain.on("bridge:json:writeSync", (event, filename, data) => {
-    const projectDir = getProjectDirForEvent(event as unknown as SenderEvent);
+    const projectDir = getProjectDirForEvent(event);
     const safeName = safeJsonFilename(filename);
     if (!safeName) {
       event.returnValue = { ok: false, reason: "INVALID_FILENAME" };

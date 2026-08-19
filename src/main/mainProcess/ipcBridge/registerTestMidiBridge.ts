@@ -8,7 +8,7 @@ export function registerTestMidiBridge(): void {
   if (isTest && isMockMidi) {
     const defaultDevices = [{ id: "e2e-midi-1", name: "E2E MIDI Device", manufacturer: "nw_wrld" }];
     const mock = getOrCreateGlobalMockWebMidi(defaultDevices);
-    (globalThis as unknown as { __nwWrldWebMidiOverride?: unknown }).__nwWrldWebMidiOverride = mock;
+    (globalThis as { __nwWrldWebMidiOverride?: unknown }).__nwWrldWebMidiOverride = mock;
 
     ipcMain.handle("test:midi:reset", async (_event, devices: unknown) => {
       const list = Array.isArray(devices)

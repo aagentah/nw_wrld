@@ -6,7 +6,7 @@ function getJsonBridge(): {
   write?: (filename: string, data: unknown) => Promise<unknown>;
   writeSync?: (filename: string, data: unknown) => unknown;
 } | null {
-  const bridge = (globalThis as unknown as { nwWrldAppBridge?: unknown }).nwWrldAppBridge;
+  const bridge = (globalThis as { nwWrldAppBridge?: unknown }).nwWrldAppBridge;
   if (!bridge || typeof bridge !== "object") return null;
 
   const json = (bridge as { json?: unknown }).json;

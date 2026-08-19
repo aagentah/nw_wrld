@@ -86,7 +86,7 @@ export const useDashboardAudioCapture = ({
   }, [minIntervalMs]);
 
   const isMockMode = useMemo(() => {
-    const testing = (globalThis as unknown as { nwWrldBridge?: unknown }).nwWrldBridge;
+    const testing = (globalThis as { nwWrldBridge?: unknown }).nwWrldBridge;
     const t =
       testing && typeof testing === "object" ? (testing as Record<string, unknown>).testing : null;
     const audio = t && typeof t === "object" ? (t as Record<string, unknown>).audio : null;
@@ -172,9 +172,9 @@ export const useDashboardAudioCapture = ({
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
         streamRef.current = stream;
         const Ctx =
-          (globalThis as unknown as { AudioContext?: unknown; webkitAudioContext?: unknown })
+          (globalThis as { AudioContext?: unknown; webkitAudioContext?: unknown })
             .AudioContext ||
-          (globalThis as unknown as { webkitAudioContext?: unknown }).webkitAudioContext;
+          (globalThis as { webkitAudioContext?: unknown }).webkitAudioContext;
         if (!Ctx || typeof Ctx !== "function") {
           setState({
             status: "error",

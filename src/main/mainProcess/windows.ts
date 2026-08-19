@@ -207,7 +207,7 @@ export function loadConfig(projectDir: string | null): unknown {
         return sanitizeJsonForBridge(
           "userData.json",
           backupParsed as Jsonish,
-          DEFAULT_USER_DATA as unknown as Jsonish
+          DEFAULT_USER_DATA as Jsonish
         );
       } catch {}
       console.error("[Main] Using default configuration");
@@ -218,7 +218,7 @@ export function loadConfig(projectDir: string | null): unknown {
       return sanitizeJsonForBridge(
         "userData.json",
         parsed as Jsonish,
-        DEFAULT_USER_DATA as unknown as Jsonish
+        DEFAULT_USER_DATA as Jsonish
       );
     } catch (sanitizeErr) {
       const message = sanitizeErr instanceof Error ? sanitizeErr.message : String(sanitizeErr);

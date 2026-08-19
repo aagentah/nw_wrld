@@ -32,7 +32,7 @@ const listAssetsCached = (() => {
     }
     if (existing && typeof existing === "object") return existing as Listing;
 
-    const bridge = (globalThis as unknown as { nwWrldBridge?: unknown }).nwWrldBridge;
+    const bridge = (globalThis as { nwWrldBridge?: unknown }).nwWrldBridge;
     const workspace = isPlainObject(bridge) ? (bridge as Record<string, unknown>)["workspace"] : null;
     const listAssetsValue = isPlainObject(workspace)
       ? (workspace as Record<string, unknown>)["listAssets"]

@@ -609,11 +609,7 @@ export const NoteSelector = memo(
                       e.preventDefault();
                       e.stopPropagation();
                       try {
-                        (
-                          globalThis as unknown as {
-                            nwWrldBridge?: { app?: { openProjectorDevTools?: () => void } };
-                          }
-                        )?.nwWrldBridge?.app?.openProjectorDevTools?.();
+                        globalThis.nwWrldBridge?.app?.openProjectorDevTools?.();
                       } catch {}
                     }}
                   >

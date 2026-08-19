@@ -16,6 +16,7 @@ import { HelpIcon } from "../components/HelpIcon";
 import { SignalThresholdMeter } from "../components/SignalThresholdMeter";
 import { HELP_TEXT } from "../../shared/helpText";
 import type { FileAudioState } from "../core/hooks/useDashboardFileAudio";
+import type { AudioDevice } from "../core/hooks/useDashboardAudioDevices";
 
 const isValidHexColor = (value: string): boolean => /^#([0-9A-F]{3}){1,2}$/i.test(value);
 
@@ -307,11 +308,6 @@ const ProjectorSettings = ({
 type MidiDevice = {
   id: string;
   name: string;
-};
-
-type AudioDevice = {
-  id: string;
-  label: string;
 };
 
 type InputConfig = {

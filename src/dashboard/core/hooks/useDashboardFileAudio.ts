@@ -52,7 +52,7 @@ function bandForHz(hz: number): Band | null {
 const dbToLin = (db: number) => (Number.isFinite(db) ? Math.pow(10, db / 20) : 0);
 
 const getBridgeWorkspace = () => {
-  const b = (globalThis as unknown as { nwWrldBridge?: unknown }).nwWrldBridge;
+  const b = (globalThis as { nwWrldBridge?: unknown }).nwWrldBridge;
   const obj = b && typeof b === "object" ? (b as Record<string, unknown>) : null;
   const w =
     obj && typeof obj.workspace === "object" ? (obj.workspace as Record<string, unknown>) : null;
@@ -194,9 +194,9 @@ export const useDashboardFileAudio = ({
     debugRef.current = readDebugFlag("nwWrld.debug.fileAudio");
 
     const Ctx =
-      (globalThis as unknown as { AudioContext?: unknown; webkitAudioContext?: unknown })
+      (globalThis as { AudioContext?: unknown; webkitAudioContext?: unknown })
         .AudioContext ||
-      (globalThis as unknown as { webkitAudioContext?: unknown }).webkitAudioContext;
+      (globalThis as { webkitAudioContext?: unknown }).webkitAudioContext;
     if (!Ctx || typeof Ctx !== "function") {
       setState({
         status: "error",
@@ -501,9 +501,9 @@ export const useDashboardFileAudio = ({
           return;
         }
         const Ctx =
-          (globalThis as unknown as { AudioContext?: unknown; webkitAudioContext?: unknown })
+          (globalThis as { AudioContext?: unknown; webkitAudioContext?: unknown })
             .AudioContext ||
-          (globalThis as unknown as { webkitAudioContext?: unknown }).webkitAudioContext;
+          (globalThis as { webkitAudioContext?: unknown }).webkitAudioContext;
         if (!Ctx || typeof Ctx !== "function") {
           setState({
             status: "error",

@@ -14,13 +14,7 @@ import { ModuleEditorModal } from "./ModuleEditorModal";
 import { NewModuleDialog } from "./NewModuleDialog";
 import type { AudioCaptureState } from "../core/hooks/useDashboardAudioCapture";
 import type { FileAudioState } from "../core/hooks/useDashboardFileAudio";
-
-type Confirmation = {
-  title?: string;
-  message: string;
-  onConfirm?: () => void;
-  type?: "confirm" | "alert";
-} | null;
+import type { Confirmation } from "../core/hooks/useDashboardUiState";
 
 type UserData = Parameters<typeof SelectSetModal>[0]["userData"];
 type ProjectorSettings = Parameters<typeof SettingsModal>[0]["settings"];

@@ -1,6 +1,6 @@
-type JsonRecord = Record<string, unknown>;
+export type JsonRecord = Record<string, unknown>;
 
-const isRecord = (value: unknown): value is JsonRecord =>
+export const isRecord = (value: unknown): value is JsonRecord =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
 
 const deepCopy = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
