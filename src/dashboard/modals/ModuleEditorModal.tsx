@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { FaTimes } from "react-icons/fa";
-import { Button } from "./Button";
+import { Button } from "../components/Button";
 import { getBridge } from "../core/utils";
 
 

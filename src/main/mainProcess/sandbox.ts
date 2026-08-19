@@ -335,6 +335,9 @@ const destroySandboxForProjector = (ownerWebContentsId: number | null): void => 
   } catch {}
 };
 
+// Envelope keys differ by protocol on purpose: lifecycle channels (registerToken/ensure/
+// destroy) use `reason`; the sandbox message protocol (sandbox:request) uses `error`,
+// which TrackSandboxHost.isStaleTokenResult matches on. Unifying them breaks stale-token recovery.
 export function registerSandboxIpc(): void {
   ipcMain.on("bridge:sandbox:registerToken", (event, token) => {
     const projectDir = getProjectDirForEvent(event);

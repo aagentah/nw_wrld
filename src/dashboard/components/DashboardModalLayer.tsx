@@ -10,7 +10,7 @@ import { DebugOverlayModal } from "../modals/DebugOverlayModal";
 import { MethodConfiguratorModal } from "../modals/MethodConfiguratorModal";
 import { EditChannelModal } from "../modals/EditChannelModal";
 import { ConfirmationModal } from "../modals/ConfirmationModal";
-import { ModuleEditorModal } from "./ModuleEditorModal";
+import { ModuleEditorModal } from "../modals/ModuleEditorModal";
 import { NewModuleDialog } from "./NewModuleDialog";
 import type { AudioCaptureState } from "../core/hooks/useDashboardAudioCapture";
 import type { FileAudioState } from "../core/hooks/useDashboardFileAudio";

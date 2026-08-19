@@ -1,7 +1,9 @@
 import { getBridge } from "../bridge";
 
 type EnsureSandboxOk = { ok: true; token: string };
-type EnsureSandboxErr = { ok: false; reason: string };
+// ensureSandbox only RETURNS ok:false for DISPOSED; every other failure throws.
+// Widening this union invites callers to if-check failures that never return.
+type EnsureSandboxErr = { ok: false; reason: "DISPOSED" };
 
 const STALE_TOKEN_ERRORS = new Set(["TOKEN_NOT_OWNED", "INVALID_TOKEN", "SANDBOX_UNAVAILABLE"]);
 

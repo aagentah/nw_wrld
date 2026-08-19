@@ -168,10 +168,8 @@ export function registerJsonBridge(): void {
       await atomicWriteFile(filePath, JSON.stringify(data, null, 2));
       return { ok: true };
     } catch (e) {
-      return {
-        ok: false,
-        reason: e instanceof Error ? e.message : "WRITE_FAILED",
-      };
+      console.error("[Main] JSON write failed:", e);
+      return { ok: false, reason: "WRITE_FAILED" };
     }
   });
 
@@ -196,10 +194,8 @@ export function registerJsonBridge(): void {
       atomicWriteFileSync(filePath, JSON.stringify(data, null, 2));
       event.returnValue = { ok: true };
     } catch (e) {
-      event.returnValue = {
-        ok: false,
-        reason: e instanceof Error ? e.message : "WRITE_FAILED",
-      };
+      console.error("[Main] JSON write failed:", e);
+      event.returnValue = { ok: false, reason: "WRITE_FAILED" };
     }
   });
 }

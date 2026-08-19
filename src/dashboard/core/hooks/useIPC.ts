@@ -52,6 +52,7 @@ export const useIPCInvoke = () => {
         ? await messaging.selectWorkspace()
         : null;
     }
+    console.warn(`[useIPCInvoke] Unknown channel: ${channel}`);
     return null;
   }, []);
 };
@@ -78,6 +79,7 @@ export const useIPCListener = (
     } else if (channel === "workspace:lostSync") {
       cleanup = messaging.onWorkspaceLostSync?.(handler);
     } else {
+      console.warn(`[useIPCListener] Unknown channel: ${channel}`);
       return;
     }
     return () => {

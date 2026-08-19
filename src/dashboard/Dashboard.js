@@ -18,7 +18,7 @@ import { DashboardHeader } from "./components/DashboardHeader";
 import { DashboardFooter } from "./components/DashboardFooter";
 import { DashboardBody } from "./components/DashboardBody";
 import { DashboardModalLayer } from "./components/DashboardModalLayer";
-import { WorkspaceGateModal } from "./components/WorkspaceGateModal";
+import { WorkspaceGateModal } from "./modals/WorkspaceGateModal";
 import { useWorkspaceModules } from "./core/hooks/useWorkspaceModules";
 import { useInputEvents } from "./core/hooks/useInputEvents";
 import { useModuleIntrospection } from "./core/hooks/useModuleIntrospection";
