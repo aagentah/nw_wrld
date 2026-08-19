@@ -117,14 +117,16 @@ test("jsonFileBase: loadJsonFileSync returns default and errors when bridge.read
 test("jsonFileBase: saveJsonFile logs and returns when bridge missing", async () => {
   const prevBridge = globalThis.nwWrldAppBridge;
   const prevErr = console.error;
-  let calls = 0;
+  const errorCalls = [];
   try {
     delete globalThis.nwWrldAppBridge;
-    console.error = () => {
-      calls += 1;
+    console.error = (...args) => {
+      errorCalls.push(args);
     };
     await saveJsonFile("x.json", { a: 1 });
-    assert.equal(calls, 1);
+    assert.equal(errorCalls.length, 1);
+    assert.equal(typeof errorCalls[0][0], "string");
+    assert.ok(errorCalls[0][0].includes("x.json"));
   } finally {
     console.error = prevErr;
     globalThis.nwWrldAppBridge = prevBridge;
@@ -134,14 +136,16 @@ test("jsonFileBase: saveJsonFile logs and returns when bridge missing", async ()
 test("jsonFileBase: saveJsonFileSync logs and returns when bridge missing", () => {
   const prevBridge = globalThis.nwWrldAppBridge;
   const prevErr = console.error;
-  let calls = 0;
+  const errorCalls = [];
   try {
     delete globalThis.nwWrldAppBridge;
-    console.error = () => {
-      calls += 1;
+    console.error = (...args) => {
+      errorCalls.push(args);
     };
     saveJsonFileSync("x.json", { a: 1 });
-    assert.equal(calls, 1);
+    assert.equal(errorCalls.length, 1);
+    assert.equal(typeof errorCalls[0][0], "string");
+    assert.ok(errorCalls[0][0].includes("x.json"));
   } finally {
     console.error = prevErr;
     globalThis.nwWrldAppBridge = prevBridge;
@@ -151,7 +155,7 @@ test("jsonFileBase: saveJsonFileSync logs and returns when bridge missing", () =
 test("jsonFileBase: saveJsonFile logs when bridge.write throws", async () => {
   const prevBridge = globalThis.nwWrldAppBridge;
   const prevErr = console.error;
-  let calls = 0;
+  const errorCalls = [];
   try {
     globalThis.nwWrldAppBridge = {
       json: {
@@ -160,11 +164,13 @@ test("jsonFileBase: saveJsonFile logs when bridge.write throws", async () => {
         },
       },
     };
-    console.error = () => {
-      calls += 1;
+    console.error = (...args) => {
+      errorCalls.push(args);
     };
     await saveJsonFile("x.json", { a: 1 });
-    assert.equal(calls, 1);
+    assert.equal(errorCalls.length, 1);
+    assert.equal(typeof errorCalls[0][0], "string");
+    assert.ok(errorCalls[0][0].includes("x.json"));
   } finally {
     console.error = prevErr;
     globalThis.nwWrldAppBridge = prevBridge;
@@ -174,7 +180,7 @@ test("jsonFileBase: saveJsonFile logs when bridge.write throws", async () => {
 test("jsonFileBase: saveJsonFileSync logs when bridge.writeSync throws", () => {
   const prevBridge = globalThis.nwWrldAppBridge;
   const prevErr = console.error;
-  let calls = 0;
+  const errorCalls = [];
   try {
     globalThis.nwWrldAppBridge = {
       json: {
@@ -183,11 +189,13 @@ test("jsonFileBase: saveJsonFileSync logs when bridge.writeSync throws", () => {
         },
       },
     };
-    console.error = () => {
-      calls += 1;
+    console.error = (...args) => {
+      errorCalls.push(args);
     };
     saveJsonFileSync("x.json", { a: 1 });
-    assert.equal(calls, 1);
+    assert.equal(errorCalls.length, 1);
+    assert.equal(typeof errorCalls[0][0], "string");
+    assert.ok(errorCalls[0][0].includes("x.json"));
   } finally {
     console.error = prevErr;
     globalThis.nwWrldAppBridge = prevBridge;
@@ -197,18 +205,20 @@ test("jsonFileBase: saveJsonFileSync logs when bridge.writeSync throws", () => {
 test("jsonFileBase: saveJsonFile logs and returns when bridge.write returns ok:false", async () => {
   const prevBridge = globalThis.nwWrldAppBridge;
   const prevErr = console.error;
-  let calls = 0;
+  const errorCalls = [];
   try {
     globalThis.nwWrldAppBridge = {
       json: {
         write: async () => ({ ok: false, reason: "NO_DIR" }),
       },
     };
-    console.error = () => {
-      calls += 1;
+    console.error = (...args) => {
+      errorCalls.push(args);
     };
     await saveJsonFile("x.json", { a: 1 });
-    assert.equal(calls, 1);
+    assert.equal(errorCalls.length, 1);
+    assert.equal(typeof errorCalls[0][0], "string");
+    assert.ok(errorCalls[0][0].includes("x.json"));
   } finally {
     console.error = prevErr;
     globalThis.nwWrldAppBridge = prevBridge;
@@ -218,18 +228,20 @@ test("jsonFileBase: saveJsonFile logs and returns when bridge.write returns ok:f
 test("jsonFileBase: saveJsonFileSync logs and returns when bridge.writeSync returns ok:false", () => {
   const prevBridge = globalThis.nwWrldAppBridge;
   const prevErr = console.error;
-  let calls = 0;
+  const errorCalls = [];
   try {
     globalThis.nwWrldAppBridge = {
       json: {
         writeSync: () => ({ ok: false, reason: "NO_DIR" }),
       },
     };
-    console.error = () => {
-      calls += 1;
+    console.error = (...args) => {
+      errorCalls.push(args);
     };
     saveJsonFileSync("x.json", { a: 1 });
-    assert.equal(calls, 1);
+    assert.equal(errorCalls.length, 1);
+    assert.equal(typeof errorCalls[0][0], "string");
+    assert.ok(errorCalls[0][0].includes("x.json"));
   } finally {
     console.error = prevErr;
     globalThis.nwWrldAppBridge = prevBridge;

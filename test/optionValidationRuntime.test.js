@@ -58,17 +58,15 @@ test("validateMethodOptions does not throw on malformed options array entries", 
     name: "m",
     options: [{ name: "opacity", type: "number", defaultVal: 1, min: 0, max: 1 }],
   };
-  assert.doesNotThrow(() => {
-    const out = validateMethodOptions(methodDefinition, [
-      null,
-      123,
-      "x",
-      { name: "opacity", value: 2 },
-    ]);
-    assert.equal(Array.isArray(out), true);
-    assert.equal(out.length, 4);
-    assert.equal(out[3].value, 1);
-  });
+  const out = validateMethodOptions(methodDefinition, [
+    null,
+    123,
+    "x",
+    { name: "opacity", value: 2 },
+  ]);
+  assert.equal(Array.isArray(out), true);
+  assert.equal(out.length, 4);
+  assert.equal(out[3].value, 1);
 });
 
 test("validateMethodOptions returns [] for non-array inputs", () => {

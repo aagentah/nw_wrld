@@ -15,30 +15,38 @@ function writeJson(filePath, value) {
 
 test("findOffenders reports a .js duplicate next to a runtime TS include", () => {
   const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), "nw_wrld-dupes-"));
-  const tsconfigPath = path.join(repoRoot, "tsconfig.runtime.json");
-  writeJson(tsconfigPath, { include: ["src/foo.ts"] });
+  try {
+    const tsconfigPath = path.join(repoRoot, "tsconfig.runtime.json");
+    writeJson(tsconfigPath, { include: ["src/foo.ts"] });
 
-  const tsPath = path.join(repoRoot, "src", "foo.ts");
-  const jsPath = path.join(repoRoot, "src", "foo.js");
-  fs.mkdirSync(path.dirname(tsPath), { recursive: true });
-  fs.writeFileSync(tsPath, "export const x = 1;\n");
-  fs.writeFileSync(jsPath, "module.exports = { x: 1 };\n");
+    const tsPath = path.join(repoRoot, "src", "foo.ts");
+    const jsPath = path.join(repoRoot, "src", "foo.js");
+    fs.mkdirSync(path.dirname(tsPath), { recursive: true });
+    fs.writeFileSync(tsPath, "export const x = 1;\n");
+    fs.writeFileSync(jsPath, "module.exports = { x: 1 };\n");
 
-  const offenders = findOffenders(repoRoot, tsconfigPath);
-  assert.equal(offenders.length, 1);
-  assert.equal(offenders[0].runtime, path.join("src", "foo.ts"));
-  assert.deepEqual(offenders[0].duplicates, [path.join("src", "foo.js")]);
+    const offenders = findOffenders(repoRoot, tsconfigPath);
+    assert.equal(offenders.length, 1);
+    assert.equal(offenders[0].runtime, path.join("src", "foo.ts"));
+    assert.deepEqual(offenders[0].duplicates, [path.join("src", "foo.js")]);
+  } finally {
+    fs.rmSync(repoRoot, { recursive: true, force: true });
+  }
 });
 
 test("findOffenders returns empty when no duplicates exist", () => {
   const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), "nw_wrld-dupes-"));
-  const tsconfigPath = path.join(repoRoot, "tsconfig.runtime.json");
-  writeJson(tsconfigPath, { include: ["src/foo.ts"] });
+  try {
+    const tsconfigPath = path.join(repoRoot, "tsconfig.runtime.json");
+    writeJson(tsconfigPath, { include: ["src/foo.ts"] });
 
-  const tsPath = path.join(repoRoot, "src", "foo.ts");
-  fs.mkdirSync(path.dirname(tsPath), { recursive: true });
-  fs.writeFileSync(tsPath, "export const x = 1;\n");
+    const tsPath = path.join(repoRoot, "src", "foo.ts");
+    fs.mkdirSync(path.dirname(tsPath), { recursive: true });
+    fs.writeFileSync(tsPath, "export const x = 1;\n");
 
-  const offenders = findOffenders(repoRoot, tsconfigPath);
-  assert.deepEqual(offenders, []);
+    const offenders = findOffenders(repoRoot, tsconfigPath);
+    assert.deepEqual(offenders, []);
+  } finally {
+    fs.rmSync(repoRoot, { recursive: true, force: true });
+  }
 });

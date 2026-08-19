@@ -175,7 +175,27 @@ const createWindowsHarness = () => {
   const browserWindows = [];
   const attachCalls = [];
   const shellOpenExternalCalls = [];
+  const pendingTimers = [];
   let nextWebContentsId = 1;
+  let nextTimerId = 1;
+
+  const fakeSetTimeout = (fn, delay, ...args) => {
+    const id = nextTimerId++;
+    pendingTimers.push({ id, fn, delay: Number(delay) || 0, args });
+    return id;
+  };
+  const fakeClearTimeout = (id) => {
+    const index = pendingTimers.findIndex((timer) => timer.id === id);
+    if (index !== -1) pendingTimers.splice(index, 1);
+  };
+  const advanceTimers = (ms) => {
+    for (;;) {
+      const dueIndex = pendingTimers.findIndex((timer) => timer.delay <= ms);
+      if (dueIndex === -1) return;
+      const [due] = pendingTimers.splice(dueIndex, 1);
+      due.fn(...due.args);
+    }
+  };
 
   class MockBrowserWindow {
     constructor(options) {
@@ -318,9 +338,20 @@ const createWindowsHarness = () => {
       destroySandboxView: () => {},
       updateSandboxViewBounds: () => {},
     },
+  }, {
+    setTimeout: fakeSetTimeout,
+    clearTimeout: fakeClearTimeout,
   });
 
-  return { ...moduleExports, browserWindows, state, attachCalls, shellOpenExternalCalls };
+  return {
+    ...moduleExports,
+    browserWindows,
+    state,
+    attachCalls,
+    shellOpenExternalCalls,
+    pendingTimers,
+    advanceTimers,
+  };
 };
 
 test("handleTrackSelection drains pending track after empty-track early exit", async () => {
@@ -431,8 +462,9 @@ test("preview chaining preserves the original restore track", async () => {
   assert.equal(ctx.activeTrack?.name, "Live Track");
 });
 
-test("projector recovery timer does not recreate a window after shutdown starts", async () => {
-  const { createWindow, browserWindows, state, attachCalls } = createWindowsHarness();
+test("projector recovery timer does not recreate a window after shutdown starts", () => {
+  const { createWindow, browserWindows, state, attachCalls, pendingTimers, advanceTimers } =
+    createWindowsHarness();
 
   createWindow("/tmp/workspace");
 
@@ -445,12 +477,24 @@ test("projector recovery timer does not recreate a window after shutdown starts"
   projector.close();
   state.didRunShutdownCleanup = true;
 
-  await new Promise((resolve) => setTimeout(resolve, 250));
+  assert.equal(
+    pendingTimers.length,
+    1,
+    "closing the projector should have scheduled exactly one recovery timer"
+  );
+  assert.equal(
+    browserWindows.filter((win) => win.title === "Projector 1").length,
+    1,
+    "no window may be created before the recovery timer fires"
+  );
+
+  advanceTimers(1000);
 
   const projectorWindowsAfterClose = browserWindows.filter((win) => win.title === "Projector 1");
   assert.equal(projectorWindowsAfterClose.length, 1);
   assert.equal(state.projector1Window, null);
   assert.deepEqual(attachCalls, [null]);
+  assert.equal(pendingTimers.length, 0);
 });
 
 test("createWindow denies new windows and blocks external navigation on both windows", () => {
