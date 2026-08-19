@@ -15,7 +15,7 @@
     "src/types/vendor.d.ts",
     "src/shared/nwWrldDocblock.ts",
     "src/shared/config/defaultConfig.ts",
-    "src/shared/constants/inputStatus.cts",
+    "src/shared/constants/inputStatus.ts",
     "src/shared/json/atomicWrite.ts",
     "src/shared/validation/inputConfigValidation.ts",
     "src/shared/validation/inputEventValidation.ts",

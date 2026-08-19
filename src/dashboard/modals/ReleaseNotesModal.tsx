@@ -3,10 +3,10 @@ import { Modal } from "../shared/Modal";
 import { ModalHeader } from "../components/ModalHeader";
 import { ModalFooter } from "../components/ModalFooter";
 import { Button } from "../components/Button";
+import { getBridge } from "../core/utils";
 
 const REQUEST_TIMEOUT_MS = 6000;
 
-const getBridge = () => globalThis.nwWrldBridge;
 
 type RepoInfo = { owner: string; repo: string };
 

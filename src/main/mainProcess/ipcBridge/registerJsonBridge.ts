@@ -15,11 +15,11 @@ import { getProjectDirForEvent } from "./projectContext";
 
 type Jsonish = string | number | boolean | null | undefined | object;
 
-const isPlainObject = (v: unknown): v is Record<string, unknown> =>
+const isRecordLike = (v: unknown): v is Record<string, unknown> =>
   Boolean(v) && typeof v === "object" && !Array.isArray(v);
 
 const stripIsDefaultDataFlag = (v: unknown): unknown => {
-  if (!isPlainObject(v)) return v;
+  if (!isRecordLike(v)) return v;
   if (!("_isDefaultData" in v)) return v;
   const out = { ...v };
   delete (out as { _isDefaultData?: unknown })._isDefaultData;

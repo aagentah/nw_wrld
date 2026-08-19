@@ -1,5 +1,5 @@
 import { useCallback, type MutableRefObject } from "react";
-import { updateUserData, type SetUserData } from "../utils";
+import { normalizeHexColor, updateUserData, type SetUserData } from "../utils";
 
 type UseDashboardUpdateConfigArgs = {
   setUserData: SetUserData;
@@ -62,18 +62,8 @@ export const useDashboardUpdateConfig = ({
         const out: string[] = [];
         const seen = new Set<string>();
         for (const v of raw) {
-          const s = String(v || "").trim();
-          if (!s) continue;
-          const withHash = s.startsWith("#") ? s : `#${s}`;
-          if (!/^#([0-9A-F]{3}){1,2}$/i.test(withHash)) continue;
-          let hex = withHash.toLowerCase();
-          if (hex.length === 4) {
-            const r = hex[1];
-            const g = hex[2];
-            const b = hex[3];
-            hex = `#${r}${r}${g}${g}${b}${b}`;
-          }
-          if (seen.has(hex)) continue;
+          const hex = normalizeHexColor(v);
+          if (!hex || seen.has(hex)) continue;
           seen.add(hex);
           out.push(hex);
         }

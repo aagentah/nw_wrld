@@ -1,19 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { readDebugFlag, readLocalStorageNumber } from "../utils/readDebugFlag";
+import { readDebugFlag, readLocalStorageNumber } from "../readDebugFlag";
 import {
   AUDIO_ANALYSER_CONFIG,
-  AUDIO_BAND_CUTOFF_HZ,
   AUDIO_DEFAULTS,
   AUDIO_NORMALIZATION_CONFIG,
   AUDIO_TRIGGER_CONFIG,
+  DEFAULT_GAINS,
+  clamp01,
+  bandForHz,
+  dbToLin,
+  type Band,
+  type Levels,
+  type PeaksDb,
 } from "../audio/audioTuning";
-
-type Band = "low" | "medium" | "high";
-
-type Levels = Record<Band, number>;
-type PeaksDb = Record<Band, number>;
-
-const DEFAULT_GAINS: Record<Band, number> = { low: 6.0, medium: 14.0, high: 18.0 };
 
 export type AudioCaptureState =
   | { status: "idle"; levels: Levels; peaksDb: PeaksDb }
@@ -21,17 +20,6 @@ export type AudioCaptureState =
   | { status: "running"; levels: Levels; peaksDb: PeaksDb }
   | { status: "error"; message: string; levels: Levels; peaksDb: PeaksDb }
   | { status: "mock"; levels: Levels; peaksDb: PeaksDb };
-
-const clamp01 = (n: number) => (n < 0 ? 0 : n > 1 ? 1 : n);
-
-function bandForHz(hz: number): Band | null {
-  if (!Number.isFinite(hz) || hz <= 0) return null;
-  if (hz < AUDIO_BAND_CUTOFF_HZ.lowMaxHz) return "low";
-  if (hz < AUDIO_BAND_CUTOFF_HZ.mediumMaxHz) return "medium";
-  return "high";
-}
-
-const dbToLin = (db: number) => (Number.isFinite(db) ? Math.pow(10, db / 20) : 0);
 
 export const useDashboardAudioCapture = ({
   enabled,

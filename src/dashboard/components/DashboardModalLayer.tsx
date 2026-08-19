@@ -15,11 +15,11 @@ import { NewModuleDialog } from "./NewModuleDialog";
 import type { AudioCaptureState } from "../core/hooks/useDashboardAudioCapture";
 import type { FileAudioState } from "../core/hooks/useDashboardFileAudio";
 import type { Confirmation } from "../core/hooks/useDashboardUiState";
+import type { Band } from "../core/audio/audioTuning";
 
 type UserData = Parameters<typeof SelectSetModal>[0]["userData"];
 type ProjectorSettings = Parameters<typeof SettingsModal>[0]["settings"];
 type PredefinedModules = Parameters<typeof AddModuleModal>[0]["predefinedModules"];
-type Band = "low" | "medium" | "high";
 
 type DashboardModalLayerProps = {
   isCreateTrackOpen: boolean;

@@ -7,7 +7,7 @@ import { ModalHeader } from "../components/ModalHeader";
 import { ModalFooter } from "../components/ModalFooter";
 import { Button } from "../components/Button";
 import { RadioButton } from "../components/FormInputs";
-import { updateActiveSet } from "../core/utils";
+import { randomIdSuffix, updateActiveSet } from "../core/utils";
 import { getActiveSetTracks } from "../../shared/utils/setUtils";
 import { EditTrackModal } from "./EditTrackModal";
 import { ConfirmationModal } from "./ConfirmationModal";
@@ -24,6 +24,7 @@ import {
 } from "../../shared/midi/midiUtils";
 import type { AudioCaptureState } from "../core/hooks/useDashboardAudioCapture";
 import type { FileAudioState } from "../core/hooks/useDashboardFileAudio";
+import { getMaxTrackSlots } from "../core/hooks/useTrackSlots";
 
 type Track = {
   id: string | number;
@@ -183,7 +184,7 @@ export const SelectTrackModal = ({
     const track = tracks[trackIndex];
     if (!track) return;
 
-    const maxSlots = String(inputType) === "midi" ? 12 : 10;
+    const maxSlots = getMaxTrackSlots(String(inputType));
     const usedSlots = new Set(
       (tracks as Array<{ trackSlot?: unknown }>).map((t) => t.trackSlot).filter(Boolean)
     );
@@ -195,8 +196,7 @@ export const SelectTrackModal = ({
       return;
     }
 
-    const randomSuffix = () => Math.random().toString(36).slice(2, 11);
-    const newTrackId = `track_${Date.now()}_${randomSuffix()}`;
+    const newTrackId = `track_${Date.now()}_${randomIdSuffix()}`;
     const newTrack = duplicateTrack(track as unknown as Record<string, unknown>, {
       newId: newTrackId,
       name: duplicateName(
@@ -204,7 +204,7 @@ export const SelectTrackModal = ({
         (tracks as Array<{ name?: unknown }>).map((t) => String(t.name || ""))
       ),
       trackSlot: freeSlot,
-      makeModuleId: () => `inst_${Date.now()}_${randomSuffix()}`,
+      makeModuleId: () => `inst_${Date.now()}_${randomIdSuffix()}`,
     });
 
     updateActiveSet(setUserData, activeSetId, (activeSet) => {

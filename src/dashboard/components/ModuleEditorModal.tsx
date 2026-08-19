@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { FaTimes } from "react-icons/fa";
 import { Button } from "./Button";
+import { getBridge } from "../core/utils";
 
-const getBridge = () => globalThis.nwWrldBridge;
 
 type ModuleMethodOption = {
   name: string;

@@ -7,7 +7,7 @@ import { ModalHeader } from "../components/ModalHeader";
 import { ModalFooter } from "../components/ModalFooter";
 import { Button } from "../components/Button";
 import { RadioButton } from "../components/FormInputs";
-import { updateUserData } from "../core/utils";
+import { randomIdSuffix, updateUserData } from "../core/utils";
 import { EditSetModal } from "./EditSetModal";
 import { ConfirmationModal } from "./ConfirmationModal";
 import { deleteRecordingsForTracks } from "../../shared/json/recordingUtils";
@@ -148,17 +148,16 @@ export const SelectSetModal = ({
     const sourceSet = sets.find((s) => s.id === setId);
     if (!sourceSet) return;
 
-    const randomSuffix = () => Math.random().toString(36).slice(2, 11);
     const { set: newSet, trackIdMap } = duplicateSet(
       sourceSet as unknown as Record<string, unknown>,
       {
-        newId: `set_${Date.now()}_${randomSuffix()}`,
+        newId: `set_${Date.now()}_${randomIdSuffix()}`,
         name: duplicateName(
           sourceSet.name,
           sets.map((s) => s.name)
         ),
-        makeTrackId: () => `track_${Date.now()}_${randomSuffix()}`,
-        makeModuleId: () => `inst_${Date.now()}_${randomSuffix()}`,
+        makeTrackId: () => `track_${Date.now()}_${randomIdSuffix()}`,
+        makeModuleId: () => `inst_${Date.now()}_${randomIdSuffix()}`,
       }
     );
 

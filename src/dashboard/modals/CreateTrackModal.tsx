@@ -11,7 +11,7 @@ import { updateActiveSet } from "../core/utils";
 import { getActiveSetTracks } from "../../shared/utils/setUtils";
 import { HELP_TEXT } from "../../shared/helpText";
 import { useNameValidation } from "../core/hooks/useNameValidation";
-import { useTrackSlots } from "../core/hooks/useTrackSlots";
+import { getMaxTrackSlots, useTrackSlots } from "../core/hooks/useTrackSlots";
 import { parsePitchClass, pitchClassToName } from "../../shared/midi/midiUtils";
 
 type InputConfigLike = {
@@ -51,7 +51,7 @@ export const CreateTrackModal = ({
           : "midi";
   const noteMatchMode = inputConfig?.noteMatchMode === "exactNote" ? "exactNote" : "pitchClass";
   const globalMappings = (userData as Record<string, unknown>).config || {};
-  const maxTrackSlots = inputType === "midi" ? 12 : 10;
+  const maxTrackSlots = getMaxTrackSlots(inputType);
 
   const tracks = getActiveSetTracks(userData, activeSetId);
 

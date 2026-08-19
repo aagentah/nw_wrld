@@ -8,3 +8,5 @@ export const TERMINAL_STYLES = {
   fontSize: "11px",
 } as const;
 
+
+export const CUSTOM_VALUE = "__nw_wrld_custom__";

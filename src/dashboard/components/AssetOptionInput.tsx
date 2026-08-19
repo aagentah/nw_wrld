@@ -1,19 +1,10 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { Select, TextInput } from "./FormInputs";
-
-const CUSTOM_VALUE = "__nw_wrld_custom__";
+import { CUSTOM_VALUE } from "../core/constants";
+import { isPlainObject } from "../core/utils";
 
 type Listing = { ok: boolean; files: string[]; dirs: string[] };
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return (
-    Boolean(value) &&
-    typeof value === "object" &&
-    !Array.isArray(value) &&
-    Object.prototype.toString.call(value) === "[object Object]"
-  );
-}
 
 const listAssetsCached = (() => {
   const cache = new Map<string, Listing | Promise<Listing>>();

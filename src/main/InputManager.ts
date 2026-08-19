@@ -9,28 +9,8 @@ import type {
   MidiDeviceInfo,
 } from "../types/input";
 import type { InputConfig } from "../types/userData";
-
-const DEFAULT_INPUT_CONFIG = {
-  type: "midi",
-  deviceName: "IAC Driver Bus 1",
-  trackSelectionChannel: 2,
-  methodTriggerChannel: 1,
-  velocitySensitive: false,
-  noteMatchMode: "pitchClass",
-  port: 8000,
-};
-
-const INPUT_STATUS: {
-  DISCONNECTED: InputStatus;
-  CONNECTING: InputStatus;
-  CONNECTED: InputStatus;
-  ERROR: InputStatus;
-} = {
-  DISCONNECTED: "disconnected",
-  CONNECTING: "connecting",
-  CONNECTED: "connected",
-  ERROR: "error",
-};
+import { DEFAULT_INPUT_CONFIG } from "../shared/config/defaultConfig";
+import { INPUT_STATUS } from "../shared/constants/inputStatus";
 
 type RuntimeMidiConfig = Omit<InputConfig, "type"> & {
   type: "midi";

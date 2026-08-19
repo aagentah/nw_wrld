@@ -26,3 +26,20 @@ export const AUDIO_NORMALIZATION_CONFIG = {
   absoluteDenomFloorDb: -50,
 } as const;
 
+
+export type Band = "low" | "medium" | "high";
+export type Levels = Record<Band, number>;
+export type PeaksDb = Record<Band, number>;
+
+export const DEFAULT_GAINS: Record<Band, number> = { low: 6.0, medium: 14.0, high: 18.0 };
+
+export const clamp01 = (n: number) => (n < 0 ? 0 : n > 1 ? 1 : n);
+
+export function bandForHz(hz: number): Band | null {
+  if (!Number.isFinite(hz) || hz <= 0) return null;
+  if (hz < AUDIO_BAND_CUTOFF_HZ.lowMaxHz) return "low";
+  if (hz < AUDIO_BAND_CUTOFF_HZ.mediumMaxHz) return "medium";
+  return "high";
+}
+
+export const dbToLin = (db: number) => (Number.isFinite(db) ? Math.pow(10, db / 20) : 0);

@@ -3,8 +3,7 @@ import { FaDice, FaLock, FaPlay } from "react-icons/fa";
 import { TextInput, NumberInput, ColorInput, Select, Checkbox } from "./FormInputs";
 import { MatrixGrid } from "../shared/MatrixGrid";
 import { AssetOptionInput } from "./AssetOptionInput";
-
-const CUSTOM_VALUE = "__nw_wrld_custom__";
+import { CUSTOM_VALUE } from "../core/constants";
 
 type MethodOptionDef = {
   name: string;

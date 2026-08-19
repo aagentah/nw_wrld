@@ -4,7 +4,7 @@ import { remove } from "lodash";
 import { FaPlus } from "react-icons/fa";
 import { SortableList, arrayMove } from "../../shared/SortableList";
 import { userDataAtom, activeSetIdAtom } from "../../core/state";
-import { updateActiveSet } from "../../core/utils";
+import { isPlainObject, updateActiveSet } from "../../core/utils";
 import { Button } from "../Button";
 import { TrackDataModal } from "../../modals/TrackDataModal";
 import { EditTrackModal } from "../../modals/EditTrackModal";
@@ -13,15 +13,6 @@ import type { AudioCaptureState } from "../../core/hooks/useDashboardAudioCaptur
 import type { FileAudioState } from "../../core/hooks/useDashboardFileAudio";
 
 type ModuleInstance = { id: string; type: string };
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return (
-    Boolean(value) &&
-    typeof value === "object" &&
-    !Array.isArray(value) &&
-    Object.prototype.toString.call(value) === "[object Object]"
-  );
-}
 
 type Track = {
   id: string | number;

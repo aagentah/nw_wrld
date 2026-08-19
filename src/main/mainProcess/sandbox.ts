@@ -3,6 +3,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { srcDir, state } from "./state";
 import { isExistingDirectory, resolveWithinDir } from "./pathSafety";
+import { getProjectDirForEvent } from "./ipcBridge/projectContext";
 import {
   normalizeSandboxRequestProps,
   normalizeSandboxResult,
@@ -27,16 +28,6 @@ const readFileUtf8WithLimit = async (
   } catch {
     return null;
   }
-};
-
-const getProjectDirForEvent = (event: SenderEvent): string | null => {
-  try {
-    const senderId = event?.sender?.id;
-    if (typeof senderId === "number" && state.webContentsToProjectDir.has(senderId)) {
-      return state.webContentsToProjectDir.get(senderId) || null;
-    }
-  } catch {}
-  return state.currentProjectDir || null;
 };
 
 const registerSandboxToken = (

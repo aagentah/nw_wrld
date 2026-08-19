@@ -11,7 +11,7 @@ import {
   flashingConstructorsAtom,
   sequencerCurrentStepAtom,
 } from "../../core/state";
-import { updateActiveSet } from "../../core/utils";
+import { isPlainObject, randomIdSuffix, updateActiveSet } from "../../core/utils";
 import { TERMINAL_STYLES } from "../../core/constants";
 import { getActiveSetTracks } from "../../../shared/utils/setUtils";
 import { getRecordingForTrack, getSequencerForTrack } from "../../../shared/json/recordingUtils";
@@ -38,15 +38,6 @@ type SelectedChannel = {
   channelNumber: number | "constructor";
   isConstructor: boolean;
 };
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return (
-    Boolean(value) &&
-    typeof value === "object" &&
-    !Array.isArray(value) &&
-    Object.prototype.toString.call(value) === "[object Object]"
-  );
-}
 
 type ModuleSelectorProps = {
   trackIndex: number;
@@ -497,7 +488,7 @@ export const NoteSelector = memo(
     }, [setUserData, activeSetId, trackIndex, instanceId]);
 
     const duplicateModule = useCallback(() => {
-      const newInstanceId = `inst_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+      const newInstanceId = `inst_${Date.now()}_${randomIdSuffix()}`;
       updateActiveSet(setUserData, activeSetId, (activeSet) => {
         if (!isPlainObject(activeSet)) return;
         const tracksUnknown = (activeSet as Record<string, unknown>).tracks;

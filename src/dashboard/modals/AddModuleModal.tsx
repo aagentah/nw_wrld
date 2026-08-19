@@ -16,7 +16,7 @@ import { Button } from "../components/Button";
 import { HelpIcon } from "../components/HelpIcon";
 import { Tooltip } from "../components/Tooltip";
 import { activeSetIdAtom, activeTrackIdAtom } from "../core/state";
-import { updateActiveSet } from "../core/utils";
+import { randomIdSuffix, updateActiveSet } from "../core/utils";
 import { getActiveSetTracks } from "../../shared/utils/setUtils";
 import { HELP_TEXT } from "../../shared/helpText";
 
@@ -210,7 +210,7 @@ export const AddModuleModal = ({
       if (typeof trackUnknown !== "object" || !trackUnknown) return;
       const t = trackUnknown as Record<string, unknown>;
 
-      const instanceId = `inst_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+      const instanceId = `inst_${Date.now()}_${randomIdSuffix()}`;
       const modulesArray = Array.isArray(t.modules) ? t.modules : [];
       modulesArray.push({
         id: instanceId,

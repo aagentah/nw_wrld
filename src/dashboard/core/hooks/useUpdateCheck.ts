@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
+import { getBridge } from "../utils";
 
 const STORAGE_KEY = "nw_wrld:updateCheck:v1";
 const CHECK_TTL_MS = 6 * 60 * 60 * 1000;
 const REQUEST_TIMEOUT_MS = 5000;
 
-const getBridge = () => globalThis.nwWrldBridge;
 
 const normalizeVersion = (v: unknown) => {
   const s = String(v || "").trim();

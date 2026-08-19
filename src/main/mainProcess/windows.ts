@@ -10,8 +10,6 @@ import { srcDir, state } from "./state";
 import { getProjectJsonDirForMain, startWorkspaceWatcher } from "./workspace";
 import { destroySandboxView, updateSandboxViewBounds } from "./sandbox";
 
-type WebContentsWithId = { id?: unknown };
-type SenderEvent = { sender?: WebContentsWithId };
 type Jsonish = string | number | boolean | null | undefined | object;
 
 const isTestHeadless = process.env.NW_WRLD_TEST_HEADLESS === "1";
@@ -171,16 +169,6 @@ export const applyProjectorWindowAspectRatio = (aspectRatioId: unknown): void =>
       false
     );
   } catch {}
-};
-
-export const getProjectDirForEvent = (event: SenderEvent): string | null => {
-  try {
-    const senderId = event?.sender?.id;
-    if (typeof senderId === "number" && state.webContentsToProjectDir.has(senderId)) {
-      return state.webContentsToProjectDir.get(senderId) || null;
-    }
-  } catch {}
-  return state.currentProjectDir || null;
 };
 
 export function loadConfig(projectDir: string | null): unknown {
