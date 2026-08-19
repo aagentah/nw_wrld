@@ -45,7 +45,6 @@ export const Modal = ({
   const isBottomAligned = position === "bottom";
 
   const getSizeClass = () => {
-    if (isBottomAligned && size === "full") return "w-full";
     if (isBottomAligned) return "w-full";
 
     switch (size) {

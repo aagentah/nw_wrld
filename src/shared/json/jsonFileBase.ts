@@ -39,8 +39,6 @@ function getJsonBridge(): {
   };
 }
 
-export const getJsonFilePath = (filename: string): string => filename;
-
 export const loadJsonFile = async <T>(
   filename: string,
   defaultValue: T,

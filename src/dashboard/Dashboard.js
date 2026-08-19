@@ -414,7 +414,6 @@ const Dashboard = () => {
             predefinedModules={predefinedModules}
             openAddModuleModal={openAddModuleModal}
             openConfirmationModal={openConfirmationModal}
-            setActiveTrackId={setActiveTrackId}
             inputConfig={inputConfig}
             config={userData.config}
             isSequencerPlaying={isSequencerPlaying}
@@ -485,7 +484,6 @@ const Dashboard = () => {
         setIsDebugOverlayOpen={setIsDebugOverlayOpen}
         userData={userData}
         setUserData={setUserData}
-        recordingData={recordingData}
         setRecordingData={setRecordingData}
         activeTrackId={activeTrackId}
         setActiveTrackId={setActiveTrackId}

@@ -4,12 +4,7 @@ import {
   DEFAULT_GLOBAL_MAPPINGS,
   DEFAULT_INPUT_CONFIG,
 } from "../../shared/config/defaultConfig";
-import {
-  getJsonFilePath,
-  loadJsonFile,
-  saveJsonFile,
-  saveJsonFileSync,
-} from "../../shared/json/jsonFileBase";
+import { loadJsonFile, saveJsonFile, saveJsonFileSync } from "../../shared/json/jsonFileBase";
 
 const getMethodsByLayer = (module: unknown, moduleBase: string[], threeBase: string[]) => {
   const m = module as { methods?: Array<{ name?: unknown }>; name?: unknown } | null;
@@ -79,10 +74,6 @@ const updateUserData = (setUserData: SetUserData, updater: (draft: UserDataState
       updater(draft as unknown as UserDataState);
     }) as unknown as UserDataState
   );
-};
-
-const getUserDataPath = () => {
-  return getJsonFilePath("userData.json");
 };
 
 const loadUserData = async () => {
@@ -241,7 +232,6 @@ export {
   getMethodsByLayer,
   getMethodCode,
   updateUserData,
-  getUserDataPath,
   loadUserData,
   saveUserData,
   saveUserDataSync,

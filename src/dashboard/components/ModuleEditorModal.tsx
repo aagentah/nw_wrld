@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { FaTimes } from "react-icons/fa";
 import { Button } from "./Button";
-import { getBaseMethodNames } from "../utils/moduleUtils";
 
 const getBridge = () => globalThis.nwWrldBridge;
 
@@ -24,17 +23,11 @@ type PredefinedModule = {
 
 type TemplateType = "basic" | "threejs" | "p5js";
 
-type MethodWithValues = {
-  name: string;
-  options: { name: string; value: unknown }[];
-};
-
 type ModuleEditorModalProps = {
   isOpen: boolean;
   onClose: () => void;
   moduleName: string | null;
   templateType?: TemplateType | null;
-  onModuleSaved?: ((moduleName: string) => void) | null;
   predefinedModules?: PredefinedModule[];
   workspacePath?: string | null;
 };
@@ -233,17 +226,12 @@ export const ModuleEditorModal = ({
   onClose,
   moduleName,
   templateType = null,
-  onModuleSaved: _onModuleSaved,
   predefinedModules = [],
   workspacePath = null,
 }: ModuleEditorModalProps) => {
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
-  const [methodOptions, setMethodOptions] = useState<
-    Record<string, Record<string, unknown>>
-  >({});
 
   const moduleData = useMemo<PredefinedModule | null>(() => {
     if (!moduleName) return null;
@@ -271,33 +259,6 @@ export const ModuleEditorModal = ({
     }
     bridge.workspace.showModuleInFolder(moduleName);
   }, [moduleName]);
-
-  const { moduleBase, threeBase } = useMemo(() => getBaseMethodNames(), []);
-
-  const customMethods = useMemo(() => {
-    if (!moduleData || !moduleData.methods) return [];
-
-    const allBaseMethods = [...moduleBase, ...threeBase];
-    return moduleData.methods.filter(
-      (method) => !allBaseMethods.includes(method.name)
-    );
-  }, [moduleData, moduleBase, threeBase]);
-
-  const _methodsWithValues = useMemo(() => {
-    return customMethods.map((method) => ({
-      name: method.name,
-      options: (method.options || []).map((opt) => {
-        const currentValue =
-          methodOptions[method.name]?.[opt.name] !== undefined
-            ? methodOptions[method.name][opt.name]
-            : opt.defaultVal;
-        return {
-          name: opt.name,
-          value: currentValue,
-        };
-      }),
-    }));
-  }, [customMethods, methodOptions]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -577,38 +538,10 @@ export const ModuleEditorModal = ({
     bridge?.messaging?.sendToProjector?.("clear-preview", {});
   };
 
-  const _handleMethodTrigger = (method: MethodWithValues) => {
-    const params: Record<string, unknown> = {};
-    method.options.forEach((opt) => {
-      params[opt.name] = opt.value;
-    });
-
-    const bridge = getBridge();
-    bridge?.messaging?.sendToProjector?.("trigger-preview-method", {
-      moduleName: moduleName,
-      methodName: method.name,
-      options: params,
-    });
-  };
-
-  const _handleOptionChange = useCallback(
-    (methodName: string, optionName: string, value: unknown) => {
-    setMethodOptions((prev) => ({
-      ...prev,
-      [methodName]: {
-        ...prev[methodName],
-        [optionName]: value,
-      },
-    }));
-    },
-    []
-  );
-
   const handleClose = () => {
     clearPreview();
     setCode("");
     setError(null);
-    setMethodOptions({});
     onClose();
   };
 

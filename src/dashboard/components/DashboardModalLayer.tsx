@@ -47,7 +47,6 @@ type DashboardModalLayerProps = {
   setUserData: (
     updater: ((prev: Record<string, unknown>) => Record<string, unknown>) | Record<string, unknown>
   ) => void;
-  recordingData: Record<string, unknown>;
   setRecordingData: (
     updater: ((prev: Record<string, unknown>) => Record<string, unknown>) | Record<string, unknown>
   ) => void;
@@ -142,7 +141,6 @@ export const DashboardModalLayer = ({
   setIsDebugOverlayOpen,
   userData,
   setUserData,
-  recordingData,
   setRecordingData,
   activeTrackId,
   setActiveTrackId,
@@ -214,7 +212,6 @@ export const DashboardModalLayer = ({
         activeTrackId={activeTrackId}
         setActiveTrackId={setActiveTrackId}
         activeSetId={activeSetId}
-        recordingData={recordingData}
         setRecordingData={setRecordingData}
         audioCaptureState={audioCaptureState}
         fileAudioState={fileAudioState}
@@ -229,11 +226,9 @@ export const DashboardModalLayer = ({
         onClose={() => setIsSelectSetModalOpen(false)}
         userData={userData}
         setUserData={setUserData}
-        activeTrackId={activeTrackId}
         setActiveTrackId={setActiveTrackId}
         activeSetId={activeSetId}
         setActiveSetId={setActiveSetId}
-        recordingData={recordingData}
         setRecordingData={setRecordingData}
         onCreateSet={() => {
           setIsSelectSetModalOpen(false);
@@ -310,7 +305,6 @@ export const DashboardModalLayer = ({
         onClose={onCloseModuleEditor}
         moduleName={editingModuleName}
         templateType={editingTemplateType}
-        onModuleSaved={null}
         predefinedModules={predefinedModules}
         workspacePath={workspacePath}
       />

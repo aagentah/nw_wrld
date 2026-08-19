@@ -45,7 +45,6 @@ type InputConfig = {
 type InputStatus = {
   status: string;
   message?: string;
-  config?: { input?: InputConfig } | null;
 };
 
 type DashboardConfig = { sequencerMode?: boolean } & Record<string, unknown>;
@@ -119,15 +118,6 @@ export const DashboardFooter = ({
   const getStatusText = () => {
     if (inputStatus?.message && inputStatus.message !== "") {
       return inputStatus.message;
-    }
-
-    const statusInput = inputStatus?.config?.input || null;
-    if (statusInput && statusInput.type) {
-      if (statusInput.type === "osc") {
-        return `Listening on Port ${statusInput.port || 8000}`;
-      } else if (statusInput.type === "midi") {
-        return `MIDI: ${statusInput.deviceName || "Not configured"}`;
-      }
     }
 
     if (inputConfig?.type === "osc") {

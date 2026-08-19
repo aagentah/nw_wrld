@@ -1,8 +1,6 @@
 import { InputHTMLAttributes, CSSProperties, HTMLAttributes, ReactNode, SelectHTMLAttributes } from "react";
 import { TERMINAL_STYLES } from "../core/constants";
 
-export { TERMINAL_STYLES };
-
 export const TextInput = ({
   style,
   ...props

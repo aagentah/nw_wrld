@@ -10,7 +10,6 @@ type DashboardBodyProps = {
   predefinedModules: unknown[];
   openAddModuleModal: (trackIndex: number) => void;
   openConfirmationModal: (message: string, onConfirm: () => void) => void;
-  setActiveTrackId: (id: string | number | null) => void;
   inputConfig: unknown;
   config: Record<string, unknown> | null;
   isSequencerPlaying: boolean;
@@ -29,7 +28,6 @@ export const DashboardBody = ({
   predefinedModules,
   openAddModuleModal,
   openConfirmationModal,
-  setActiveTrackId,
   inputConfig,
   config,
   isSequencerPlaying,
@@ -61,7 +59,6 @@ export const DashboardBody = ({
               predefinedModules={predefinedModules}
               openRightMenu={openAddModuleModal}
               onConfirmDelete={openConfirmationModal}
-              setActiveTrackId={setActiveTrackId}
               inputConfig={inputConfig}
               config={config}
               isSequencerPlaying={isSequencerPlaying}

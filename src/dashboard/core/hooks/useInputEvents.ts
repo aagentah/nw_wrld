@@ -170,18 +170,6 @@ export const useInputEvents = ({
         ? (eventData.data as Record<string, unknown>)
         : {};
     const trackName = typeof eventData.trackName === "string" ? eventData.trackName : null;
-    const moduleInfo =
-      eventData.moduleInfo && typeof eventData.moduleInfo === "object"
-        ? (eventData.moduleInfo as Record<string, unknown>)
-        : null;
-    const methodInfo =
-      eventData.methodInfo && typeof eventData.methodInfo === "object"
-        ? (eventData.methodInfo as Record<string, unknown>)
-        : null;
-    const props =
-      eventData.props && typeof eventData.props === "object"
-        ? (eventData.props as Record<string, unknown>)
-        : null;
 
     const timeStr = timestamp.toFixed(5);
     const sourceLabel =
@@ -247,18 +235,6 @@ export const useInputEvents = ({
     if (trackName) {
       log += `  Track: ${trackName}\n`;
     }
-    if (moduleInfo) {
-      const instanceId = typeof moduleInfo.instanceId === "string" ? moduleInfo.instanceId : "";
-      const typeLabel = typeof moduleInfo.type === "string" ? moduleInfo.type : "";
-      log += `  Module: ${instanceId} (${typeLabel})\n`;
-    }
-    if (methodInfo) {
-      const name = typeof methodInfo.name === "string" ? methodInfo.name : "";
-      log += `  Method: ${name}\n`;
-    }
-    if (props && Object.keys(props).length > 0) {
-      log += `  Props: ${JSON.stringify(props, null, 2)}\n`;
-    }
     return log;
   }, []);
 
@@ -302,9 +278,6 @@ export const useInputEvents = ({
       const tracks = getActiveSetTracks(userDataRef.current || {}, activeSetIdRef.current);
       const noteMatchMode = normalizeNoteMatchMode(inputCfg?.noteMatchMode);
       let trackName: string | null = null;
-      const moduleInfo: Record<string, unknown> | null = null;
-      const methodInfo: Record<string, unknown> | null = null;
-      const props: Record<string, unknown> | null = null;
 
       switch (type) {
         case "track-selection": {
@@ -544,9 +517,6 @@ export const useInputEvents = ({
         source: source || "",
         data,
         trackName,
-        moduleInfo,
-        methodInfo,
-        props,
       });
       addDebugLog(log);
     },

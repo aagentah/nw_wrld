@@ -105,11 +105,9 @@ type SelectSetModalProps = {
   onClose: () => void;
   userData: UserData;
   setUserData: (updater: unknown) => void;
-  activeTrackId: string | number | null;
   setActiveTrackId: (id: string | number | null) => void;
   activeSetId: string | null;
   setActiveSetId: (id: string | null) => void;
-  recordingData: Record<string, unknown>;
   setRecordingData: (updater: (prev: Record<string, unknown>) => Record<string, unknown>) => void;
   onCreateSet: () => void;
   onConfirmDelete: (message: string, onConfirm: () => void) => void;
@@ -120,11 +118,9 @@ export const SelectSetModal = ({
   onClose,
   userData,
   setUserData,
-  activeTrackId: _activeTrackId,
   setActiveTrackId,
   activeSetId,
   setActiveSetId,
-  recordingData: _recordingData,
   setRecordingData,
   onCreateSet,
   onConfirmDelete,

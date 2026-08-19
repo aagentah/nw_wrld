@@ -164,7 +164,6 @@ function normalizeTrack(value: Jsonish): Jsonish | null {
     },
   };
 
-  const _existingSignal = signalObj ? (signalObj as unknown) : null;
   const needsSignal =
     !signalObj ||
     !isPlainObject(rawAudio) ||

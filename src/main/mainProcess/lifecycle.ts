@@ -2,11 +2,7 @@ import { state } from "./state";
 
 import { app, BrowserWindow } from "electron";
 
-export function registerLifecycle({
-  createWindow: _createWindow,
-}: {
-  createWindow: (projectDir: string | null) => void;
-}) {
+export function registerLifecycle() {
   app.on("before-quit", (event) => {
     if (state.didRunShutdownCleanup) return;
     state.didRunShutdownCleanup = true;

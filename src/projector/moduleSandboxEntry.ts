@@ -39,9 +39,6 @@ const TOKEN =
   null;
 
 const injectWorkspaceModuleImports = (moduleId, sourceText) => {
-  if (typeof parseNwWrldDocblockMetadata !== "function") {
-    throw new Error(`[Sandbox] Docblock parser is unavailable.`);
-  }
   const meta = parseNwWrldDocblockMetadata(sourceText, MODULE_METADATA_MAX_BYTES);
   const preamble = buildWorkspaceImportPreamble(moduleId, meta?.imports);
 
@@ -55,20 +52,6 @@ const injectWorkspaceModuleImports = (moduleId, sourceText) => {
   const head = docblockMatch[0];
   const rest = text.slice(head.length);
   return `${head}${preamble}\n${rest}`;
-};
-
-const _getCallableMethodNames = (instance) => {
-  const names = new Set();
-  let proto = instance ? Object.getPrototypeOf(instance) : null;
-  while (proto && proto !== Object.prototype) {
-    for (const n of Object.getOwnPropertyNames(proto)) {
-      if (n === "constructor") continue;
-      const desc = Object.getOwnPropertyDescriptor(proto, n);
-      if (desc && typeof desc.value === "function") names.add(n);
-    }
-    proto = Object.getPrototypeOf(proto);
-  }
-  return Array.from(names);
 };
 
 const getCallableMethodNamesFromClass = (Cls) => {

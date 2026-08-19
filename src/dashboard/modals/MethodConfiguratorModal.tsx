@@ -54,11 +54,6 @@ type OptionDef = {
   allowRandomization?: boolean;
 };
 
-type _MethodDef = {
-  name: string;
-  options?: OptionDef[];
-};
-
 type ModuleMethod = {
   name: string;
   options?: OptionDef[];
@@ -951,17 +946,6 @@ export const MethodConfiguratorModal = ({
                           | Record<string, unknown>
                           | undefined;
                         if (!instanceData) return;
-
-                        if (ch.isConstructor) {
-                          const _methods = (instanceData as Record<string, unknown>)[
-                            "constructor"
-                          ] as MethodConfig[];
-                          void _methods;
-                        } else {
-                          const methodsObj = instanceData.methods as Record<string, unknown>;
-                          const _methods = methodsObj[channelKey] as MethodConfig[];
-                          void _methods;
-                        }
 
                         const reorderedLayer = arrayMove(
                           currentLayer.configuredMethods,

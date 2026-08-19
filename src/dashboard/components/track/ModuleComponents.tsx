@@ -52,7 +52,6 @@ type ModuleSelectorProps = {
   trackIndex: number;
   predefinedModules: unknown[];
   openRightMenu: (trackIndex: number) => void;
-  stopPlayback: () => void;
   onShowTrackData: (track: unknown) => void;
   inputConfig: { type?: string } | null;
   onEditTrack?: () => void;

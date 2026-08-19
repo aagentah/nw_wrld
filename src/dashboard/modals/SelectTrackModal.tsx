@@ -8,7 +8,7 @@ import { ModalFooter } from "../components/ModalFooter";
 import { Button } from "../components/Button";
 import { RadioButton } from "../components/FormInputs";
 import { updateActiveSet } from "../core/utils";
-import { getActiveSetTracks, getActiveSet } from "../../shared/utils/setUtils";
+import { getActiveSetTracks } from "../../shared/utils/setUtils";
 import { EditTrackModal } from "./EditTrackModal";
 import { ConfirmationModal } from "./ConfirmationModal";
 import { deleteRecordingsForTracks } from "../../shared/json/recordingUtils";
@@ -146,7 +146,6 @@ type SelectTrackModalProps = {
   activeTrackId: string | number | null;
   setActiveTrackId: (id: string | number | null) => void;
   activeSetId: string | null;
-  recordingData: Record<string, unknown>;
   setRecordingData: (updater: (prev: Record<string, unknown>) => Record<string, unknown>) => void;
   audioCaptureState: AudioCaptureState;
   fileAudioState: FileAudioState;
@@ -162,7 +161,6 @@ export const SelectTrackModal = ({
   activeTrackId,
   setActiveTrackId,
   activeSetId,
-  recordingData: _recordingData,
   setRecordingData,
   onCreateTrack,
   onConfirmDelete,
@@ -173,7 +171,6 @@ export const SelectTrackModal = ({
   const [alertMessage, setAlertMessage] = useState<string | null>(null);
 
   const tracks = getActiveSetTracks(userData, activeSetId);
-  const _activeSet = getActiveSet(userData, activeSetId);
   const inputType = userData?.config?.input?.type || "midi";
   const globalMappings = userData?.config || {};
 

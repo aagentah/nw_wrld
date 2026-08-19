@@ -60,8 +60,6 @@ const renderColoredLog = (log: string) => {
               let inString = false;
               let stringChar: string | null = null;
               let currentPart = "";
-              const _keyMode = true;
-              void _keyMode;
 
               for (let i = 0; i < jsonStr.length; i++) {
                 const char = jsonStr[i];
@@ -90,8 +88,6 @@ const renderColoredLog = (log: string) => {
                       </span>
                     );
                     currentPart = "";
-                    const _keyMode3 = false;
-                    void _keyMode3;
                   } else {
                     currentPart += char;
                   }
@@ -111,8 +107,6 @@ const renderColoredLog = (log: string) => {
                       {char}
                     </span>
                   );
-                  const _keyMode2 = false;
-                  void _keyMode2;
                 } else if ((char === "," || char === "{" || char === "}") && !inString) {
                   if (currentPart.trim()) {
                     jsonParts.push(
@@ -127,8 +121,6 @@ const renderColoredLog = (log: string) => {
                       {char}
                     </span>
                   );
-                  const _keyMode = char === ",";
-                  void _keyMode;
                 } else {
                   currentPart += char;
                 }
