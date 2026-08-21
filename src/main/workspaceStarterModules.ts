@@ -77,10 +77,8 @@ export const rewriteWorkspaceStarterModule = async (
     await copyFileAtomic(starterModulePath, workspaceModulePath);
     return { ok: true };
   } catch (error) {
-    return {
-      ok: false,
-      reason: error instanceof Error ? error.message : "REWRITE_FAILED",
-    };
+    console.error("[Main] Starter module rewrite failed:", error);
+    return { ok: false, reason: "REWRITE_FAILED" };
   }
 };
 

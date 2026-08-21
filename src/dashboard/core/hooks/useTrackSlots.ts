@@ -1,10 +1,7 @@
 import { useMemo, useCallback } from "react";
+import { isRecord, type JsonRecord } from "../../../shared/utils/duplicateUtils";
 
-type JsonRecord = Record<string, unknown>;
-
-function isRecord(value: unknown): value is JsonRecord {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}
+export const getMaxTrackSlots = (inputType: string) => (inputType === "midi" ? 12 : 10);
 
 type InputType = string;
 
@@ -41,7 +38,7 @@ export const useTrackSlots = (
   }, [tracks, excludeTrackId]);
 
   const availableSlots = useMemo(() => {
-    const maxSlots = inputType === "midi" ? 12 : 10;
+    const maxSlots = getMaxTrackSlots(inputType);
     const slots: number[] = [];
     for (let i = 1; i <= maxSlots; i++) {
       if (!usedSlots.has(i)) {

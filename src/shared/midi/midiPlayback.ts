@@ -98,10 +98,10 @@ class MidiPlayback {
       });
     });
 
-    const maxTime = Math.max(
-      ...this.channels.flatMap((ch) =>
-        ch.sequences.map((seq) => (seq.time / beatsPerSecond) * 1000)
-      ),
+    // reduce, not Math.max(...spread): long recordings overflow the argument limit
+    const maxTime = this.channels.reduce(
+      (max, ch) =>
+        ch.sequences.reduce((m, seq) => Math.max(m, (seq.time / beatsPerSecond) * 1000), max),
       0
     );
 
@@ -126,10 +126,9 @@ class MidiPlayback {
     if (this.channels.length === 0) return 0;
 
     const beatsPerSecond = this.bpm / 60;
-    const maxTime = Math.max(
-      ...this.channels.flatMap((ch) =>
-        ch.sequences.map((seq) => (seq.time / beatsPerSecond) * 1000)
-      ),
+    const maxTime = this.channels.reduce(
+      (max, ch) =>
+        ch.sequences.reduce((m, seq) => Math.max(m, (seq.time / beatsPerSecond) * 1000), max),
       1
     );
 

@@ -12,10 +12,11 @@ import { updateActiveSet } from "../core/utils";
 import { getActiveSetTracks } from "../../shared/utils/setUtils";
 import { HELP_TEXT } from "../../shared/helpText";
 import { useNameValidation } from "../core/hooks/useNameValidation";
-import { useTrackSlots } from "../core/hooks/useTrackSlots";
+import { getMaxTrackSlots, useTrackSlots } from "../core/hooks/useTrackSlots";
 import { parsePitchClass, pitchClassToName } from "../../shared/midi/midiUtils";
 import type { AudioCaptureState } from "../core/hooks/useDashboardAudioCapture";
 import type { FileAudioState } from "../core/hooks/useDashboardFileAudio";
+import { clamp01, type Band } from "../core/audio/audioTuning";
 
 type InputConfigLike = {
   type?: unknown;
@@ -52,8 +53,6 @@ export const EditTrackModal = ({
   const [fileAssetName, setFileAssetName] = useState("");
   const [fileUploadError, setFileUploadError] = useState<string | null>(null);
 
-  type Band = "low" | "medium" | "high";
-  const clamp01 = (n: number) => (n < 0 ? 0 : n > 1 ? 1 : n);
   const normalizeLevels = (levels: unknown): Record<Band, number> | null => {
     if (!levels || typeof levels !== "object") return null;
     const obj = levels as Record<string, unknown>;
@@ -79,7 +78,7 @@ export const EditTrackModal = ({
           : "midi";
   const noteMatchMode = inputConfig?.noteMatchMode === "exactNote" ? "exactNote" : "pitchClass";
   const globalMappings = (userData as Record<string, unknown>).config || {};
-  const maxTrackSlots = inputType === "midi" ? 12 : 10;
+  const maxTrackSlots = getMaxTrackSlots(inputType);
   const isAudioMode = inputType === "audio";
   const isFileMode = inputType === "file";
 
@@ -189,7 +188,7 @@ export const EditTrackModal = ({
 
   const uploadFileToAssets = useCallback(async (file: File) => {
     setFileUploadError(null);
-    const bridge = (globalThis as unknown as { nwWrldBridge?: unknown }).nwWrldBridge;
+    const bridge = (globalThis as { nwWrldBridge?: unknown }).nwWrldBridge;
     const bridgeObj =
       bridge && typeof bridge === "object" ? (bridge as Record<string, unknown>) : null;
     const workspace =

@@ -46,7 +46,7 @@ export const MatrixGrid = ({ value, onChange }: MatrixGridProps) => {
   }, [value]);
 
   const handleRowsChange = (newRows: string | number) => {
-    const numRows = Math.max(1, Math.min(5, parseInt(String(newRows)) || 1));
+    const numRows = Math.max(1, Math.min(5, parseInt(String(newRows), 10) || 1));
     const oldRows = rows;
     setRows(numRows);
 
@@ -71,7 +71,7 @@ export const MatrixGrid = ({ value, onChange }: MatrixGridProps) => {
   };
 
   const handleColsChange = (newCols: string | number) => {
-    const numCols = Math.max(1, Math.min(5, parseInt(String(newCols)) || 1));
+    const numCols = Math.max(1, Math.min(5, parseInt(String(newCols), 10) || 1));
     const oldCols = cols;
     setCols(numCols);
 

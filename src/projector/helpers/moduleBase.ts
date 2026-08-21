@@ -1,5 +1,3 @@
-// src/ModuleBase.js
-
 export class ModuleBase {
   elem: HTMLElement | null;
   name: string;
@@ -8,10 +6,10 @@ export class ModuleBase {
   currentScale: number;
   currentOpacity: number;
   viewportLineElem: SVGSVGElement | null;
-  rotateTimeout: ReturnType<typeof setTimeout> | null;
   rotationInterval: number | null;
   rotationTimeout: ReturnType<typeof setTimeout> | null;
   currentRotation: number;
+  pendingTimeouts: Set<ReturnType<typeof setTimeout>>;
   externalElements: Array<HTMLElement | SVGElement>;
 
   static methods = [
@@ -156,10 +154,10 @@ export class ModuleBase {
     this.currentScale = 1;
     this.currentOpacity = 1;
     this.viewportLineElem = null;
-    this.rotateTimeout = null;
     this.rotationInterval = null;
     this.rotationTimeout = null;
     this.currentRotation = 0;
+    this.pendingTimeouts = new Set();
     this.externalElements = [];
 
     if (this.elem) {
@@ -167,6 +165,14 @@ export class ModuleBase {
       this.elem.style.opacity = String(this.currentOpacity);
       this.updateTransform();
     }
+  }
+
+  scheduleTimeout(fn: () => void, ms: number) {
+    const id = setTimeout(() => {
+      this.pendingTimeouts.delete(id);
+      fn();
+    }, ms);
+    this.pendingTimeouts.add(id);
   }
 
   show(options: { duration?: number } = {}) {
@@ -184,7 +190,7 @@ export class ModuleBase {
       }
 
       if (duration > 0) {
-        setTimeout(() => {
+        this.scheduleTimeout(() => {
           moduleElem.style.visibility = "hidden";
           if (this.externalElements && Array.isArray(this.externalElements)) {
             this.externalElements.forEach((elem) => {
@@ -215,7 +221,7 @@ export class ModuleBase {
       }
 
       if (duration > 0) {
-        setTimeout(() => {
+        this.scheduleTimeout(() => {
           moduleElem.style.visibility = "visible";
           if (this.externalElements && Array.isArray(this.externalElements)) {
             this.externalElements.forEach((elem) => {
@@ -258,7 +264,7 @@ export class ModuleBase {
   /**
    * Adjusts the opacity of the element.
    * @param {Object} options
-   * @param {number} options.value - The opacity value between 0 and 1 (default: 1).
+   * @param {number} options.opacity - The opacity value between 0 and 1 (default: 1).
    */
   opacity(options: { opacity?: number } = {}) {
     const { opacity = 1 } = options;
@@ -279,7 +285,7 @@ export class ModuleBase {
    * After the duration, the rotation stops, and the element remains in its final rotated position.
    * @param {Object} options
    * @param {string} options.direction - "clockwise" or "counter-clockwise" (default: "clockwise").
-   * @param {number} options.speed - The rotation speed in degrees per second (default: 60).
+   * @param {number} options.speed - The rotation speed multiplier (default: 1).
    * @param {number} options.duration - Duration in milliseconds to rotate before stopping (default: 0, which means infinite rotation).
    */
   rotate(options: { direction?: string; speed?: number; duration?: number } = {}) {
@@ -591,16 +597,6 @@ export class ModuleBase {
 
     this.viewportLineElem = svg;
     this.externalElements.push(svg);
-
-    console.log(
-      `Module "${
-        this.constructor.name
-      }" viewport line drawn from (${startX.toFixed(1)}, ${startY.toFixed(
-        1
-      )}) to (${endX.toFixed(1)}, ${endY.toFixed(
-        1
-      )}) via closest side: ${closestSide}, length: ${clampedLength}%.`
-    );
   }
 
   /**
@@ -632,7 +628,7 @@ export class ModuleBase {
       moduleElem.style.filter = "invert(1)";
 
       if (duration > 0) {
-        setTimeout(() => {
+        this.scheduleTimeout(() => {
           moduleElem.style.filter = "none";
         }, duration);
       }
@@ -642,6 +638,9 @@ export class ModuleBase {
   }
 
   destroy() {
+    this.pendingTimeouts.forEach((id) => clearTimeout(id));
+    this.pendingTimeouts.clear();
+
     // Stop rotation animation if running
     this.stopRotate();
 

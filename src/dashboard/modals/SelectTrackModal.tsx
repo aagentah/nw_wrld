@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FaPlus, FaEdit, FaTrash } from "react-icons/fa";
+import { FaPlus, FaEdit, FaTrash, FaClone } from "react-icons/fa";
 import { Modal } from "../shared/Modal";
 import { SortableWrapper } from "../shared/SortableWrapper";
 import { SortableList, arrayMove } from "../shared/SortableList";
@@ -7,10 +7,16 @@ import { ModalHeader } from "../components/ModalHeader";
 import { ModalFooter } from "../components/ModalFooter";
 import { Button } from "../components/Button";
 import { RadioButton } from "../components/FormInputs";
-import { updateActiveSet } from "../core/utils";
-import { getActiveSetTracks, getActiveSet } from "../../shared/utils/setUtils";
+import { randomIdSuffix, updateActiveSet } from "../core/utils";
+import { getActiveSetTracks } from "../../shared/utils/setUtils";
 import { EditTrackModal } from "./EditTrackModal";
+import { ConfirmationModal } from "./ConfirmationModal";
 import { deleteRecordingsForTracks } from "../../shared/json/recordingUtils";
+import {
+  duplicateName,
+  duplicateTrack,
+  copyRecordingEntries,
+} from "../../shared/utils/duplicateUtils";
 import {
   parsePitchClass,
   pitchClassToName,
@@ -18,6 +24,7 @@ import {
 } from "../../shared/midi/midiUtils";
 import type { AudioCaptureState } from "../core/hooks/useDashboardAudioCapture";
 import type { FileAudioState } from "../core/hooks/useDashboardFileAudio";
+import { getMaxTrackSlots } from "../core/hooks/useTrackSlots";
 
 type Track = {
   id: string | number;
@@ -32,6 +39,7 @@ type SortableTrackItemProps = {
   globalMappings: Record<string, unknown>;
   onTrackSelect: (id: string | number) => void;
   onEdit: (index: number) => void;
+  onDuplicate: (index: number) => void;
   onDelete: (index: number) => void;
 };
 
@@ -43,6 +51,7 @@ const SortableTrackItem = ({
   globalMappings,
   onTrackSelect,
   onEdit,
+  onDuplicate,
   onDelete,
 }: SortableTrackItemProps) => {
   return (
@@ -100,6 +109,15 @@ const SortableTrackItem = ({
             <FaEdit />
           </button>
           <button
+            onClick={() => onDuplicate(trackIndex)}
+            className="text-neutral-500 hover:text-neutral-300 text-[11px]"
+            data-testid="duplicate-track"
+            aria-label="Duplicate track"
+            title="Duplicate track"
+          >
+            <FaClone />
+          </button>
+          <button
             onClick={() => onDelete(trackIndex)}
             className="text-neutral-500 hover:text-red-500 text-[11px]"
             data-testid="delete-track"
@@ -129,7 +147,6 @@ type SelectTrackModalProps = {
   activeTrackId: string | number | null;
   setActiveTrackId: (id: string | number | null) => void;
   activeSetId: string | null;
-  recordingData: Record<string, unknown>;
   setRecordingData: (updater: (prev: Record<string, unknown>) => Record<string, unknown>) => void;
   audioCaptureState: AudioCaptureState;
   fileAudioState: FileAudioState;
@@ -145,7 +162,6 @@ export const SelectTrackModal = ({
   activeTrackId,
   setActiveTrackId,
   activeSetId,
-  recordingData: _recordingData,
   setRecordingData,
   onCreateTrack,
   onConfirmDelete,
@@ -153,15 +169,52 @@ export const SelectTrackModal = ({
   fileAudioState,
 }: SelectTrackModalProps) => {
   const [editingTrackIndex, setEditingTrackIndex] = useState<number | null>(null);
+  const [alertMessage, setAlertMessage] = useState<string | null>(null);
 
   const tracks = getActiveSetTracks(userData, activeSetId);
-  const _activeSet = getActiveSet(userData, activeSetId);
   const inputType = userData?.config?.input?.type || "midi";
   const globalMappings = userData?.config || {};
 
   const handleTrackSelect = (trackId: string | number) => {
     setActiveTrackId(trackId);
     onClose();
+  };
+
+  const handleDuplicateTrack = (trackIndex: number) => {
+    const track = tracks[trackIndex];
+    if (!track) return;
+
+    const maxSlots = getMaxTrackSlots(String(inputType));
+    const usedSlots = new Set(
+      (tracks as Array<{ trackSlot?: unknown }>).map((t) => t.trackSlot).filter(Boolean)
+    );
+    const freeSlot = Array.from({ length: maxSlots }, (_, i) => i + 1).find(
+      (slot) => !usedSlots.has(slot)
+    );
+    if (!freeSlot) {
+      setAlertMessage(`Cannot duplicate: no track numbers available (max ${maxSlots} tracks).`);
+      return;
+    }
+
+    const newTrackId = `track_${Date.now()}_${randomIdSuffix()}`;
+    const newTrack = duplicateTrack(track as unknown as Record<string, unknown>, {
+      newId: newTrackId,
+      name: duplicateName(
+        String(track.name || ""),
+        (tracks as Array<{ name?: unknown }>).map((t) => String(t.name || ""))
+      ),
+      trackSlot: freeSlot,
+      makeModuleId: () => `inst_${Date.now()}_${randomIdSuffix()}`,
+    });
+
+    updateActiveSet(setUserData, activeSetId, (activeSet) => {
+      const tracksUnknown = (activeSet as Record<string, unknown>).tracks;
+      if (Array.isArray(tracksUnknown)) {
+        tracksUnknown.splice(trackIndex + 1, 0, newTrack);
+      }
+    });
+
+    setRecordingData((prev) => copyRecordingEntries(prev, { [String(track.id)]: newTrackId }));
   };
 
   const handleDeleteTrack = (trackIndex: number) => {
@@ -188,6 +241,8 @@ export const SelectTrackModal = ({
       }
     });
   };
+
+  if (!isOpen) return null;
 
   return (
     <>
@@ -232,6 +287,7 @@ export const SelectTrackModal = ({
                           globalMappings={globalMappings}
                           onTrackSelect={handleTrackSelect}
                           onEdit={setEditingTrackIndex}
+                          onDuplicate={handleDuplicateTrack}
                           onDelete={handleDeleteTrack}
                         />
                       ))}
@@ -260,6 +316,13 @@ export const SelectTrackModal = ({
           fileAudioState={fileAudioState}
         />
       )}
+
+      <ConfirmationModal
+        isOpen={!!alertMessage}
+        onClose={() => setAlertMessage(null)}
+        message={alertMessage}
+        type="alert"
+      />
     </>
   );
 };

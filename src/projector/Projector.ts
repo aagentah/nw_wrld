@@ -225,13 +225,9 @@ const Projector = {
             ).type || ""
           ) || "midi"
         : "midi";
-    if (logger.debugEnabled) {
-      console.log(
-        `✅ [Projector] Loaded ${this.userData.length} tracks from set: ${
-          activeSetId || "default"
-        }`
-      );
-    }
+    logger.log(
+      `✅ [Projector] Loaded ${this.userData.length} tracks from set: ${activeSetId || "default"}`
+    );
   },
 
   refreshPage() {

@@ -2,7 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const path = require("node:path");
 
-const { parseMidiTriggerValue, normalizeNoteMatchMode, buildMidiConfig } = require(
+const { parseMidiTriggerValue, normalizeNoteMatchMode, buildMidiConfig, createMidiConfigCache } = require(
   path.join(__dirname, "..", "dist", "runtime", "shared", "midi", "midiUtils.js")
 );
 
@@ -34,6 +34,34 @@ test("midiUtils: buildMidiConfig maps midi pitchClass trigger keys deterministic
   };
   const cfg = buildMidiConfig(tracks, globalMappings, "midi");
   assert.equal(cfg.trackTriggersMap["0"], "T1");
+});
+
+test("midiUtils: createMidiConfigCache reuses output for identical references and rebuilds on change", () => {
+  const cache = createMidiConfigCache();
+  const tracks = [{ name: "T1", trackSlot: "ch1", channelMappings: { "1": 1, "2": 2 } }];
+  const globalMappings = {
+    input: { noteMatchMode: "pitchClass" },
+    trackMappings: { midi: { pitchClass: { ch1: "C" } } },
+    channelMappings: { midi: { pitchClass: { "1": "D", "2": "E" } } },
+  };
+
+  const a = cache.get(tracks, globalMappings, "midi");
+  assert.deepEqual(a, buildMidiConfig(tracks, globalMappings, "midi"));
+  assert.equal(cache.get(tracks, globalMappings, "midi"), a);
+
+  const tracksCopy = [...tracks];
+  const b = cache.get(tracksCopy, globalMappings, "midi");
+  assert.notEqual(b, a);
+  assert.deepEqual(b, a);
+
+  const c = cache.get(tracksCopy, globalMappings, "osc");
+  assert.notEqual(c, b);
+  assert.deepEqual(c, buildMidiConfig(tracksCopy, globalMappings, "osc"));
+
+  const mappingsCopy = { ...globalMappings };
+  const d = cache.get(tracksCopy, mappingsCopy, "osc");
+  assert.notEqual(d, c);
+  assert.deepEqual(d, c);
 });
 
 test("midiPlayback: smoke (empty channels) play/pause/stop are non-throwing and stop calls callback", () => {

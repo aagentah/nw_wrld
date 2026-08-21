@@ -75,8 +75,6 @@ const nwWrldBridge = {
   },
   app: {
     getBaseMethodNames: () => ipcRenderer.sendSync("bridge:app:getBaseMethodNames") as unknown,
-    getMethodCode: (moduleName: unknown, methodName: unknown) =>
-      ipcRenderer.sendSync("bridge:app:getMethodCode", moduleName, methodName) as unknown,
     getKickMp3ArrayBuffer: () =>
       ipcRenderer.sendSync("bridge:app:getKickMp3ArrayBuffer") as unknown,
     getVersion: () => ipcRenderer.sendSync("bridge:app:getVersion") as unknown,

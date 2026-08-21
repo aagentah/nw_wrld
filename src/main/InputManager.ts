@@ -9,28 +9,8 @@ import type {
   MidiDeviceInfo,
 } from "../types/input";
 import type { InputConfig } from "../types/userData";
-
-const DEFAULT_INPUT_CONFIG = {
-  type: "midi",
-  deviceName: "IAC Driver Bus 1",
-  trackSelectionChannel: 2,
-  methodTriggerChannel: 1,
-  velocitySensitive: false,
-  noteMatchMode: "pitchClass",
-  port: 8000,
-};
-
-const INPUT_STATUS: {
-  DISCONNECTED: InputStatus;
-  CONNECTING: InputStatus;
-  CONNECTED: InputStatus;
-  ERROR: InputStatus;
-} = {
-  DISCONNECTED: "disconnected",
-  CONNECTING: "connecting",
-  CONNECTED: "connected",
-  ERROR: "error",
-};
+import { DEFAULT_INPUT_CONFIG } from "../shared/config/defaultConfig";
+import { INPUT_STATUS } from "../shared/constants/inputStatus";
 
 type RuntimeMidiConfig = Omit<InputConfig, "type"> & {
   type: "midi";
@@ -81,9 +61,9 @@ type CurrentSource =
 type WebMidiProvider = typeof WebMidi;
 
 const getWebMidiProvider = () => {
-  const g = globalThis as unknown as { __nwWrldWebMidiOverride?: unknown };
+  const g = globalThis as { __nwWrldWebMidiOverride?: unknown };
   if (g.__nwWrldWebMidiOverride) return g.__nwWrldWebMidiOverride as WebMidiProvider;
-  return WebMidi as unknown as WebMidiProvider;
+  return WebMidi;
 };
 
 const webMidiEnableInFlightByProvider: WeakMap<object, Promise<void>> = new WeakMap();
@@ -93,7 +73,7 @@ const enableWebMidi = (webMidi: WebMidiProvider): Promise<void> => {
     if (webMidi.enabled) return Promise.resolve();
   } catch {}
 
-  const key = webMidi as unknown as object;
+  const key = webMidi;
   const inFlight = webMidiEnableInFlightByProvider.get(key);
   if (inFlight) return inFlight;
 
@@ -527,11 +507,14 @@ class InputManager {
   }
 
   async disconnect() {
+    // Always tear down the WebMidi singleton listeners, even when a failed init left
+    // currentSource null; otherwise a dead manager keeps handlers registered and leaks
+    // across workspace switches.
+    this.teardownMidiWebMidiListeners();
     try {
       if (this.currentSource) {
         switch (this.currentSource.type) {
           case "midi":
-            this.teardownMidiWebMidiListeners();
             if (this.currentSource.instance) {
               try {
                 this.currentSource.instance.removeListener();

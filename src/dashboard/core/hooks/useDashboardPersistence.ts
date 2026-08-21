@@ -39,6 +39,7 @@ export const useDashboardPersistence = ({
 }: UseDashboardPersistenceArgs) => {
   const userDataSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const recordingDataSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSavedUserDataRef = useRef<Record<string, unknown> | null>(null);
 
   useEffect(() => {
     if (isInitialMountRef.current) {
@@ -49,8 +50,15 @@ export const useDashboardPersistence = ({
       return;
     }
 
+    // All edits produce a new userData reference (immer), so a pure track/set
+    // switch re-firing this effect must not rewrite identical bytes to disk.
+    if (lastSavedUserDataRef.current === userData) {
+      return;
+    }
+
     const debouncedSave = setTimeout(async () => {
       await saveUserData(userData);
+      lastSavedUserDataRef.current = userData;
       userDataSaveTimeoutRef.current = null;
 
       const tracks = getActiveSetTracks(userData, activeSetId);
@@ -122,14 +130,22 @@ export const useDashboardPersistence = ({
     workspacePathRef,
   ]);
 
+  const appStateRef = useRef<Record<string, unknown> | null>(null);
+
   useEffect(() => {
     if (isInitialMountRef.current) {
       return;
     }
 
     const updateAppState = async () => {
-      const currentState = await loadAppState();
-      const currentStateObj = currentState && typeof currentState === 'object' ? currentState as Record<string, unknown> : {};
+      // appState.json is written only by this hook and the unload flush, so
+      // read it once and spread from the in-memory copy on later writes.
+      if (appStateRef.current === null) {
+        const currentState = await loadAppState();
+        appStateRef.current =
+          currentState && typeof currentState === 'object' ? currentState as Record<string, unknown> : {};
+      }
+      const currentStateObj = appStateRef.current;
       const preservedWorkspacePath = workspacePathRef.current ?? currentStateObj.workspacePath ?? null;
       const stateToSave = {
         ...currentStateObj,
@@ -138,6 +154,7 @@ export const useDashboardPersistence = ({
         sequencerMuted: isSequencerMuted,
         workspacePath: preservedWorkspacePath,
       };
+      appStateRef.current = stateToSave;
       await saveAppState(stateToSave);
     };
     updateAppState();

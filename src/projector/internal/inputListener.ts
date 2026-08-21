@@ -1,5 +1,5 @@
 import {
-  buildMidiConfig,
+  createMidiConfigCache,
   normalizeNoteMatchMode,
   noteNumberToTriggerKey,
   pitchClassToName,
@@ -27,6 +27,7 @@ type InputListenerContext = {
 export function initInputListener(this: InputListenerContext) {
   const messaging = getMessaging();
   if (!messaging || typeof messaging.onInputEvent !== "function") return;
+  const midiConfigCache = createMidiConfigCache();
   messaging.onInputEvent((event: unknown, payload: unknown) => {
     const p =
       payload && typeof payload === "object" ? (payload as InputEventPayload) : null;
@@ -43,13 +44,13 @@ export function initInputListener(this: InputListenerContext) {
       typeof (config as { input?: unknown }).input === "object"
         ? String(((config as { input?: unknown }).input as { type?: unknown }).type || "midi")
         : "midi";
-    const midiConfig = buildMidiConfig(this.userData, config, selectedInputType);
     if (isSequencerMode) {
       return;
     }
     if (data.source && data.source !== selectedInputType) {
       return;
     }
+    const midiConfig = midiConfigCache.get(this.userData, config, selectedInputType);
 
     if (debugEnabled) {
       logger.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");

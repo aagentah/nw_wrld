@@ -12,6 +12,7 @@ This document is the standard we will follow (and enforce) for any future work i
 - **Boundary coverage**: Prefer tests that cross real boundaries (UI → IPC → disk JSON → projector messaging) when that’s the risk.
 - **No bloat**: Keep tests short, deterministic, and easy to maintain.
 - **Zero regression**: A failing E2E test should point to a real break (not flakiness).
+  - Note: `playwright.config.ts` retries up to 3 times locally, so a green local run can still mask intermittent flakiness (a test that only passed on a retry). Treat retried passes as a signal to fix the underlying instability, not as a clean result.
 
 ---
 
@@ -22,7 +23,7 @@ This document is the standard we will follow (and enforce) for any future work i
 - **No fixed sleeps.**
   - Do not add `setTimeout`/`sleep` waits. Use Playwright auto-waiting, `expect(...).toBeVisible()`, `waitForFunction`, `expect.poll`, etc.
 - **No brittle selectors.**
-  - Prefer stable selectors. If you can’t make it stable, don’t write the test yet—fix the UI contract first.
+  - Prefer stable selectors. If you can’t make it stable, don’t write the test yet. Fix the UI contract first.
 - **No mystery diffs.**
   - If you can’t explain a changed line, revert it.
 
@@ -97,7 +98,7 @@ Use “wait for truth” instead of “wait for time”:
 ### Scope rules: golden paths vs. small workflows
 
 - **Golden path tests**:
-  - 1–2 tests max
+  - 1-2 tests max
   - Prove the most important end-to-end “happy path”
   - Keep assertions minimal but meaningful
 

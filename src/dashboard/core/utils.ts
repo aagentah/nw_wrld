@@ -4,12 +4,37 @@ import {
   DEFAULT_GLOBAL_MAPPINGS,
   DEFAULT_INPUT_CONFIG,
 } from "../../shared/config/defaultConfig";
-import {
-  getJsonFilePath,
-  loadJsonFile,
-  saveJsonFile,
-  saveJsonFileSync,
-} from "../../shared/json/jsonFileBase";
+import { loadJsonFile, saveJsonFile, saveJsonFileSync } from "../../shared/json/jsonFileBase";
+
+export const getBridge = () => globalThis.nwWrldBridge;
+
+export const randomIdSuffix = () => Math.random().toString(36).slice(2, 11);
+
+export function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return (
+    Boolean(value) &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    Object.prototype.toString.call(value) === "[object Object]"
+  );
+}
+
+export const isValidHexColor = (value: string): boolean => /^#([0-9A-F]{3}){1,2}$/i.test(value);
+
+export const normalizeHexColor = (value: unknown): string | null => {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+  const withHash = raw.startsWith("#") ? raw : `#${raw}`;
+  if (!isValidHexColor(withHash)) return null;
+  const hex = withHash.toLowerCase();
+  if (hex.length === 4) {
+    const r = hex[1];
+    const g = hex[2];
+    const b = hex[3];
+    return `#${r}${r}${g}${g}${b}${b}`;
+  }
+  return hex;
+};
 
 const getMethodsByLayer = (module: unknown, moduleBase: string[], threeBase: string[]) => {
   const m = module as { methods?: Array<{ name?: unknown }>; name?: unknown } | null;
@@ -49,29 +74,9 @@ const getMethodsByLayer = (module: unknown, moduleBase: string[], threeBase: str
   return layers;
 };
 
-const getMethodCode = (moduleName: unknown, methodName: unknown) => {
-  try {
-    const bridge = globalThis.nwWrldBridge;
-    if (!bridge || !bridge.app || typeof bridge.app.getMethodCode !== "function") {
-      return { code: null, filePath: null };
-    }
-    const res = bridge.app.getMethodCode(moduleName, methodName) as
-      | { code?: unknown; filePath?: unknown }
-      | null
-      | undefined;
-    return {
-      code: (res && typeof res.code === "string" ? res.code : null) || null,
-      filePath: (res && typeof res.filePath === "string" ? res.filePath : null) || null,
-    };
-  } catch (error) {
-    console.error("Error extracting method code:", error);
-    return { code: null, filePath: null };
-  }
-};
-
 type UserDataState = { config: Record<string, unknown>; sets: unknown[] } & Record<string, unknown>;
 type SetStateAction<T> = T | ((prev: T) => T);
-type SetUserData = (action: SetStateAction<UserDataState>) => void;
+export type SetUserData = (action: SetStateAction<UserDataState>) => void;
 
 const updateUserData = (setUserData: SetUserData, updater: (draft: UserDataState) => void) => {
   setUserData((prev) =>
@@ -79,10 +84,6 @@ const updateUserData = (setUserData: SetUserData, updater: (draft: UserDataState
       updater(draft as unknown as UserDataState);
     }) as unknown as UserDataState
   );
-};
-
-const getUserDataPath = () => {
-  return getJsonFilePath("userData.json");
 };
 
 const loadUserData = async () => {
@@ -239,9 +240,7 @@ const updateActiveSet = (
 
 export {
   getMethodsByLayer,
-  getMethodCode,
   updateUserData,
-  getUserDataPath,
   loadUserData,
   saveUserData,
   saveUserDataSync,

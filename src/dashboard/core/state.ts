@@ -1,4 +1,4 @@
-import { atom, useAtom } from "jotai";
+import { atom, useSetAtom } from "jotai";
 import { useRef, useCallback, useEffect } from "react";
 
 export const userDataAtom = atom<{ config: Record<string, unknown>; sets: unknown[] }>({
@@ -14,13 +14,12 @@ export const flashingConstructorsAtom = atom<Set<string>>(new Set<string>());
 export const recordingStateAtom = atom<Record<string, { startTime: number; isRecording: boolean }>>(
   {}
 );
-export const helpTextAtom = atom<string>("");
+export const sequencerCurrentStepAtom = atom<number>(0);
+export const lastTrackActivityAtom = atom<string | null>(null);
+export const lastMethodActivityAtom = atom<string | null>(null);
 
-export const useFlashingChannels = (): [
-  Set<string>,
-  (channelName: string, duration?: number) => void,
-] => {
-  const [flashingChannels, setFlashingChannels] = useAtom(flashingChannelsAtom);
+export const useFlashingChannels = (): ((channelName: string, duration?: number) => void) => {
+  const setFlashingChannels = useSetAtom(flashingChannelsAtom);
   const activeFlashesRef = useRef<Set<string>>(new Set());
   const pendingUpdatesRef = useRef<Set<string>>(new Set());
   const rafIdRef = useRef<number | null>(null);
@@ -77,5 +76,5 @@ export const useFlashingChannels = (): [
     };
   }, []);
 
-  return [flashingChannels, flashChannel];
+  return flashChannel;
 };

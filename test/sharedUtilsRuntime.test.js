@@ -103,9 +103,9 @@ test("sdkHelpers loadJson invalid JSON => null", async () => {
   assert.equal(await loadJson("x"), null);
 });
 
-test("methodOptions does not throw for weird inputs", () => {
-  assert.doesNotThrow(() => buildMethodOptions(null));
-  assert.doesNotThrow(() => buildMethodOptions([null, 1, "x", {}]));
+test("methodOptions returns an empty options object for weird inputs", () => {
+  assert.deepEqual(buildMethodOptions(null), {});
+  assert.deepEqual(buildMethodOptions([null, 1, "x", {}]), {});
 });
 
 test("methodOptions output keys only from input name fields", () => {

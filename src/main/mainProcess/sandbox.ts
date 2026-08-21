@@ -3,6 +3,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { srcDir, state } from "./state";
 import { isExistingDirectory, resolveWithinDir } from "./pathSafety";
+import { getProjectDirForEvent } from "./ipcBridge/projectContext";
 import {
   normalizeSandboxRequestProps,
   normalizeSandboxResult,
@@ -27,16 +28,6 @@ const readFileUtf8WithLimit = async (
   } catch {
     return null;
   }
-};
-
-const getProjectDirForEvent = (event: SenderEvent): string | null => {
-  try {
-    const senderId = event?.sender?.id;
-    if (typeof senderId === "number" && state.webContentsToProjectDir.has(senderId)) {
-      return state.webContentsToProjectDir.get(senderId) || null;
-    }
-  } catch {}
-  return state.currentProjectDir || null;
 };
 
 const registerSandboxToken = (
@@ -344,31 +335,34 @@ const destroySandboxForProjector = (ownerWebContentsId: number | null): void => 
   } catch {}
 };
 
+// Envelope keys differ by protocol on purpose: lifecycle channels (registerToken/ensure/
+// destroy) use `reason`; the sandbox message protocol (sandbox:request) uses `error`,
+// which TrackSandboxHost.isStaleTokenResult matches on. Unifying them breaks stale-token recovery.
 export function registerSandboxIpc(): void {
   ipcMain.on("bridge:sandbox:registerToken", (event, token) => {
-    const projectDir = getProjectDirForEvent(event as unknown as SenderEvent);
+    const projectDir = getProjectDirForEvent(event);
     if (!projectDir || !isExistingDirectory(projectDir)) {
-      (event as unknown as { returnValue: unknown }).returnValue = {
+      event.returnValue = {
         ok: false,
         reason: "PROJECT_DIR_MISSING",
       };
       return;
     }
-    (event as unknown as { returnValue: unknown }).returnValue = registerSandboxToken(
-      event as unknown as SenderEvent,
+    event.returnValue = registerSandboxToken(
+      event,
       token,
       projectDir
     );
   });
 
   ipcMain.on("bridge:sandbox:unregisterToken", (event, token) => {
-    (event as unknown as { returnValue: unknown }).returnValue = unregisterSandboxToken(token);
+    event.returnValue = unregisterSandboxToken(token);
   });
 
   ipcMain.handle("sandbox:ensure", async (event) => {
-    if (!isProjectorEvent(event as unknown as SenderEvent))
+    if (!isProjectorEvent(event))
       return { ok: false, reason: "FORBIDDEN" };
-    const projectDir = getProjectDirForEvent(event as unknown as SenderEvent);
+    const projectDir = getProjectDirForEvent(event);
     if (!projectDir || !isExistingDirectory(projectDir)) {
       return { ok: false, reason: "PROJECT_DIR_MISSING" };
     }
@@ -403,7 +397,7 @@ export function registerSandboxIpc(): void {
 
     const p = (async () => {
       const token = `nw_${Math.random().toString(16).slice(2)}_${Date.now()}`;
-      const reg = registerSandboxToken(event as unknown as SenderEvent, token, projectDir);
+      const reg = registerSandboxToken(event, token, projectDir);
       if (!reg || reg.ok !== true) {
         return { ok: false, reason: reg?.reason || "TOKEN_REGISTER_FAILED" };
       }
@@ -434,22 +428,22 @@ export function registerSandboxIpc(): void {
   });
 
   ipcMain.handle("sandbox:destroy", async (event) => {
-    if (!isProjectorEvent(event as unknown as SenderEvent))
+    if (!isProjectorEvent(event))
       return { ok: false, reason: "FORBIDDEN" };
     const ownerId =
-      typeof (event as unknown as SenderEvent)?.sender?.id === "number"
-        ? ((event as unknown as SenderEvent).sender?.id as number)
+      typeof (event)?.sender?.id === "number"
+        ? ((event).sender?.id as number)
         : null;
     destroySandboxForProjector(ownerId);
     return { ok: true };
   });
 
   ipcMain.handle("sandbox:request", async (event, payload) => {
-    if (!isProjectorEvent(event as unknown as SenderEvent))
+    if (!isProjectorEvent(event))
       return { ok: false, error: "FORBIDDEN" };
     const ownerId =
-      typeof (event as unknown as SenderEvent)?.sender?.id === "number"
-        ? ((event as unknown as SenderEvent).sender?.id as number)
+      typeof (event)?.sender?.id === "number"
+        ? ((event).sender?.id as number)
         : null;
     const token = String((payload as { token?: unknown })?.token || "").trim();
     const type = String((payload as { type?: unknown })?.type || "").trim();
@@ -499,8 +493,8 @@ export function registerSandboxIpc(): void {
 
   ipcMain.on("sandbox:toMain", async (event, payload) => {
     const senderId =
-      typeof (event as unknown as SenderEvent)?.sender?.id === "number"
-        ? ((event as unknown as SenderEvent).sender?.id as number)
+      typeof (event)?.sender?.id === "number"
+        ? ((event).sender?.id as number)
         : null;
     if (!senderId || senderId !== state.sandboxViewWebContentsId) return;
     const data = payload as unknown;

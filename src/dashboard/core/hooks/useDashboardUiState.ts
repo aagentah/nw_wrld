@@ -1,7 +1,7 @@
 import { useCallback, useState, type Dispatch, type SetStateAction } from "react";
 import { updateActiveSet } from "../utils";
 
-type Confirmation = {
+export type Confirmation = {
   title?: string;
   message: string;
   onConfirm?: () => void;
@@ -28,10 +28,6 @@ export const useDashboardUiState = ({ selectedChannel, setUserData, activeSetId 
 
   const [isModuleEditorOpen, setIsModuleEditorOpen] = useState(false);
   const [editingModuleName, setEditingModuleName] = useState<string | null>(null);
-  const [editingTemplateType, setEditingTemplateType] = useState<"basic" | "threejs" | "p5js" | null>(
-    null
-  );
-  const [isNewModuleDialogOpen, setIsNewModuleDialogOpen] = useState(false);
 
   const [isCreateTrackOpen, setIsCreateTrackOpen] = useState(false);
   const [isCreateSetOpen, setIsCreateSetOpen] = useState(false);
@@ -62,26 +58,14 @@ export const useDashboardUiState = ({ selectedChannel, setUserData, activeSetId 
     channelNumber: null,
   });
 
-  const handleCreateNewModule = () => {
-    setIsNewModuleDialogOpen(true);
-  };
-
-  const handleCreateModule = (moduleName: string, templateType: string) => {
-    setEditingModuleName(moduleName);
-    setEditingTemplateType(templateType as unknown as "basic" | "threejs" | "p5js");
-    setIsModuleEditorOpen(true);
-  };
-
   const handleEditModule = (moduleName: string) => {
     setEditingModuleName(moduleName);
-    setEditingTemplateType(null);
     setIsModuleEditorOpen(true);
   };
 
   const handleCloseModuleEditor = () => {
     setIsModuleEditorOpen(false);
     setEditingModuleName(null);
-    setEditingTemplateType(null);
   };
 
   const openConfirmationModal = useCallback(
@@ -105,7 +89,7 @@ export const useDashboardUiState = ({ selectedChannel, setUserData, activeSetId 
       if (!selectedChannel) return;
       setEditChannelModalState({
         isOpen: true,
-        trackIndex: (selectedChannel as unknown as { trackIndex: number }).trackIndex,
+        trackIndex: (selectedChannel as { trackIndex: number }).trackIndex,
         channelNumber,
       });
     },
@@ -117,10 +101,10 @@ export const useDashboardUiState = ({ selectedChannel, setUserData, activeSetId 
       if (!selectedChannel) return;
       openConfirmationModal(`Are you sure you want to delete Channel ${channelNumber}?`, () => {
         updateActiveSet(setUserData, activeSetId, (activeSet) => {
-          const tracks = (activeSet as unknown as { tracks: unknown[] }).tracks;
+          const tracks = (activeSet as { tracks: unknown[] }).tracks;
           const currentTrack = tracks[
-            (selectedChannel as unknown as { trackIndex: number }).trackIndex
-          ] as unknown as {
+            (selectedChannel as { trackIndex: number }).trackIndex
+          ] as {
             channelMappings: Record<string, unknown>;
             modulesData: Record<string, { methods?: Record<string, unknown> }>;
           };
@@ -182,15 +166,10 @@ export const useDashboardUiState = ({ selectedChannel, setUserData, activeSetId 
     setSelectedTrackForModuleMenu,
     openAddModuleModal,
 
-    handleCreateNewModule,
-    handleCreateModule,
     handleEditModule,
     handleCloseModuleEditor,
     isModuleEditorOpen,
     editingModuleName,
-    editingTemplateType,
-    isNewModuleDialogOpen,
-    setIsNewModuleDialogOpen,
 
     confirmationModal,
     setConfirmationModal,
@@ -245,15 +224,10 @@ export const useDashboardUiState = ({ selectedChannel, setUserData, activeSetId 
     setSelectedTrackForModuleMenu: Dispatch<SetStateAction<number | null>>;
     openAddModuleModal: (trackIndex: number) => void;
 
-    handleCreateNewModule: () => void;
-    handleCreateModule: (moduleName: string, templateType: string) => void;
     handleEditModule: (moduleName: string) => void;
     handleCloseModuleEditor: () => void;
     isModuleEditorOpen: boolean;
     editingModuleName: string | null;
-    editingTemplateType: "basic" | "threejs" | "p5js" | null;
-    isNewModuleDialogOpen: boolean;
-    setIsNewModuleDialogOpen: Dispatch<SetStateAction<boolean>>;
 
     confirmationModal: Confirmation;
     setConfirmationModal: Dispatch<SetStateAction<Confirmation>>;

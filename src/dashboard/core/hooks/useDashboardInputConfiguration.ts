@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { updateUserData } from "../utils";
-import { readDebugFlag } from "../utils/readDebugFlag";
+import { readDebugFlag } from "../readDebugFlag";
 
 type UseDashboardInputConfigurationArgs = {
   userData: Record<string, unknown>;

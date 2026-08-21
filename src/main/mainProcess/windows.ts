@@ -1,19 +1,56 @@
-import { BrowserWindow, app, screen } from "electron";
+import { BrowserWindow, app, screen, shell } from "electron";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import InputManager from "../InputManager";
 import { DEFAULT_INPUT_CONFIG, DEFAULT_USER_DATA } from "../../shared/config/defaultConfig";
 import { sanitizeJsonForBridge } from "../../shared/validation/jsonBridgeValidation";
 import { normalizeDashboardProjectorMessage } from "../../shared/validation/dashboardProjectorIpcValidation";
+import { normalizeOpenExternalUrl } from "../../shared/validation/openExternalValidation";
 import { srcDir, state } from "./state";
 import { getProjectJsonDirForMain, startWorkspaceWatcher } from "./workspace";
 import { destroySandboxView, updateSandboxViewBounds } from "./sandbox";
 
-type WebContentsWithId = { id?: unknown };
-type SenderEvent = { sender?: WebContentsWithId };
 type Jsonish = string | number | boolean | null | undefined | object;
 
 const isTestHeadless = process.env.NW_WRLD_TEST_HEADLESS === "1";
+
+const isAllowedInternalNavigation = (url: unknown): boolean => {
+  if (typeof url !== "string") return false;
+  return (
+    url.startsWith("file:") ||
+    url.startsWith("nw-sandbox:") ||
+    url.startsWith("nw-assets:") ||
+    url.startsWith("devtools:") ||
+    url === "about:blank"
+  );
+};
+
+// Privileged windows can reach the fs; pin them to local content (external links go via validated openExternal).
+const hardenWindowNavigation = (win: BrowserWindow): void => {
+  try {
+    const wc = win.webContents;
+    if (!wc) return;
+    if (typeof wc.setWindowOpenHandler === "function") {
+      wc.setWindowOpenHandler(({ url }) => {
+        const safe = normalizeOpenExternalUrl(url);
+        if (safe) {
+          Promise.resolve(shell.openExternal(safe)).catch(() => {});
+        }
+        return { action: "deny" };
+      });
+    }
+    wc.on("will-navigate", (event, url) => {
+      if (!isAllowedInternalNavigation(url)) {
+        event.preventDefault();
+      }
+    });
+    wc.on("will-redirect", (event, url) => {
+      if (!isAllowedInternalNavigation(url)) {
+        event.preventDefault();
+      }
+    });
+  } catch {}
+};
 
 const getProjectorAspectRatioValue = (aspectRatioId: unknown): number => {
   const id = String(aspectRatioId || "").trim();
@@ -134,16 +171,6 @@ export const applyProjectorWindowAspectRatio = (aspectRatioId: unknown): void =>
   } catch {}
 };
 
-export const getProjectDirForEvent = (event: SenderEvent): string | null => {
-  try {
-    const senderId = event?.sender?.id;
-    if (typeof senderId === "number" && state.webContentsToProjectDir.has(senderId)) {
-      return state.webContentsToProjectDir.get(senderId) || null;
-    }
-  } catch {}
-  return state.currentProjectDir || null;
-};
-
 export function loadConfig(projectDir: string | null): unknown {
   const baseDir = getProjectJsonDirForMain(projectDir);
   if (!baseDir) return DEFAULT_USER_DATA;
@@ -168,7 +195,7 @@ export function loadConfig(projectDir: string | null): unknown {
         return sanitizeJsonForBridge(
           "userData.json",
           backupParsed as Jsonish,
-          DEFAULT_USER_DATA as unknown as Jsonish
+          DEFAULT_USER_DATA as Jsonish
         );
       } catch {}
       console.error("[Main] Using default configuration");
@@ -179,7 +206,7 @@ export function loadConfig(projectDir: string | null): unknown {
       return sanitizeJsonForBridge(
         "userData.json",
         parsed as Jsonish,
-        DEFAULT_USER_DATA as unknown as Jsonish
+        DEFAULT_USER_DATA as Jsonish
       );
     } catch (sanitizeErr) {
       const message = sanitizeErr instanceof Error ? sanitizeErr.message : String(sanitizeErr);
@@ -286,6 +313,8 @@ const createProjectorWindow = (projectDir: string | null): BrowserWindow => {
     paintWhenInitiallyHidden: true,
     frame: false,
   });
+
+  hardenWindowNavigation(projectorWindow);
 
   try {
     if (typeof projectorWindow.getBounds === "function") {
@@ -402,6 +431,8 @@ export function createWindow(projectDir: string | null): void {
     show: false,
     paintWhenInitiallyHidden: true,
   });
+
+  hardenWindowNavigation(state.dashboardWindow as BrowserWindow);
 
   try {
     const win = state.dashboardWindow as { once?: unknown; show?: unknown };

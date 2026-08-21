@@ -1,6 +1,7 @@
 // src/projector/helpers/animationManager.ts
 
 import TWEEN from "@tweenjs/tween.js";
+import logger from "./logger";
 
 /**
  * AnimationManager - Centralized requestAnimationFrame coordinator
@@ -31,10 +32,7 @@ class AnimationManager {
    */
   subscribe(callback: unknown) {
     if (typeof callback !== "function") {
-      console.error(
-        "[AnimationManager] Subscribe called with non-function:",
-        callback
-      );
+      logger.error("[AnimationManager] Subscribe called with non-function:", callback);
       return;
     }
 
@@ -72,13 +70,14 @@ class AnimationManager {
       try {
         callback();
       } catch (error: unknown) {
-        console.error(
-          "[AnimationManager] Error in subscriber callback:",
-          error
-        );
+        logger.error("[AnimationManager] Error in subscriber callback:", error);
       }
     });
 
+    if (this.subscribers.size === 0) {
+      this.rafId = null;
+      return;
+    }
     this.rafId = requestAnimationFrame(this.tickBound);
   }
 

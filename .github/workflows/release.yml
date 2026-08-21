@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Optional tag to build (e.g. v0.4.0-beta). If empty, builds the selected branch ref."
+        description: "Optional tag to build (e.g. v0.5.1-beta). If empty, builds the selected branch ref."
         required: false
         type: string
   push:
@@ -165,7 +165,10 @@ jobs:
           pathlib.Path("SHA256SUMS").write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
           print(pathlib.Path("SHA256SUMS").read_text(encoding="utf-8"))
           PY
-      - uses: softprops/action-gh-release@v2
+      # Pinned to a commit SHA (supply-chain hardening): a floating @v2 tag can be
+      # repointed by a maintainer or attacker, and this step publishes release
+      # artifacts with the contents:write token. SHA == softprops/action-gh-release v2.
+      - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           tag_name: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag != '' && github.event.inputs.tag || github.ref_name }}
           files: |

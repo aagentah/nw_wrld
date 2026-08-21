@@ -96,14 +96,14 @@ export async function executeMethods(
       const options = buildMethodOptions(methodOptions, {
         onInvalidRandomRange: ({ name, min, max, value }) => {
           if (debugEnabled) {
-            console.warn(
+            logger.warn(
               `[Projector] Invalid randomRange for "${name}": [${min}, ${max}] - expected numbers. Using value: ${value}`
             );
           }
         },
         onSwapRandomRange: ({ name, min, max }) => {
           if (debugEnabled) {
-            console.warn(
+            logger.warn(
               `[Projector] Invalid randomRange for "${name}": min (${min}) > max (${max}). Swapping values.`
             );
           }
