@@ -27,6 +27,7 @@ test("packaging config references build resources that exist", () => {
   assert.equal(typeof mac.entitlements, "string");
   assert.equal(typeof mac.entitlementsInherit, "string");
   assert.equal(typeof mac.icon, "string");
+  assert.match(String(mac.x64ArchFiles), /jazz-midi/);
 
   const win = build && build.win ? build.win : null;
   assert.equal(typeof win, "object");

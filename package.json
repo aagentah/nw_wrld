@@ -171,7 +171,8 @@
       "hardenedRuntime": true,
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.inherit.plist",
-      "notarize": true
+      "notarize": true,
+      "x64ArchFiles": "**/jazz-midi/**/*.node"
     },
     "win": {
       "target": [
