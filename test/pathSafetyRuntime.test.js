@@ -29,14 +29,18 @@ test("safeJsonFilename: only accepts known json filenames", () => {
 
 test("resolveWithinDir: prevents path traversal and returns resolved paths", () => {
   const base = fs.mkdtempSync(path.join(os.tmpdir(), "nw_wrld_pathsafety_"));
-  assert.equal(isExistingDirectory(base), true);
+  try {
+    assert.equal(isExistingDirectory(base), true);
 
-  const ok = resolveWithinDir(base, "a/b.txt");
-  assert.equal(typeof ok, "string");
-  assert.ok(ok.endsWith(path.join("a", "b.txt")));
-  assert.ok(ok.startsWith(base));
+    const ok = resolveWithinDir(base, "a/b.txt");
+    assert.equal(typeof ok, "string");
+    assert.ok(ok.endsWith(path.join("a", "b.txt")));
+    assert.ok(ok.startsWith(base));
 
-  const traversal = resolveWithinDir(base, "../escape.txt");
-  assert.equal(traversal, null);
+    const traversal = resolveWithinDir(base, "../escape.txt");
+    assert.equal(traversal, null);
+  } finally {
+    fs.rmSync(base, { recursive: true, force: true });
+  }
 });
 

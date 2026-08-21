@@ -164,7 +164,6 @@ function normalizeTrack(value: Jsonish): Jsonish | null {
     },
   };
 
-  const _existingSignal = signalObj ? (signalObj as unknown) : null;
   const needsSignal =
     !signalObj ||
     !isPlainObject(rawAudio) ||
@@ -190,7 +189,7 @@ function normalizeTrack(value: Jsonish): Jsonish | null {
 
   if (needsSignal) {
     ensure();
-    out.signal = nextSignal as unknown as Jsonish;
+    out.signal = nextSignal as Jsonish;
   }
 
   return changed ? out : value;

@@ -12,6 +12,7 @@ import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 import { parseNwWrldDocblockMetadata } from "../shared/nwWrldDocblock";
 import { buildMethodOptions, parseMatrixOptions } from "../shared/utils/methodOptions";
 import { createSdkHelpers } from "../shared/utils/sdkHelpers";
+import { resolveConstructorRunList } from "./internal/track/constructorRunList";
 import {
   buildWorkspaceImportPreamble,
   ensureTrailingSlash,
@@ -38,9 +39,6 @@ const TOKEN =
   null;
 
 const injectWorkspaceModuleImports = (moduleId, sourceText) => {
-  if (typeof parseNwWrldDocblockMetadata !== "function") {
-    throw new Error(`[Sandbox] Docblock parser is unavailable.`);
-  }
   const meta = parseNwWrldDocblockMetadata(sourceText, MODULE_METADATA_MAX_BYTES);
   const preamble = buildWorkspaceImportPreamble(moduleId, meta?.imports);
 
@@ -54,20 +52,6 @@ const injectWorkspaceModuleImports = (moduleId, sourceText) => {
   const head = docblockMatch[0];
   const rest = text.slice(head.length);
   return `${head}${preamble}\n${rest}`;
-};
-
-const _getCallableMethodNames = (instance) => {
-  const names = new Set();
-  let proto = instance ? Object.getPrototypeOf(instance) : null;
-  while (proto && proto !== Object.prototype) {
-    for (const n of Object.getOwnPropertyNames(proto)) {
-      if (n === "constructor") continue;
-      const desc = Object.getOwnPropertyDescriptor(proto, n);
-      if (desc && typeof desc.value === "function") names.add(n);
-    }
-    proto = Object.getPrototypeOf(proto);
-  }
-  return Array.from(names);
 };
 
 const getCallableMethodNamesFromClass = (Cls) => {
@@ -389,8 +373,12 @@ globalThis.nwSandboxIpc?.on?.(async (data) => {
 
           instancesById.set(instanceId, { moduleType, instances });
 
-          const nonMatrix = constructorMethods.filter((mm) => mm?.name && mm.name !== "matrix");
-          for (const mm of nonMatrix) {
+          const allClassMethods = mergeMethodsByName(
+            getBaseMethodsForClass(ModuleClass),
+            Array.isArray(ModuleClass?.methods) ? ModuleClass.methods : []
+          );
+          const runList = resolveConstructorRunList(constructorMethods, allClassMethods);
+          for (const mm of runList) {
             const methodName = String(mm.name || "").trim();
             if (!methodName) continue;
             const opts = buildMethodOptions(mm.options);
@@ -464,8 +452,6 @@ globalThis.nwSandboxIpc?.on?.(async (data) => {
         const ctor = Array.isArray(modulesData?.[instanceId]?.constructor)
           ? modulesData[instanceId].constructor
           : [];
-        const nonMatrix = ctor.filter((mm) => mm?.name && mm.name !== "matrix");
-
         const ModuleClass = await getModuleClass(moduleType, moduleSources);
         const instances = [];
         for (let row = 1; row <= matrix.rows; row++) {
@@ -496,7 +482,12 @@ globalThis.nwSandboxIpc?.on?.(async (data) => {
 
         instancesById.set(instanceId, { moduleType, instances });
 
-        for (const mm of nonMatrix) {
+        const allClassMethods = mergeMethodsByName(
+          getBaseMethodsForClass(ModuleClass),
+          Array.isArray(ModuleClass?.methods) ? ModuleClass.methods : []
+        );
+        const runList = resolveConstructorRunList(ctor, allClassMethods);
+        for (const mm of runList) {
           const methodName = String(mm.name || "").trim();
           if (!methodName) continue;
           const opts = buildMethodOptions(mm.options);

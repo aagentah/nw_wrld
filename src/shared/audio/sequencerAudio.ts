@@ -101,7 +101,7 @@ class SequencerAudio {
       return;
     }
 
-    const numericChannel = parseInt(String(channelNumber));
+    const numericChannel = parseInt(String(channelNumber), 10);
     if (isNaN(numericChannel) || numericChannel < 1) {
       console.warn(`Invalid channel number: ${channelNumber}`);
       return;

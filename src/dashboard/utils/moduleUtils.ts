@@ -27,7 +27,7 @@ export const getBaseMethodNames = (): { moduleBase: string[]; threeBase: string[
     const res = fn();
     return asBaseMethodNames(res) || { moduleBase: [], threeBase: [] };
   } catch (error) {
-    console.error("Error reading base files:", error);
+    console.error("Error reading base method names from bridge:", error);
     return { moduleBase: [], threeBase: [] };
   }
 };

@@ -5,7 +5,7 @@ nw_wrld is an event-driven sequencer for triggering visuals using web technologi
 Visuals can be triggered via the built-in 16-step sequencer or by configuring external MIDI, OSC, audio capture, or file-upload inputs.
 
 ![Node Version](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen)
-![Electron](https://img.shields.io/badge/electron-v39.2.7-blue)
+![Electron](https://img.shields.io/badge/electron-v39.8.10-blue)
 
 <img width="1512" height="901" alt="Screenshot 2026-01-09 at 14 17 49" src="https://github.com/user-attachments/assets/9d59fe7d-cc3b-48ec-af11-007a9379cac5" />
 
@@ -89,27 +89,13 @@ nw_wrld uses a **project folder** model. Each project is a self-contained folder
 
 ### What's Inside a Project Folder
 
-```
-MyProject/
-├── modules/           # Visual modules (hot-reloadable JavaScript files)
-│   ├── Text.js
-│   ├── GridOverlay.js
-│   ├── SpinningCube.js
-│   └── ...16 starter modules
-├── assets/            # Images, JSON, and other resources
-│   ├── images/
-│   │   └── blueprint.png
-│   └── json/
-│       └── meteor.json
-└── nw_wrld_data/      # Tracks, settings, and recordings
-    └── json/
-```
+A project folder holds three things: `modules/` (your hot-reloadable visual modules), `assets/` (images, JSON, and other resources), and `nw_wrld_data/` (tracks, settings, and recordings). For the full annotated layout, see [Project Structure](#project-structure) below.
 
 ### First Launch Experience
 
 When you first launch nw_wrld, you'll be prompted to select or create a project folder. The app automatically scaffolds a working project with:
 
-- **16 starter modules** - Ready-to-use examples (2D, 3D, text, data visualization)
+- **22 starter modules** - Ready-to-use examples (2D, 3D, text, data visualization)
 - **Sample assets** - Images and JSON data files
 - **Data storage** - Configuration, tracks, and recordings
 
@@ -174,22 +160,7 @@ To set up input routing and switch modes, see [Getting Started](GETTING_STARTED.
 
 ### DAW Quickstart (Ableton / FL Studio / Logic / etc.)
 
-Most DAW setups send notes on **MIDI Channel 1** unless you explicitly route or change it. nw_wrld supports both single-channel and split-channel workflows:
-
-- **Option A (simplest): Single MIDI channel**
-  - In nw_wrld → Settings → External (MIDI/OSC) → MIDI:
-    - **Method Triggers MIDI Channel**: `1`
-    - **Track Select MIDI Channel**: `1`
-  - Use **Settings → Configure Mappings** to choose either:
-    - **MIDI (Pitch Class)**: octave-agnostic mapping using C..B (avoids DAW octave-name differences)
-    - **MIDI (Exact Note)**: octave-specific mapping using full MIDI note numbers (0–127)
-  - Then map which triggers activate track selection vs method triggers.
-
-- **Option B (clean separation): Split MIDI channels**
-  - In your DAW, route method trigger notes to Channel 1 and track-selection notes to Channel 2 (commonly done with separate MIDI routing tracks/devices).
-  - In nw_wrld → Settings:
-    - **Method Triggers MIDI Channel**: `1`
-    - **Track Select MIDI Channel**: `2`
+Most DAW setups send notes on **MIDI Channel 1** unless you explicitly route or change it. nw_wrld supports both a single-channel workflow and a split-channel workflow (method triggers on one channel, track selection on another). For the full channel-defaults walkthrough and best practice, see [Getting Started](GETTING_STARTED.md#advanced-connect-external-midiosc).
 
 ---
 
@@ -199,7 +170,7 @@ Modules are JavaScript files in your **project's `modules/` folder**. Edit them 
 
 ### Quick Module Creation
 
-Create or edit a `.js` file in your project’s `modules/` folder and save — nw_wrld hot-reloads it automatically.
+Create or edit a `.js` file in your project’s `modules/` folder and save, and nw_wrld hot-reloads it automatically.
 
 ### Module File Contract (Docblock + Default Export)
 
@@ -212,8 +183,9 @@ Workspace modules are loaded from your project folder and must follow a strict c
 
 Allowed `@nwWrld imports`:
 
-- **SDK**: `ModuleBase`, `BaseThreeJsModule`, `assetUrl`, `readText`, `loadJson`
-- **Global libs**: `THREE`, `p5`, `d3`
+- **SDK**: `ModuleBase`, `BaseThreeJsModule`, `assetUrl`, `readText`, `loadJson`, `listAssets`
+- **Global libs**: `THREE`, `p5`, `d3`, `Noise`
+- **Three.js loaders**: `OBJLoader`, `PLYLoader`, `PCDLoader`, `GLTFLoader`, `STLLoader`
 
 ```javascript
 /*
@@ -244,11 +216,11 @@ See the [Module Development Guide](MODULE_DEVELOPMENT.md) for complete documenta
 
 ## Built-in ModuleBase Methods
 
-When you extend `ModuleBase`, you inherit powerful methods for free: `show`, `hide`, `offset`, `scale`, `opacity`, `rotate`, `randomZoom`, and `matrix`.
+When you extend `ModuleBase`, you inherit powerful methods for free: `show`, `hide`, `offset`, `scale`, `opacity`, `rotate`, `randomZoom`, `viewportLine`, `background`, and `invert`. A built-in `matrix` method is also available as a triggerable method, handled by the projector layout layer: declare and trigger it, but do not call it from module code.
 
 These methods can be triggered via the sequencer or external signal sources (MIDI/OSC/audio/file), giving you instant control over positioning, visibility, transformations, and effects.
 
-See the [Module Development Guide](MODULE_DEVELOPMENT.md#option-types-reference) for complete documentation of all built-in methods and their parameters.
+See the [Module Development Guide](MODULE_DEVELOPMENT.md#sdk-api-reference) for complete documentation of all built-in methods and their parameters.
 
 ---
 
@@ -256,17 +228,9 @@ See the [Module Development Guide](MODULE_DEVELOPMENT.md#option-types-reference)
 
 Switch between modes in **Settings → Signal Source**.
 
-**Sequencer Mode (Default)** - Program patterns with a 16-step grid per channel. Perfect for getting started, testing modules, and creating standalone pieces without external hardware. Adjustable BPM (60-130), patterns loop continuously and save with your tracks.
+**Sequencer Mode (Default)** - Program patterns with a 16-step grid per channel. Perfect for getting started, testing modules, and creating standalone pieces without external hardware. Adjustable BPM (default 120), patterns loop continuously and save with your tracks.
 
-**External Modes (Advanced)** - Use one of the following sources:
-
-- **MIDI (Pitch Class)**: map C..B (octave-agnostic). This avoids “G7 vs G8” naming differences across DAWs because matching is based on pitch class.
-- **MIDI (Exact Note)**: map full MIDI note numbers (0–127) for octave-specific triggers.
-- **OSC**: map OSC addresses.
-- **External Audio**: capture live audio from a selected input device and trigger channels from Low/Medium/High bands.
-- **File Upload**: upload an MP3/WAV per track and trigger channels from Low/Medium/High bands during playback.
-
-Configure global mappings in Settings for consistent control across all tracks.
+**External Modes (Advanced)** - Drive channels from MIDI, OSC, live audio input, or an uploaded audio file. For the per-source breakdown and routing details, see [Advanced: External Input Control](#advanced-external-input-control) above. Configure global mappings in Settings for consistent control across all tracks.
 
 Switch modes anytime - your tracks, modules, and methods remain the same. Only the trigger source changes.
 
@@ -274,37 +238,40 @@ Switch modes anytime - your tracks, modules, and methods remain the same. Only t
 
 ## Starter Modules
 
-Every new project includes 16 starter modules in your `modules/` folder:
+Every new project includes 22 starter modules in your `modules/` folder, grouped by category:
 
-**2D & UI:**
-
-- **Text** - Configurable text display and manipulation
-- **Corners** - DOM-based corner UI elements
-- **GridOverlay** - Canvas-based grid overlay
-- **GridDots** - Animated dot grid patterns
-- **Frame** - Border frame overlay
-- **Image** - Load images from workspace assets
-- **CodeColumns** - Animated code/text columns
-
-**3D Graphics:**
-
-- **SpinningCube** - Basic Three.js example
-- **CubeCube** - Nested cube visualization
-- **OrbitalPlane** - Orbital mechanics simulation
-- **LowEarthPoint** - Low earth orbit visualization
-
-**Data Visualization:**
+**2D:**
 
 - **AsteroidGraph** - p5.js with workspace JSON data
+- **Corners** - DOM-based corner UI elements
+- **Frame** - Border frame overlay
+- **GridDots** - Animated dot grid patterns
+- **GridOverlay** - Canvas-based grid overlay
+- **Image** - Load images from workspace assets
+- **ImageGallery** - Cycle through multiple workspace images
 - **MathOrbitalMap** - Mathematical orbit mapping
+- **OrbitalPlane** - Orbital mechanics simulation
+- **PerlinBlob** - Noise-driven animated blob
+- **ScanLines** - Animated scan-line overlay
+
+**3D:**
+
+- **BasicGeometry** - Three.js primitive geometry example
 - **CloudPointIceberg** - 3D point cloud
+- **CubeCube** - Nested cube visualization
+- **CubeGrowth** - Growing cube animation
+- **LowEarthPoint** - Low earth orbit visualization
+- **ModelLoader** - Load external 3D models
+- **SpinningCube** - Basic Three.js example
+
+**Text:**
+
+- **CodeColumns** - Animated code/text columns
+- **HelloWorld** - Minimal working example
+- **Text** - Configurable text display and manipulation
 - **ZKProofVisualizer** - Zero-knowledge proof visualization
 
-**Getting Started:**
-
-- **HelloWorld** - Minimal working example
-
-Study these modules to learn patterns for 2D, 3D, text, and data visualization. All are fully editable in your project's `modules/` folder.
+Study these modules to learn patterns for 2D, 3D, and text. All are fully editable in your project's `modules/` folder.
 
 ---
 
@@ -319,12 +286,16 @@ MyProject/
 │   ├── GridOverlay.js
 │   ├── SpinningCube.js
 │   ├── YourCustomModule.js    # Create your own modules here
-│   └── ...16 starter modules
+│   └── ...22 starter modules
 │
 ├── assets/                     # ← YOUR ASSETS GO HERE
 │   ├── images/
 │   │   ├── blueprint.png      # Included starter asset
 │   │   └── your-image.png     # Add your own images
+│   ├── models/                 # 3D models (OBJ, PLY, PCD, GLTF/GLB, STL)
+│   │   └── cube.obj            # Included starter model
+│   ├── fonts/                  # Fonts for text modules
+│   │   └── RobotoMono-VariableFont_wght.ttf
 │   └── json/
 │       ├── meteor.json         # Included starter dataset
 │       └── your-data.json      # Add your own data
@@ -345,34 +316,34 @@ nw_wrld/
 │   ├── dashboard/              # React UI for control
 │   │   ├── Dashboard.js        # Main dashboard logic
 │   │   ├── modals/             # UI modals
-│   │   ├── components/         # Reusable components
-│   │   └── styles/             # Dashboard styles
+│   │   └── components/         # Reusable components
 │   │
 │   ├── projector/              # Visual output window
-│   │   ├── Projector.js        # Main projector logic
-│   │   ├── helpers/
-│   │   │   ├── moduleBase.ts   # Base class (the foundation)
-│   │   │   └── threeBase.ts    # Three.js base class
-│   │   └── templates/
-│   │       └── ThreeTemplate.ts # 3D module template
+│   │   ├── Projector.ts        # Main projector logic
+│   │   ├── moduleSandboxEntry.ts # SDK initialization (sandbox entry)
+│   │   └── helpers/
+│   │       ├── moduleBase.ts   # Base class (the foundation)
+│   │       └── threeBase.ts    # Three.js base class
 │   │
 │   ├── main/                   # Electron main process
-│   │   ├── InputManager.js     # MIDI/OSC input handling
+│   │   ├── InputManager.ts     # MIDI/OSC input handling
 │   │   ├── starter_modules/    # Starter modules (seeded into projects)
-│   │   └── workspaceStarterModules.js
+│   │   └── workspaceStarterModules.ts
 │   │
-│   ├── shared/
-│   │   ├── json/               # JSON file management
-│   │   ├── config/             # Default configuration
-│   │   ├── sequencer/          # Sequencer playback engine
-│   │   ├── midi/               # MIDI utilities
-│   │   └── audio/              # Audio feedback
-│   │
-│   └── renderer.ts             # SDK initialization
+│   └── shared/
+│       ├── json/               # JSON file management
+│       ├── config/             # Default configuration
+│       ├── sequencer/          # Sequencer playback engine
+│       ├── midi/               # MIDI utilities
+│       ├── audio/              # Audio feedback
+│       └── styles/             # Shared styles (_main.css)
 │
+├── index.js                    # Thin bootstrap into the compiled main process
 ├── package.json
 └── README.md
 ```
+
+`src/index.js` is a thin bootstrap that loads the compiled main process. The Electron main process lives under `src/main/mainProcess/` (`entry.ts`, `windows.ts`, `sandbox.ts`, `workspace.ts`, `protocols.ts`, `lifecycle.ts`, and `ipcBridge/`).
 
 ---
 
@@ -391,19 +362,14 @@ These files are managed by the Dashboard and typically don't require manual edit
 
 ## Troubleshooting
 
-| Issue                                 | Solution                                                                                                       |
-| ------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| Project folder missing                | App will prompt to reselect - choose or create a new project                                                   |
-| Module doesn't appear                 | Verify filename is `MyModule.js` (letters/numbers only), and docblock includes `@nwWrld name/category/imports` |
-| Module won't load                     | Open Projector devtools; check for syntax errors, missing imports, or unknown imports                          |
-| Module hidden                         | Trigger `show()` method or set `executeOnLoad: true`                                                           |
-| Asset won't load                      | Verify path is relative to `assets/` folder                                                                    |
-| Pattern not playing                   | Check that methods are assigned to channels                                                                    |
-| No MIDI detected                      | Enable IAC Driver/loopMIDI and verify DAW MIDI output                                                          |
-| MIDI works once, then stops (Windows) | Ensure nw_wrld fully closed (no background process). If using a virtual port, restart the port app or reboot.  |
-| Method not triggering                 | Verify mapping, check method name match, check console                                                         |
-| Hot reload not working                | Check file is saved in project's `modules/` folder                                                             |
-| App won't start (dev mode)            | Close other dev servers (port 9000), run `npm install`                                                         |
+Common quick fixes are below. For the full troubleshooting reference (module, asset, sequencer, MIDI, dev-mode, and Linux/WSL issues), see [Getting Started](GETTING_STARTED.md#troubleshooting).
+
+| Issue                  | Solution                                                                                                       |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Project folder missing | App will prompt to reselect - choose or create a new project                                                   |
+| Module doesn't appear  | Verify filename is `MyModule.js` (letters/numbers only), and docblock includes `@nwWrld name/category/imports` |
+| Module hidden          | Trigger `show()` method or set `executeOnLoad: true`                                                           |
+| No MIDI detected       | Enable IAC Driver/loopMIDI and verify DAW MIDI output                                                          |
 
 ---
 
@@ -467,10 +433,10 @@ This creates Linux artifacts (typically `.AppImage` and `.deb`) in the `release/
 
 ### Automated Releases
 
-The project uses GitHub Actions to automatically build and attach release artifacts (macOS DMGs for arm64 + x64, Windows portable `.exe`, and Linux `.AppImage` + `.deb`). A `SHA256SUMS` file is also attached for verifying downloads:
+The project uses GitHub Actions to automatically build and attach release artifacts (a single universal macOS DMG covering arm64 + x64, Windows portable `.exe`, and Linux `.AppImage` + `.deb`). A `SHA256SUMS` file is also attached for verifying downloads:
 
-1. Tag a new version: `git tag v1.0.0`
-2. Push the tag: `git push origin v1.0.0`
+1. Tag a new version: `git tag v0.5.1-beta`
+2. Push the tag: `git push origin v0.5.1-beta`
 3. GitHub Actions builds the artifacts and creates a release automatically
 
 See `.github/workflows/release.yml` for the CI configuration.
@@ -495,6 +461,7 @@ This project is licensed under the GPL-3.0 License - see the [LICENSE](LICENSE) 
 
 - [Getting Started Guide](GETTING_STARTED.md)
 - [Module Development Guide](MODULE_DEVELOPMENT.md)
+- [Runtime TS Testing Guidelines](RUNTIME_TS_TESTING_GUIDELINES.md)
 - [E2E Testing Guidelines](E2E_TESTING_GUIDELINES.md)
 - [Contributing Guide](CONTRIBUTING.md)
 

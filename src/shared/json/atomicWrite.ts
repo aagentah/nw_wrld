@@ -6,6 +6,8 @@ const writeQueue = new Map<string, Promise<void>>();
 const writeEpoch = new Map<string, number>();
 let tmpCounter = 0;
 
+type AsyncFileHandle = Awaited<ReturnType<typeof fs.promises.open>>;
+
 function makeTempPath(filePath: string) {
   tmpCounter = (tmpCounter + 1) >>> 0;
   const uuid =
@@ -15,11 +17,63 @@ function makeTempPath(filePath: string) {
   return `${filePath}.tmp.${process.pid}.${Date.now()}.${tmpCounter}.${uuid}`;
 }
 
+// Best-effort fsync of the containing dir so the rename survives power loss.
+async function fsyncDirectory(dirPath: string) {
+  let handle: AsyncFileHandle | null = null;
+  try {
+    handle = await fs.promises.open(dirPath, "r");
+    await handle.sync();
+  } catch {
+    /* best-effort */
+  } finally {
+    if (handle) {
+      try {
+        await handle.close();
+      } catch {}
+    }
+  }
+}
+
+function fsyncDirectorySync(dirPath: string) {
+  let fd: number | null = null;
+  try {
+    fd = fs.openSync(dirPath, "r");
+    fs.fsyncSync(fd);
+  } catch {
+    /* best-effort */
+  } finally {
+    if (fd !== null) {
+      try {
+        fs.closeSync(fd);
+      } catch {}
+    }
+  }
+}
+
+async function rollBackup(filePath: string, backupPath: string) {
+  try {
+    await fs.promises.copyFile(filePath, backupPath);
+  } catch {}
+}
+
+function rollBackupSync(filePath: string, backupPath: string) {
+  try {
+    fs.copyFileSync(filePath, backupPath);
+  } catch {}
+}
+
 async function performAtomicWrite(filePath: string, data: string, epoch: number | null) {
   const tempPath = makeTempPath(filePath);
+  const backupPath = `${filePath}.backup`;
 
   try {
-    await fs.promises.writeFile(tempPath, data, "utf-8");
+    const handle = await fs.promises.open(tempPath, "w");
+    try {
+      await handle.writeFile(data, "utf-8");
+      await handle.sync();
+    } finally {
+      await handle.close();
+    }
 
     if (epoch != null && writeEpoch.get(filePath) !== epoch) {
       try {
@@ -28,49 +82,24 @@ async function performAtomicWrite(filePath: string, data: string, epoch: number 
       return;
     }
 
+    await rollBackup(filePath, backupPath);
+
     try {
       await fs.promises.rename(tempPath, filePath);
     } catch (renameError) {
       const err = renameError as { code?: string };
       if (err.code === "EEXIST" || err.code === "EPERM") {
-        if (epoch != null && writeEpoch.get(filePath) !== epoch) {
-          try {
-            await fs.promises.unlink(tempPath);
-          } catch {}
-          return;
-        }
-
-        const backupPath = `${filePath}.backup`;
+        // Windows can't rename onto an existing file.
         try {
-          await fs.promises.unlink(backupPath);
+          await fs.promises.unlink(filePath);
         } catch {}
-        try {
-          await fs.promises.rename(filePath, backupPath);
-        } catch (backupError) {
-          const bErr = backupError as { code?: string };
-          if (bErr.code !== "ENOENT") {
-            throw backupError;
-          }
-        }
-
-        if (epoch != null && writeEpoch.get(filePath) !== epoch) {
-          try {
-            await fs.promises.rename(backupPath, filePath);
-          } catch {}
-          try {
-            await fs.promises.unlink(tempPath);
-          } catch {}
-          return;
-        }
-
         await fs.promises.rename(tempPath, filePath);
-        try {
-          await fs.promises.unlink(backupPath);
-        } catch {}
       } else {
         throw renameError;
       }
     }
+
+    await fsyncDirectory(path.dirname(filePath));
   } catch (error) {
     try {
       await fs.promises.unlink(tempPath);
@@ -108,9 +137,16 @@ export function atomicWriteFileSync(filePath: string, data: string) {
   writeEpoch.set(filePath, epoch);
 
   const tempPath = makeTempPath(filePath);
+  const backupPath = `${filePath}.backup`;
 
   try {
-    fs.writeFileSync(tempPath, data, "utf-8");
+    const fd = fs.openSync(tempPath, "w");
+    try {
+      fs.writeFileSync(fd, data, "utf-8");
+      fs.fsyncSync(fd);
+    } finally {
+      fs.closeSync(fd);
+    }
 
     if (epoch != null && writeEpoch.get(filePath) !== epoch) {
       try {
@@ -119,71 +155,27 @@ export function atomicWriteFileSync(filePath: string, data: string) {
       return;
     }
 
+    rollBackupSync(filePath, backupPath);
+
     try {
       fs.renameSync(tempPath, filePath);
     } catch (renameError) {
       const err = renameError as { code?: string };
       if (err.code === "EEXIST" || err.code === "EPERM") {
-        if (epoch != null && writeEpoch.get(filePath) !== epoch) {
-          try {
-            fs.unlinkSync(tempPath);
-          } catch {}
-          return;
-        }
-
-        const backupPath = `${filePath}.backup`;
         try {
-          fs.unlinkSync(backupPath);
+          fs.unlinkSync(filePath);
         } catch {}
-        try {
-          fs.renameSync(filePath, backupPath);
-        } catch (backupError) {
-          const bErr = backupError as { code?: string };
-          if (bErr.code !== "ENOENT") {
-            throw backupError;
-          }
-        }
-
-        if (epoch != null && writeEpoch.get(filePath) !== epoch) {
-          try {
-            fs.renameSync(backupPath, filePath);
-          } catch {}
-          try {
-            fs.unlinkSync(tempPath);
-          } catch {}
-          return;
-        }
-
         fs.renameSync(tempPath, filePath);
-        try {
-          fs.unlinkSync(backupPath);
-        } catch {}
       } else {
         throw renameError;
       }
     }
+
+    fsyncDirectorySync(path.dirname(filePath));
   } catch (error) {
     try {
       fs.unlinkSync(tempPath);
     } catch {}
     throw error;
   }
-}
-
-export async function cleanupStaleTempFiles(directory: string, minAgeMs = 60_000) {
-  try {
-    const files = await fs.promises.readdir(directory);
-    const now = Date.now();
-    const tempFiles = files.filter((f: string) => f.includes(".tmp."));
-
-    for (const file of tempFiles) {
-      try {
-        const fullPath = path.join(directory, file);
-        const stat = await fs.promises.stat(fullPath);
-        if (now - stat.mtimeMs >= minAgeMs) {
-          await fs.promises.unlink(fullPath);
-        }
-      } catch {}
-    }
-  } catch {}
 }

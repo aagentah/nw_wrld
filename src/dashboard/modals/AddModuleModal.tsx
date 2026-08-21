@@ -16,7 +16,7 @@ import { Button } from "../components/Button";
 import { HelpIcon } from "../components/HelpIcon";
 import { Tooltip } from "../components/Tooltip";
 import { activeSetIdAtom, activeTrackIdAtom } from "../core/state";
-import { updateActiveSet } from "../core/utils";
+import { randomIdSuffix, updateActiveSet } from "../core/utils";
 import { getActiveSetTracks } from "../../shared/utils/setUtils";
 import { HELP_TEXT } from "../../shared/helpText";
 
@@ -57,7 +57,6 @@ type AddModuleModalProps = {
   setUserData: (updater: unknown) => void;
   predefinedModules: PredefinedModule[];
   skippedWorkspaceModules?: Array<{ file: string; reason: string }>;
-  onCreateNewModule?: () => void;
   onEditModule: (moduleId: string) => void;
   onConfirmRewrite?: (message: string, onConfirm: () => void, options?: { title?: string }) => void;
   mode?: "add-to-track" | "manage-modules";
@@ -71,7 +70,6 @@ export const AddModuleModal = ({
   setUserData,
   predefinedModules,
   skippedWorkspaceModules,
-  onCreateNewModule: _onCreateNewModule,
   onEditModule,
   onConfirmRewrite,
   mode = "add-to-track",
@@ -210,7 +208,7 @@ export const AddModuleModal = ({
       if (typeof trackUnknown !== "object" || !trackUnknown) return;
       const t = trackUnknown as Record<string, unknown>;
 
-      const instanceId = `inst_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const instanceId = `inst_${Date.now()}_${randomIdSuffix()}`;
       const modulesArray = Array.isArray(t.modules) ? t.modules : [];
       modulesArray.push({
         id: instanceId,
@@ -464,13 +462,15 @@ export const AddModuleModal = ({
     };
   }, [cancelScheduledPreviewClear]);
 
+  if (!isOpen) return null;
+
   if (mode === "add-to-track") {
     if (trackIndex === null || trackIndex === undefined) return null;
     if (!track || !track.modules) return null;
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} onCloseHandler={handleClose} size="medium">
+    <Modal isOpen={isOpen} onClose={onClose} onOverlayClick={handleClose} size="medium">
       <ModalHeader title={modalTitle} onClose={handleClose} />
 
       <div className="px-6">
@@ -613,13 +613,7 @@ export const AddModuleModal = ({
                                   e.preventDefault();
                                   e.stopPropagation();
                                   try {
-                                    (
-                                      globalThis as unknown as {
-                                        nwWrldBridge?: {
-                                          app?: { openProjectorDevTools?: () => void };
-                                        };
-                                      }
-                                    )?.nwWrldBridge?.app?.openProjectorDevTools?.();
+                                    globalThis.nwWrldBridge?.app?.openProjectorDevTools?.();
                                   } catch {}
                                 }}
                               >

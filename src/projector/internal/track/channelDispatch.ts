@@ -17,7 +17,6 @@ type ChannelDispatchContext = {
   logToMain: (message: unknown) => unknown;
 
   activeChannelHandlers: Record<string, ChannelTarget[]>;
-  buildChannelHandlerMap: (track: unknown) => Record<string, ChannelTarget[]>;
 
   trackSandboxHost:
     | null
@@ -68,9 +67,9 @@ export async function handleChannelMessage(
       logger.log(`Received message for channel: ${channelNumber}`);
     }
     const modulesData = (track as { modulesData?: unknown }).modulesData;
-    if (!this.activeChannelHandlers[channelNumber]) {
-      this.activeChannelHandlers = this.buildChannelHandlerMap(track);
-    }
+    // The handler map is rebuilt at every activeTrack assignment (trackLifecycle),
+    // so a missing key means "channel unmapped", not "map not built" -- the old
+    // lazy rebuild here ran the full map build on every unmapped-channel trigger.
     const channelTargets = this.activeChannelHandlers[channelNumber] || [];
     if (channelTargets.length === 0) {
       if (logger.debugEnabled) {

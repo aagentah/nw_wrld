@@ -14,12 +14,6 @@ type MethodDefinition = {
   options?: unknown;
 };
 
-type _MethodOptionValue = {
-  name?: unknown;
-  value?: unknown;
-  randomRange?: unknown;
-};
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }

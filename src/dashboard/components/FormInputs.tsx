@@ -1,8 +1,6 @@
 import { InputHTMLAttributes, CSSProperties, HTMLAttributes, ReactNode, SelectHTMLAttributes } from "react";
 import { TERMINAL_STYLES } from "../core/constants";
 
-export { TERMINAL_STYLES };
-
 export const TextInput = ({
   style,
   ...props
@@ -171,30 +169,6 @@ export const ColorInput = ({
         padding: 0,
         border: `1px solid ${TERMINAL_STYLES.border}`,
         cursor: "pointer",
-        ...style,
-      }}
-      {...props}
-    />
-  );
-};
-
-export const FileInput = ({
-  style,
-  ...props
-}: InputHTMLAttributes<HTMLInputElement> & {
-  style?: CSSProperties;
-}) => {
-  return (
-    <input
-      type="file"
-      style={{
-        fontSize: TERMINAL_STYLES.fontSize,
-        fontFamily: TERMINAL_STYLES.fontFamily,
-        color: TERMINAL_STYLES.text,
-        backgroundColor: TERMINAL_STYLES.bg,
-        border: "none",
-        outline: "none",
-        padding: "2px 0",
         ...style,
       }}
       {...props}

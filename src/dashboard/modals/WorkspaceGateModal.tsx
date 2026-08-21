@@ -1,7 +1,7 @@
 import { Modal } from "../shared/Modal";
-import { ModalHeader } from "./ModalHeader";
-import { ModalFooter } from "./ModalFooter";
-import { Button } from "./Button";
+import { ModalHeader } from "../components/ModalHeader";
+import { ModalFooter } from "../components/ModalFooter";
+import { Button } from "../components/Button";
 
 type WorkspaceGateModalProps = {
   isOpen: boolean;

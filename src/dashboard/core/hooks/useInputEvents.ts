@@ -1,10 +1,13 @@
 import {
   useCallback,
   useEffect,
+  useRef,
   type Dispatch,
   type MutableRefObject,
   type SetStateAction,
 } from "react";
+import { useSetAtom, type PrimitiveAtom } from "jotai";
+import { lastTrackActivityAtom, lastMethodActivityAtom } from "../state";
 import { getRecordingForTrack, setRecordingForTrack } from "../../../shared/json/recordingUtils";
 import {
   buildMidiConfig,
@@ -61,6 +64,39 @@ export const useInputEvents = ({
   isDebugOverlayOpen,
   setIsProjectorReady,
 }: UseInputEventsArgs) => {
+  // Buffer debug entries in a ring buffer; only re-render while the overlay is open.
+  const debugLogBufferRef = useRef<string[]>([]);
+  const isDebugOverlayOpenRef = useRef(isDebugOverlayOpen);
+  const setLastTrackActivity = useSetAtom(
+    lastTrackActivityAtom as unknown as PrimitiveAtom<string | null>
+  );
+  const setLastMethodActivity = useSetAtom(
+    lastMethodActivityAtom as unknown as PrimitiveAtom<string | null>
+  );
+
+  const recordDebugEntries = useCallback(
+    (entries: string[]) => {
+      if (entries.length === 0) return;
+      if (!isDebugOverlayOpenRef.current) {
+        const buf = debugLogBufferRef.current;
+        for (const entry of entries) buf.push(entry);
+        if (buf.length > 200) buf.splice(0, buf.length - 200);
+        return;
+      }
+      setDebugLogs((prev) => [...prev, ...entries].slice(-200));
+    },
+    [setDebugLogs]
+  );
+
+  useEffect(() => {
+    isDebugOverlayOpenRef.current = isDebugOverlayOpen;
+    if (isDebugOverlayOpen && debugLogBufferRef.current.length > 0) {
+      const buffered = debugLogBufferRef.current;
+      debugLogBufferRef.current = [];
+      setDebugLogs((prev) => [...prev, ...buffered].slice(-200));
+    }
+  }, [isDebugOverlayOpen, setDebugLogs]);
+
   useEffect(() => {
     const tracks = getActiveSetTracks(userData, activeSetId);
     const globalMappings =
@@ -106,10 +142,7 @@ export const useInputEvents = ({
               : ""
             : "";
       const logEntries = rawLog.split("\n\n").filter((entry) => entry.trim());
-      setDebugLogs((prev) => {
-        const newLogs = [...prev, ...logEntries];
-        return newLogs.slice(-200);
-      });
+      recordDebugEntries(logEntries);
     }
   });
 
@@ -119,12 +152,12 @@ export const useInputEvents = ({
     });
   }, [isDebugOverlayOpen, sendToProjector]);
 
-  const addDebugLog = useCallback((log: string) => {
-    setDebugLogs((prev) => {
-      const newLogs = [...prev, log];
-      return newLogs.slice(-200);
-    });
-  }, []);
+  const addDebugLog = useCallback(
+    (log: string) => {
+      recordDebugEntries([log]);
+    },
+    [recordDebugEntries]
+  );
 
   const formatDebugLog = useCallback((eventData: Record<string, unknown>) => {
     const timestampRaw = eventData.timestamp;
@@ -137,18 +170,6 @@ export const useInputEvents = ({
         ? (eventData.data as Record<string, unknown>)
         : {};
     const trackName = typeof eventData.trackName === "string" ? eventData.trackName : null;
-    const moduleInfo =
-      eventData.moduleInfo && typeof eventData.moduleInfo === "object"
-        ? (eventData.moduleInfo as Record<string, unknown>)
-        : null;
-    const methodInfo =
-      eventData.methodInfo && typeof eventData.methodInfo === "object"
-        ? (eventData.methodInfo as Record<string, unknown>)
-        : null;
-    const props =
-      eventData.props && typeof eventData.props === "object"
-        ? (eventData.props as Record<string, unknown>)
-        : null;
 
     const timeStr = timestamp.toFixed(5);
     const sourceLabel =
@@ -214,18 +235,6 @@ export const useInputEvents = ({
     if (trackName) {
       log += `  Track: ${trackName}\n`;
     }
-    if (moduleInfo) {
-      const instanceId = typeof moduleInfo.instanceId === "string" ? moduleInfo.instanceId : "";
-      const typeLabel = typeof moduleInfo.type === "string" ? moduleInfo.type : "";
-      log += `  Module: ${instanceId} (${typeLabel})\n`;
-    }
-    if (methodInfo) {
-      const name = typeof methodInfo.name === "string" ? methodInfo.name : "";
-      log += `  Method: ${name}\n`;
-    }
-    if (props && Object.keys(props).length > 0) {
-      log += `  Props: ${JSON.stringify(props, null, 2)}\n`;
-    }
     return log;
   }, []);
 
@@ -269,9 +278,6 @@ export const useInputEvents = ({
       const tracks = getActiveSetTracks(userDataRef.current || {}, activeSetIdRef.current);
       const noteMatchMode = normalizeNoteMatchMode(inputCfg?.noteMatchMode);
       let trackName: string | null = null;
-      const moduleInfo: Record<string, unknown> | null = null;
-      const methodInfo: Record<string, unknown> | null = null;
-      const props: Record<string, unknown> | null = null;
 
       switch (type) {
         case "track-selection": {
@@ -301,6 +307,7 @@ export const useInputEvents = ({
               if (id != null && idKey && name) {
                 trackName = name;
                 setActiveTrackId(id);
+                setLastTrackActivity(name);
 
                 const wasRecording = recordingStateRef.current[idKey];
                 if (wasRecording) {
@@ -452,6 +459,10 @@ export const useInputEvents = ({
               flashChannel(channel, 100);
             });
 
+            if (channelsToFlash.length > 0) {
+              setLastMethodActivity(channelsToFlash.map((ch) => `CH ${ch}`).join(", "));
+            }
+
             if (currentActiveTrackIdKey && channelsToFlash.length > 0) {
               const recordingStateForTrack = recordingStateRef.current[currentActiveTrackIdKey];
               if (recordingStateForTrack?.isRecording) {
@@ -506,9 +517,6 @@ export const useInputEvents = ({
         source: source || "",
         data,
         trackName,
-        moduleInfo,
-        methodInfo,
-        props,
       });
       addDebugLog(log);
     },
@@ -520,6 +528,8 @@ export const useInputEvents = ({
       setRecordingData,
       setRecordingState,
       setFlashingConstructors,
+      setLastTrackActivity,
+      setLastMethodActivity,
     ]
   );
 

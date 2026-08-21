@@ -54,6 +54,18 @@ const loadAssetOptionInputModule = () => {
           TextInput: () => null,
         };
       }
+      if (specifier === "../core/constants") {
+        return { CUSTOM_VALUE: "__nw_wrld_custom__" };
+      }
+      if (specifier === "../core/utils") {
+        return {
+          isPlainObject: (value) =>
+            Boolean(value) &&
+            typeof value === "object" &&
+            !Array.isArray(value) &&
+            Object.prototype.toString.call(value) === "[object Object]",
+        };
+      }
       throw new Error(`Unexpected require: ${specifier}`);
     },
     console,

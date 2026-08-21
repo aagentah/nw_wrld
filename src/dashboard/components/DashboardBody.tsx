@@ -10,11 +10,9 @@ type DashboardBodyProps = {
   predefinedModules: unknown[];
   openAddModuleModal: (trackIndex: number) => void;
   openConfirmationModal: (message: string, onConfirm: () => void) => void;
-  setActiveTrackId: (id: string | number | null) => void;
   inputConfig: unknown;
   config: Record<string, unknown> | null;
   isSequencerPlaying: boolean;
-  sequencerCurrentStep: number;
   handleSequencerToggle: (channelName: string, stepIndex: number) => void;
   workspacePath: string | null;
   workspaceModuleFiles: string[];
@@ -30,11 +28,9 @@ export const DashboardBody = ({
   predefinedModules,
   openAddModuleModal,
   openConfirmationModal,
-  setActiveTrackId,
   inputConfig,
   config,
   isSequencerPlaying,
-  sequencerCurrentStep,
   handleSequencerToggle,
   workspacePath,
   workspaceModuleFiles,
@@ -63,11 +59,9 @@ export const DashboardBody = ({
               predefinedModules={predefinedModules}
               openRightMenu={openAddModuleModal}
               onConfirmDelete={openConfirmationModal}
-              setActiveTrackId={setActiveTrackId}
               inputConfig={inputConfig}
               config={config}
               isSequencerPlaying={isSequencerPlaying}
-              sequencerCurrentStep={sequencerCurrentStep}
               handleSequencerToggle={handleSequencerToggle}
               workspacePath={workspacePath}
               workspaceModuleFiles={workspaceModuleFiles}

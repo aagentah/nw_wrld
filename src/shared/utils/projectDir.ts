@@ -4,7 +4,7 @@ type GlobalWithNwWrld = typeof globalThis & {
 };
 
 export const getProjectDir = () => {
-  const g = globalThis as unknown as GlobalWithNwWrld;
+  const g = globalThis as GlobalWithNwWrld;
 
   const sdk = g.nwWrldSdk;
   if (sdk && typeof sdk.getWorkspaceDir === "function") {

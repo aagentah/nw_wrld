@@ -148,7 +148,7 @@ export class MockWebMidi {
 }
 
 export const getOrCreateGlobalMockWebMidi = (initialDevices: MockMidiDeviceInfo[]) => {
-  const g = globalThis as unknown as { __nwWrldMockWebMidi?: MockWebMidi };
+  const g = globalThis as { __nwWrldMockWebMidi?: MockWebMidi };
   if (g.__nwWrldMockWebMidi) return g.__nwWrldMockWebMidi;
   g.__nwWrldMockWebMidi = new MockWebMidi(initialDevices);
   return g.__nwWrldMockWebMidi;

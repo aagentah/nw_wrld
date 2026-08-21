@@ -3,10 +3,10 @@ import { Modal } from "../shared/Modal";
 import { ModalHeader } from "../components/ModalHeader";
 import { ModalFooter } from "../components/ModalFooter";
 import { Button } from "../components/Button";
+import { getBridge } from "../core/utils";
 
 const REQUEST_TIMEOUT_MS = 6000;
 
-const getBridge = () => globalThis.nwWrldBridge;
 
 type RepoInfo = { owner: string; repo: string };
 
@@ -147,6 +147,8 @@ export const ReleaseNotesModal = ({ isOpen, onClose }: ReleaseNotesModalProps) =
 
   const releasesPageUrl =
     repoInfo?.owner && repoInfo?.repo ? `https://github.com/${repoInfo.owner}/${repoInfo.repo}/releases` : null;
+
+  if (!isOpen) return null;
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="large">

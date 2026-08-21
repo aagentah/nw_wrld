@@ -212,8 +212,10 @@ export class BaseThreeJsModule extends ModuleBase {
     this.controls.autoRotate = false;
     this.controls.autoRotateSpeed = 2.0;
 
-    // Add event listener for controls
-    this.controls.addEventListener("change", this.render);
+    // Render on interaction only until the shared loop takes over (it renders every frame)
+    this.controls.addEventListener("change", () => {
+      if (!this.isInitialized) this.render();
+    });
 
     // Bind resize event
     window.addEventListener("resize", this.onWindowResize);
@@ -529,9 +531,7 @@ export class BaseThreeJsModule extends ModuleBase {
         this.stopCameraAnimation();
         break;
     }
-
-    this.controls.update();
-    this.render();
+    // animate() runs controls.update() and render() right after this returns (same tick).
   }
 
   /**
@@ -1012,11 +1012,18 @@ export class BaseThreeJsModule extends ModuleBase {
       this.scene = null;
     }
 
+    // Remove the constructor's resize listener so the instance can be GC'd.
+    window.removeEventListener("resize", this.onWindowResize);
+
     // Dispose of the renderer and its DOM element
     if (this.renderer) {
       if (this.renderer.domElement) {
         const parent = this.renderer.domElement.parentNode;
         if (parent) parent.removeChild(this.renderer.domElement);
+      }
+      // Eagerly release the WebGL context before disposing.
+      if (typeof this.renderer.forceContextLoss === "function") {
+        this.renderer.forceContextLoss();
       }
       this.renderer.dispose();
       this.renderer = null;

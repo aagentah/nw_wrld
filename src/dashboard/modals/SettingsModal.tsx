@@ -16,8 +16,9 @@ import { HelpIcon } from "../components/HelpIcon";
 import { SignalThresholdMeter } from "../components/SignalThresholdMeter";
 import { HELP_TEXT } from "../../shared/helpText";
 import type { FileAudioState } from "../core/hooks/useDashboardFileAudio";
-
-const isValidHexColor = (value: string): boolean => /^#([0-9A-F]{3}){1,2}$/i.test(value);
+import type { AudioDevice } from "../core/hooks/useDashboardAudioDevices";
+import { clamp01, type Band } from "../core/audio/audioTuning";
+import { isValidHexColor, normalizeHexColor } from "../core/utils";
 
 const clampMidiChannel = (value: unknown, fallback = 1): number => {
   const n = parseInt(String(value ?? ""), 10);
@@ -27,21 +28,6 @@ const clampMidiChannel = (value: unknown, fallback = 1): number => {
 
 const normalizeMidiNoteMatchMode = (value: unknown): "pitchClass" | "exactNote" =>
   value === "exactNote" ? "exactNote" : "pitchClass";
-
-const normalizeHexColor = (value: unknown): string | null => {
-  const raw = String(value || "").trim();
-  if (!raw) return null;
-  const withHash = raw.startsWith("#") ? raw : `#${raw}`;
-  if (!isValidHexColor(withHash)) return null;
-  const hex = withHash.toLowerCase();
-  if (hex.length === 4) {
-    const r = hex[1];
-    const g = hex[2];
-    const b = hex[3];
-    return `#${r}${r}${g}${g}${b}${b}`;
-  }
-  return hex;
-};
 
 type DraftIntInputProps = {
   value: number;
@@ -89,93 +75,6 @@ const DraftIntInput = memo(({ value, fallback, onCommit, ...props }: DraftIntInp
       return;
     }
     const n = parseInt(s, 10);
-    if (!Number.isFinite(n)) {
-      onCommit(fallback);
-      return;
-    }
-    onCommit(n);
-  }, [draft, fallback, onCommit]);
-
-  return (
-    <NumberInput
-      {...props}
-      value={displayed}
-      onFocus={() => {
-        skipCommitRef.current = false;
-        setIsFocused(true);
-        setDraft(String(value ?? ""));
-      }}
-      onChange={(e: ChangeEvent<HTMLInputElement>) => {
-        const next = e.target.value;
-        setDraft(next);
-        commitIfValid(next);
-      }}
-      onBlur={() => {
-        setIsFocused(false);
-        if (skipCommitRef.current) {
-          skipCommitRef.current = false;
-          return;
-        }
-        commitOnBlur();
-      }}
-      onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === "Enter") e.currentTarget.blur();
-        if (e.key === "Escape") {
-          skipCommitRef.current = true;
-          setDraft(null);
-          e.currentTarget.blur();
-        }
-      }}
-    />
-  );
-});
-
-type DraftFloatInputProps = {
-  value: number;
-  fallback: number;
-  onCommit: (value: number) => void;
-  min?: number;
-  max?: number;
-  step?: number;
-  className?: string;
-  style?: React.CSSProperties;
-  "data-testid"?: string;
-};
-
-const DraftFloatInput = memo(({ value, fallback, onCommit, ...props }: DraftFloatInputProps) => {
-  const [draft, setDraft] = useState<string | null>(null);
-  const [isFocused, setIsFocused] = useState(false);
-  const skipCommitRef = useRef(false);
-
-  useEffect(() => {
-    if (!isFocused) setDraft(null);
-  }, [isFocused, value]);
-
-  const displayed = draft !== null ? draft : String(value ?? "");
-
-  const commitIfValid = useCallback(
-    (raw: string) => {
-      const s = String(raw);
-      const isIntermediate =
-        s === "" || s === "-" || s === "." || s === "-." || s.endsWith(".") || /e[+-]?$/i.test(s);
-      if (isIntermediate) return;
-      const n = parseFloat(s);
-      if (!Number.isFinite(n)) return;
-      onCommit(n);
-    },
-    [onCommit]
-  );
-
-  const commitOnBlur = useCallback(() => {
-    if (draft === null) return;
-    const s = String(draft);
-    const isIntermediate =
-      s === "" || s === "-" || s === "." || s === "-." || s.endsWith(".") || /e[+-]?$/i.test(s);
-    if (isIntermediate) {
-      onCommit(fallback);
-      return;
-    }
-    const n = parseFloat(s);
     if (!Number.isFinite(n)) {
       onCommit(fallback);
       return;
@@ -396,11 +295,6 @@ type MidiDevice = {
   name: string;
 };
 
-type AudioDevice = {
-  id: string;
-  label: string;
-};
-
 type InputConfig = {
   type?: string;
   deviceId?: string;
@@ -417,7 +311,6 @@ type Config = {
   userColors?: string[];
 };
 
-type Band = "low" | "medium" | "high";
 
 type SettingsModalProps = {
   isOpen: boolean;
@@ -495,7 +388,6 @@ export const SettingsModal = ({
   workspacePath,
   onSelectWorkspace,
 }: SettingsModalProps) => {
-  const clamp01 = useCallback((n: number) => (n < 0 ? 0 : n > 1 ? 1 : n), []);
   const meterThresholds = useMemo(() => {
     const t =
       activeTrackAudioThresholds && typeof activeTrackAudioThresholds === "object"
@@ -506,7 +398,7 @@ export const SettingsModal = ({
       return typeof v === "number" && Number.isFinite(v) ? clamp01(v) : 0.5;
     };
     return { low: read("low"), medium: read("medium"), high: read("high") };
-  }, [activeTrackAudioThresholds, clamp01]);
+  }, [activeTrackAudioThresholds]);
   const fileMeterThresholds = useMemo(() => {
     const t =
       activeTrackFileThresholds && typeof activeTrackFileThresholds === "object"
@@ -517,7 +409,9 @@ export const SettingsModal = ({
       return typeof v === "number" && Number.isFinite(v) ? clamp01(v) : 0.5;
     };
     return { low: read("low"), medium: read("medium"), high: read("high") };
-  }, [activeTrackFileThresholds, clamp01]);
+  }, [activeTrackFileThresholds]);
+
+  if (!isOpen) return null;
 
   const normalizedInputType =
     inputConfig?.type === "osc"
@@ -794,7 +688,7 @@ export const SettingsModal = ({
                             onChange={(e: ChangeEvent<HTMLInputElement>) =>
                               setInputConfig({
                                 ...inputConfig,
-                                port: parseInt(e.target.value) || 8000,
+                                port: parseInt(e.target.value, 10) || 8000,
                               })
                             }
                             className="py-1 w-full"

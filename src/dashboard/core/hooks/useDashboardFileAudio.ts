@@ -1,19 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { readDebugFlag, readLocalStorageNumber } from "../utils/readDebugFlag";
+import { readDebugFlag, readLocalStorageNumber } from "../readDebugFlag";
 import {
   AUDIO_ANALYSER_CONFIG,
-  AUDIO_BAND_CUTOFF_HZ,
   AUDIO_DEFAULTS,
   AUDIO_NORMALIZATION_CONFIG,
   AUDIO_TRIGGER_CONFIG,
+  DEFAULT_GAINS,
+  clamp01,
+  bandForHz,
+  dbToLin,
+  type Band,
+  type Levels,
+  type PeaksDb,
 } from "../audio/audioTuning";
-
-type Band = "low" | "medium" | "high";
-
-type Levels = Record<Band, number>;
-type PeaksDb = Record<Band, number>;
-
-const DEFAULT_GAINS: Record<Band, number> = { low: 6.0, medium: 14.0, high: 18.0 };
 
 export type FileAudioState =
   | { status: "idle"; levels: Levels; peaksDb: PeaksDb; assetRelPath: string | null }
@@ -40,26 +39,15 @@ export type FileAudioState =
       message: string;
     };
 
-const clamp01 = (n: number) => (n < 0 ? 0 : n > 1 ? 1 : n);
-
-function bandForHz(hz: number): Band | null {
-  if (!Number.isFinite(hz) || hz <= 0) return null;
-  if (hz < AUDIO_BAND_CUTOFF_HZ.lowMaxHz) return "low";
-  if (hz < AUDIO_BAND_CUTOFF_HZ.mediumMaxHz) return "medium";
-  return "high";
-}
-
-const dbToLin = (db: number) => (Number.isFinite(db) ? Math.pow(10, db / 20) : 0);
-
 const getBridgeWorkspace = () => {
-  const b = (globalThis as unknown as { nwWrldBridge?: unknown }).nwWrldBridge;
+  const b = (globalThis as { nwWrldBridge?: unknown }).nwWrldBridge;
   const obj = b && typeof b === "object" ? (b as Record<string, unknown>) : null;
   const w =
     obj && typeof obj.workspace === "object" ? (obj.workspace as Record<string, unknown>) : null;
   return w;
 };
 
-export function useDashboardFileAudio({
+export const useDashboardFileAudio = ({
   enabled,
   assetRelPath,
   emitBand,
@@ -71,7 +59,7 @@ export function useDashboardFileAudio({
   emitBand: (payload: { channelName: Band; velocity: number }) => Promise<unknown>;
   thresholds?: Partial<Levels> | null;
   minIntervalMs?: number | null;
-}) {
+}) => {
   const zero: Levels = useMemo(() => ({ low: 0, medium: 0, high: 0 }), []);
   const negInf: PeaksDb = useMemo(
     () => ({ low: -Infinity, medium: -Infinity, high: -Infinity }),
@@ -194,9 +182,9 @@ export function useDashboardFileAudio({
     debugRef.current = readDebugFlag("nwWrld.debug.fileAudio");
 
     const Ctx =
-      (globalThis as unknown as { AudioContext?: unknown; webkitAudioContext?: unknown })
+      (globalThis as { AudioContext?: unknown; webkitAudioContext?: unknown })
         .AudioContext ||
-      (globalThis as unknown as { webkitAudioContext?: unknown }).webkitAudioContext;
+      (globalThis as { webkitAudioContext?: unknown }).webkitAudioContext;
     if (!Ctx || typeof Ctx !== "function") {
       setState({
         status: "error",
@@ -243,9 +231,9 @@ export function useDashboardFileAudio({
     };
 
     const gains: Record<Band, number> = {
-      low: readLocalStorageNumber("nwWrld.fileAudio.gain.low", 6.0),
-      medium: readLocalStorageNumber("nwWrld.fileAudio.gain.medium", 14.0),
-      high: readLocalStorageNumber("nwWrld.fileAudio.gain.high", 18.0),
+      low: readLocalStorageNumber("nwWrld.fileAudio.gain.low", DEFAULT_GAINS.low),
+      medium: readLocalStorageNumber("nwWrld.fileAudio.gain.medium", DEFAULT_GAINS.medium),
+      high: readLocalStorageNumber("nwWrld.fileAudio.gain.high", DEFAULT_GAINS.high),
     };
 
     if (debugRef.current) {
@@ -380,23 +368,28 @@ export function useDashboardFileAudio({
       if (now - lastUi >= 100) {
         lastLevelsUpdateMsRef.current = now;
         setState((prev) => {
-          const nextLevels = { ...lastLevelsRef.current };
-          const nextPeaksDb = { ...lastPeaksDbRef.current };
           if (prev.status === "error") return prev;
           if (prev.status === "idle") return prev;
           if (prev.status === "loading") return prev;
-          if (prev.status === "ready")
-            return {
-              status: "playing",
-              levels: nextLevels,
-              peaksDb: nextPeaksDb,
-              assetRelPath,
-              durationSec: buf.duration,
-            };
+          const nl = lastLevelsRef.current;
+          const np = lastPeaksDbRef.current;
+          if (
+            prev.status === "playing" &&
+            prev.assetRelPath === assetRelPath &&
+            prev.durationSec === buf.duration &&
+            prev.levels.low === nl.low &&
+            prev.levels.medium === nl.medium &&
+            prev.levels.high === nl.high &&
+            prev.peaksDb.low === np.low &&
+            prev.peaksDb.medium === np.medium &&
+            prev.peaksDb.high === np.high
+          ) {
+            return prev;
+          }
           return {
             status: "playing",
-            levels: nextLevels,
-            peaksDb: nextPeaksDb,
+            levels: { ...nl },
+            peaksDb: { ...np },
             assetRelPath,
             durationSec: buf.duration,
           };
@@ -496,9 +489,9 @@ export function useDashboardFileAudio({
           return;
         }
         const Ctx =
-          (globalThis as unknown as { AudioContext?: unknown; webkitAudioContext?: unknown })
+          (globalThis as { AudioContext?: unknown; webkitAudioContext?: unknown })
             .AudioContext ||
-          (globalThis as unknown as { webkitAudioContext?: unknown }).webkitAudioContext;
+          (globalThis as { webkitAudioContext?: unknown }).webkitAudioContext;
         if (!Ctx || typeof Ctx !== "function") {
           setState({
             status: "error",

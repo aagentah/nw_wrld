@@ -10,22 +10,15 @@ import { DebugOverlayModal } from "../modals/DebugOverlayModal";
 import { MethodConfiguratorModal } from "../modals/MethodConfiguratorModal";
 import { EditChannelModal } from "../modals/EditChannelModal";
 import { ConfirmationModal } from "../modals/ConfirmationModal";
-import { ModuleEditorModal } from "./ModuleEditorModal";
-import { NewModuleDialog } from "./NewModuleDialog";
+import { ModuleEditorModal } from "../modals/ModuleEditorModal";
 import type { AudioCaptureState } from "../core/hooks/useDashboardAudioCapture";
 import type { FileAudioState } from "../core/hooks/useDashboardFileAudio";
-
-type Confirmation = {
-  title?: string;
-  message: string;
-  onConfirm?: () => void;
-  type?: "confirm" | "alert";
-} | null;
+import type { Confirmation } from "../core/hooks/useDashboardUiState";
+import type { Band } from "../core/audio/audioTuning";
 
 type UserData = Parameters<typeof SelectSetModal>[0]["userData"];
 type ProjectorSettings = Parameters<typeof SettingsModal>[0]["settings"];
 type PredefinedModules = Parameters<typeof AddModuleModal>[0]["predefinedModules"];
-type Band = "low" | "medium" | "high";
 
 type DashboardModalLayerProps = {
   isCreateTrackOpen: boolean;
@@ -53,7 +46,6 @@ type DashboardModalLayerProps = {
   setUserData: (
     updater: ((prev: Record<string, unknown>) => Record<string, unknown>) | Record<string, unknown>
   ) => void;
-  recordingData: Record<string, unknown>;
   setRecordingData: (
     updater: ((prev: Record<string, unknown>) => Record<string, unknown>) | Record<string, unknown>
   ) => void;
@@ -83,15 +75,10 @@ type DashboardModalLayerProps = {
   predefinedModules: PredefinedModules;
   selectedTrackForModuleMenu: number | null;
   setSelectedTrackForModuleMenu: (next: number | null) => void;
-  onCreateNewModule: () => void;
   onEditModule: (moduleName: string) => void;
   isModuleEditorOpen: boolean;
   onCloseModuleEditor: () => void;
   editingModuleName: string | null;
-  editingTemplateType: "basic" | "threejs" | "p5js" | null;
-  isNewModuleDialogOpen: boolean;
-  onCloseNewModuleDialog: () => void;
-  onCreateModule: (moduleName: string, templateType: string) => void;
 
   debugLogs: string[];
   perfStats: { fps: number; frameMsAvg: number; longFramePct: number; at: number } | null;
@@ -148,7 +135,6 @@ export const DashboardModalLayer = ({
   setIsDebugOverlayOpen,
   userData,
   setUserData,
-  recordingData,
   setRecordingData,
   activeTrackId,
   setActiveTrackId,
@@ -174,15 +160,10 @@ export const DashboardModalLayer = ({
   predefinedModules,
   selectedTrackForModuleMenu,
   setSelectedTrackForModuleMenu,
-  onCreateNewModule,
   onEditModule,
   isModuleEditorOpen,
   onCloseModuleEditor,
   editingModuleName,
-  editingTemplateType,
-  isNewModuleDialogOpen,
-  onCloseNewModuleDialog,
-  onCreateModule,
   debugLogs,
   perfStats,
   selectedChannel,
@@ -220,7 +201,6 @@ export const DashboardModalLayer = ({
         activeTrackId={activeTrackId}
         setActiveTrackId={setActiveTrackId}
         activeSetId={activeSetId}
-        recordingData={recordingData}
         setRecordingData={setRecordingData}
         audioCaptureState={audioCaptureState}
         fileAudioState={fileAudioState}
@@ -235,11 +215,9 @@ export const DashboardModalLayer = ({
         onClose={() => setIsSelectSetModalOpen(false)}
         userData={userData}
         setUserData={setUserData}
-        activeTrackId={activeTrackId}
         setActiveTrackId={setActiveTrackId}
         activeSetId={activeSetId}
         setActiveSetId={setActiveSetId}
-        recordingData={recordingData}
         setRecordingData={setRecordingData}
         onCreateSet={() => {
           setIsSelectSetModalOpen(false);
@@ -292,7 +270,6 @@ export const DashboardModalLayer = ({
         userData={userData}
         setUserData={setUserData}
         predefinedModules={predefinedModules}
-        onCreateNewModule={onCreateNewModule}
         onEditModule={onEditModule}
         onConfirmRewrite={openConfirmationModal}
         skippedWorkspaceModules={workspaceModuleSkipped}
@@ -305,7 +282,6 @@ export const DashboardModalLayer = ({
         userData={userData}
         setUserData={setUserData}
         predefinedModules={predefinedModules}
-        onCreateNewModule={onCreateNewModule}
         onEditModule={onEditModule}
         onConfirmRewrite={openConfirmationModal}
         skippedWorkspaceModules={workspaceModuleSkipped}
@@ -315,15 +291,7 @@ export const DashboardModalLayer = ({
         isOpen={isModuleEditorOpen}
         onClose={onCloseModuleEditor}
         moduleName={editingModuleName}
-        templateType={editingTemplateType}
-        onModuleSaved={null}
         predefinedModules={predefinedModules}
-        workspacePath={workspacePath}
-      />
-      <NewModuleDialog
-        isOpen={isNewModuleDialogOpen}
-        onClose={onCloseNewModuleDialog}
-        onCreateModule={onCreateModule}
         workspacePath={workspacePath}
       />
       <DebugOverlayModal

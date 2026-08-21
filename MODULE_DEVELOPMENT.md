@@ -17,6 +17,8 @@ This guide covers creating custom visual modules for nw_wrld, including the work
 11. [Debugging Modules](#debugging-modules)
 12. [Best Practices](#best-practices)
 13. [Performance Tips](#performance-tips)
+14. [Testing Your Module](#testing-your-module)
+15. [Further Learning](#further-learning)
 
 ---
 
@@ -63,7 +65,7 @@ All workspace modules must follow the **docblock contract**:
 
 Allowed `@nwWrld imports`:
 
-- **SDK**: `ModuleBase`, `BaseThreeJsModule`, `assetUrl`, `readText`, `loadJson`
+- **SDK**: `ModuleBase`, `BaseThreeJsModule`, `assetUrl`, `readText`, `loadJson`, `listAssets`
 - **Global libs**: `THREE`, `p5`, `d3`, `Noise`
 - **THREE.js Loaders**: `OBJLoader`, `PLYLoader`, `PCDLoader`, `GLTFLoader`, `STLLoader`
 
@@ -358,7 +360,7 @@ Supported option fields:
 - **`allowRandomization`** (optional, boolean): enables the dice/random UI for this option
 - **`assetBaseDir`** (optional, string): for `assetFile` / `assetDir` options (e.g. `"images"`, `"models"`, `"json"`, `"fonts"`)
 - **`assetExtensions`** (optional, string[]): for `assetFile` options (e.g. `[".png", ".jpg"]`)
-- **`allowCustom`** (optional, boolean): for asset options; when true, users can type a custom path/list instead of picking
+- **`allowCustom`** (optional, boolean): for asset options; when true, users can type a custom path/list instead of picking. Defaults to `true`; set `allowCustom: false` to restrict users to the picker.
 
 ### Units and numeric conventions (recommended)
 
@@ -456,10 +458,11 @@ class MyModule extends ModuleBase {
 - `opacity({ opacity })` - Set opacity
 - `rotate({ direction, speed, duration })` - Rotate module (duration is milliseconds)
 - `randomZoom({ scaleFrom, scaleTo, position })` - Random zoom effect
-- `matrix({ matrix, border })` - Position using matrix grid
 - `viewportLine({ x, y, length, opacity })` - Draw a viewport line (x/y/length are percentages)
 - `background({ color })` - Set background color
 - `invert({ duration })` - Invert colors (duration is milliseconds)
+
+**Note:** `matrix({ matrix, border })` is a built-in triggerable method handled by the projector layout layer: declare and trigger it, but do not call `this.matrix()` from module code (it throws a TypeError).
 
 #### BaseThreeJsModule
 
@@ -498,7 +501,17 @@ class My3DModule extends BaseThreeJsModule {
 - `this.scene` - Three.js scene
 - `this.camera` - Three.js camera
 - `this.renderer` - Three.js renderer
-- `this.controls` - Orbit controls (if enabled)
+- `this.controls` - Orbit controls (created automatically; damping, pan, rotate, and zoom enabled by default)
+
+**Built-in BaseThreeJsModule Methods:**
+
+In addition to the ModuleBase methods, `BaseThreeJsModule` declares these triggerable methods:
+
+- `zoomLevel({ zoomLevel })` - Camera zoom (number, default `75`, `0` to `100`, unit `%`)
+- `viewDirection({ viewDirection })` - Camera view direction (select, default `"front"`, values: `front`, `top`, `right`, `back`, `bottom`, `left`)
+- `cameraAnimation({ cameraAnimation })` - Camera animation (select, default `"none"`, values: `none`, `pan-forward`, `pan-backward`, `pan-left`, `pan-right`, `pan-up`, `pan-down`, `rotate-left`, `rotate-right`, `rotate-up`, `rotate-down`, `rotate-clockwise`, `rotate-anticlockwise`, `rotate-random`)
+- `cameraSpeed({ cameraSpeed })` - Camera animation speed multiplier (number, default `1.0`, `0.01` to `10`, unit `×`)
+- `displacementParams({ amplitude, oscTime, x, y, z })` - Vertex displacement parameters (all numbers: `amplitude` default `1`, `0` to `50`; `oscTime` default `1.0`, `0.01` to `10`; `x`/`y`/`z` default `1`, `-5` to `5`)
 
 ### Asset Loading Methods
 
@@ -569,13 +582,31 @@ if (text) {
 
 **Returns:** `Promise<string | null>` - File contents or null if error
 
+#### listAssets(dir)
+
+List the asset files inside a subdirectory of workspace `assets/`.
+
+```javascript
+const models = await listAssets("models");
+if (models) {
+  console.log("Available models:", models);
+}
+```
+
+**Parameters:**
+
+- `dir` (string) - Relative directory path from `assets/` folder (e.g. `"models"`, `"json"`)
+
+**Returns:** `Promise<string[]>` - Array of asset paths (empty if the directory is missing or invalid)
+
 ### SDK Method Summary
 
-| Method           | Purpose                          | Returns                   |
-| ---------------- | -------------------------------- | ------------------------- |
-| `assetUrl(path)` | Get `nw-assets://` URL for asset | `string \| null`          |
-| `loadJson(path)` | Load & parse JSON file           | `Promise<object \| null>` |
-| `readText(path)` | Read text file                   | `Promise<string \| null>` |
+| Method             | Purpose                          | Returns                   |
+| ------------------ | -------------------------------- | ------------------------- |
+| `assetUrl(path)`   | Get `nw-assets://` URL for asset | `string \| null`          |
+| `loadJson(path)`   | Load & parse JSON file           | `Promise<object \| null>` |
+| `readText(path)`   | Read text file                   | `Promise<string \| null>` |
+| `listAssets(dir)`  | List asset files in a directory  | `Promise<string[]>`       |
 
 ---
 
@@ -592,6 +623,8 @@ MyProject/
     │   └── blueprint.png
     ├── models/          # 3D models (OBJ, PLY, PCD, GLTF/GLB, STL)
     │   └── cube.obj
+    ├── fonts/           # Fonts for text modules
+    │   └── RobotoMono-VariableFont_wght.ttf
     └── json/            # JSON data files
         └── meteor.json
 ```
@@ -600,7 +633,7 @@ MyProject/
 
 1. Navigate to your project folder
 2. Open the `assets/` directory
-3. Add files to `images/` or `json/` subdirectories
+3. Add files to the `images/`, `models/`, `fonts/`, or `json/` subdirectories
 4. Reference them in your modules using the SDK
 
 ### Loading Images
@@ -760,10 +793,13 @@ assetUrl("http://example.com/file.obj"); // No external URLs
 
 ### Starter Assets
 
-New projects include two starter assets:
+New projects include a set of starter assets:
 
 - `assets/images/blueprint.png` - Example image (used by Image module)
 - `assets/json/meteor.json` - Example dataset (used by AsteroidGraph module)
+- `assets/json/radiation.json` - Example dataset
+- `assets/fonts/RobotoMono-VariableFont_wght.ttf` - Example variable font
+- `assets/fonts/RobotoMono-Italic-VariableFont_wght.ttf` - Example italic variable font
 - `assets/models/cube.obj` - Example OBJ model (used by ModelLoader)
 - `assets/models/tetra.stl` - Example STL model (used by ModelLoader)
 - `assets/models/triangle.ply` - Example PLY model (used by ModelLoader)
@@ -969,6 +1005,12 @@ The following libraries are available globally in workspace modules:
 - **p5** - `globalThis.p5` - Creative coding and canvas drawing
 - **THREE** - `globalThis.THREE` - 3D graphics
 - **d3** - `globalThis.d3` - Data visualization
+- **Noise** - `globalThis.Noise` - Perlin/simplex noise (noisejs)
+- **OBJLoader** - `globalThis.OBJLoader` - Three.js OBJ model loader
+- **PLYLoader** - `globalThis.PLYLoader` - Three.js PLY model loader
+- **PCDLoader** - `globalThis.PCDLoader` - Three.js PCD point-cloud loader
+- **GLTFLoader** - `globalThis.GLTFLoader` - Three.js GLTF/GLB model loader
+- **STLLoader** - `globalThis.STLLoader` - Three.js STL model loader
 
 ---
 
@@ -1293,9 +1335,7 @@ async testAssetLoading() {
    }
    ```
 
-3. **Use relative paths** (no leading slash):
-   - ✅ `'images/photo.png'`
-   - ❌ `'/images/photo.png'`
+3. **Use relative paths** that stay inside `assets/`. See [Asset Path Rules](#asset-path-rules) for the canonical statement; paths are normalised by `safeAssetRelPath`, so a leading slash or a `../` that escapes `assets/` resolves to null.
 
 ### Cleanup and Memory
 
@@ -1376,172 +1416,11 @@ async testAssetLoading() {
 
 ## Performance Tips
 
-### General Performance
+Most rendering performance comes down to the engine you are drawing with. The points below are the ones that are specific to the nw_wrld module lifecycle; for general p5.js, Three.js, and canvas optimisation, see the upstream docs linked under [Further Learning](#library-documentation).
 
-1. **Batch DOM updates** - Minimize reflows and repaints:
+### nw_wrld lifecycle essentials
 
-   ```javascript
-   // Bad: Multiple style updates
-   this.elem.style.width = "100px";
-   this.elem.style.height = "100px";
-   this.elem.style.opacity = "0.5";
-
-   // Good: Single cssText update
-   this.elem.style.cssText = "width: 100px; height: 100px; opacity: 0.5;";
-   ```
-
-2. **Use requestAnimationFrame** for animations (not `setInterval` or `setTimeout`):
-
-   ```javascript
-   // Bad
-   setInterval(() => this.render(), 16);
-
-   // Good
-   const animate = () => {
-     this.render();
-     this.animationId = requestAnimationFrame(animate);
-   };
-   animate();
-   ```
-
-3. **Debounce expensive operations**:
-   ```javascript
-   onResize() {
-     clearTimeout(this.resizeTimeout);
-     this.resizeTimeout = setTimeout(() => {
-       this.resize();
-     }, 250);
-   }
-   ```
-
-### Canvas Performance
-
-1. **Clear only what you need**:
-
-   ```javascript
-   // If full clear needed
-   ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-   // If partial clear possible
-   ctx.clearRect(x, y, width, height);
-   ```
-
-2. **Use offscreen canvas** for complex rendering:
-
-   ```javascript
-   init() {
-     this.offscreen = document.createElement('canvas');
-     this.offscreenCtx = this.offscreen.getContext('2d');
-     // Render to offscreen, then copy to visible canvas
-   }
-   ```
-
-3. **Cache unchanging elements**:
-
-   ```javascript
-   // Draw static background once
-   this.cachedBackground = this.renderBackground();
-
-   render() {
-     // Use cached background
-     ctx.drawImage(this.cachedBackground, 0, 0);
-     // Draw dynamic elements on top
-   }
-   ```
-
-### Three.js Performance
-
-1. **Reuse geometries and materials**:
-
-   ```javascript
-   // Bad: New geometry/material for each object
-   for (let i = 0; i < 100; i++) {
-     const geo = new THREE.BoxGeometry(1, 1, 1);
-     const mat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-     const mesh = new THREE.Mesh(geo, mat);
-   }
-
-   // Good: Shared geometry/material
-   const geo = new THREE.BoxGeometry(1, 1, 1);
-   const mat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-   for (let i = 0; i < 100; i++) {
-     const mesh = new THREE.Mesh(geo, mat);
-     // Position mesh differently
-   }
-   ```
-
-2. **Limit object counts**:
-
-   ```javascript
-   setCount({ count = 100 } = {}) {
-     // Cap at reasonable maximum
-     const safeCount = Math.min(count, 1000);
-     this.createObjects(safeCount);
-   }
-   ```
-
-3. **Use instanced meshes** for many identical objects:
-
-   ```javascript
-   const geometry = new THREE.BoxGeometry(1, 1, 1);
-   const material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-   const instancedMesh = new THREE.InstancedMesh(geometry, material, 1000);
-   this.scene.add(instancedMesh);
-   ```
-
-4. **Dispose resources properly**:
-   ```javascript
-   destroy() {
-     if (this.mesh) {
-       this.scene.remove(this.mesh);
-       this.mesh.geometry.dispose();
-       this.mesh.material.dispose();
-     }
-     super.destroy();
-   }
-   ```
-
-### p5.js Performance
-
-1. **Avoid unnecessary redraws**:
-
-   ```javascript
-   p.setup = () => {
-     p.createCanvas(width, height);
-     p.noLoop(); // Don't redraw unless needed
-   };
-
-   myMethod() {
-     // Update state, then redraw once
-     this.updateState();
-     this.myp5.redraw();
-   }
-   ```
-
-2. **Use p5 rendering modes**:
-   ```javascript
-   p.setup = () => {
-     p.createCanvas(width, height, p.WEBGL); // Hardware accelerated
-   };
-   ```
-
-### Memory Management
-
-1. **Avoid memory leaks**:
-   - Remove event listeners in `destroy()`
-   - Cancel animation frames
-   - Clear intervals/timeouts
-   - Dispose Three.js resources
-   - Remove p5 instances
-
-2. **Monitor memory usage**:
-   - Use Chrome DevTools Memory profiler
-   - Test loading/unloading modules repeatedly
-   - Check for increasing memory over time
-
-### Asset Loading Performance
-
-1. **Load assets once, reuse**:
+1. **Load assets once, then reuse.** SDK calls like `loadJson` and `readText` hit disk, so fetch during `init()` and cache the result rather than reloading inside a method that fires on every trigger:
 
    ```javascript
    async init() {
@@ -1550,15 +1429,23 @@ async testAssetLoading() {
    }
 
    myMethod() {
-     // Reuse loaded dataset
+     // Reuse the cached dataset
      this.processData(this.dataset);
    }
    ```
 
-2. **Consider asset size**:
-   - Optimize images before adding to workspace
-   - Compress JSON data where possible
-   - Limit texture sizes for Three.js
+2. **Tear everything down in `destroy()`.** Modules are loaded and unloaded repeatedly during a session (hot reload, track changes), so a leak compounds fast. Cancel animation frames, clear timers, remove listeners, dispose Three.js geometries/materials, and remove p5 instances. See [Cleanup and Memory](#cleanup-and-memory) for the full pattern, and use `this.externalElements` for any DOM you create outside `this.elem`.
+
+3. **Batch DOM writes.** Prefer a single `cssText` assignment over several individual style writes to avoid repeated reflows:
+
+   ```javascript
+   // Good: one write
+   this.elem.style.cssText = "width: 100px; height: 100px; opacity: 0.5;";
+   ```
+
+4. **Animate with `requestAnimationFrame`.** Use it instead of `setInterval`/`setTimeout`, store the id, and cancel it in `destroy()` (see [Animation Loops](#animation-loops)).
+
+To check for leaks, load and unload your module repeatedly and watch memory in the Chrome DevTools Memory profiler.
 
 ---
 
@@ -1616,7 +1503,7 @@ async testAssetLoading() {
 
 ### Study Starter Modules
 
-The 16 starter modules in your project's `modules/` folder are your best learning resource:
+The 22 starter modules in your project's `modules/` folder are your best learning resource:
 
 - **HelloWorld.js** - Simplest structure
 - **Text.js** - Method options and DOM

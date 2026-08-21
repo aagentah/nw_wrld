@@ -1,19 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { readDebugFlag, readLocalStorageNumber } from "../utils/readDebugFlag";
+import { readDebugFlag, readLocalStorageNumber } from "../readDebugFlag";
 import {
   AUDIO_ANALYSER_CONFIG,
-  AUDIO_BAND_CUTOFF_HZ,
   AUDIO_DEFAULTS,
   AUDIO_NORMALIZATION_CONFIG,
   AUDIO_TRIGGER_CONFIG,
+  DEFAULT_GAINS,
+  clamp01,
+  bandForHz,
+  dbToLin,
+  type Band,
+  type Levels,
+  type PeaksDb,
 } from "../audio/audioTuning";
-
-type Band = "low" | "medium" | "high";
-
-type Levels = Record<Band, number>;
-type PeaksDb = Record<Band, number>;
-
-const DEFAULT_GAINS: Record<Band, number> = { low: 6.0, medium: 14.0, high: 18.0 };
 
 export type AudioCaptureState =
   | { status: "idle"; levels: Levels; peaksDb: PeaksDb }
@@ -22,18 +21,7 @@ export type AudioCaptureState =
   | { status: "error"; message: string; levels: Levels; peaksDb: PeaksDb }
   | { status: "mock"; levels: Levels; peaksDb: PeaksDb };
 
-const clamp01 = (n: number) => (n < 0 ? 0 : n > 1 ? 1 : n);
-
-function bandForHz(hz: number): Band | null {
-  if (!Number.isFinite(hz) || hz <= 0) return null;
-  if (hz < AUDIO_BAND_CUTOFF_HZ.lowMaxHz) return "low";
-  if (hz < AUDIO_BAND_CUTOFF_HZ.mediumMaxHz) return "medium";
-  return "high";
-}
-
-const dbToLin = (db: number) => (Number.isFinite(db) ? Math.pow(10, db / 20) : 0);
-
-export function useDashboardAudioCapture({
+export const useDashboardAudioCapture = ({
   enabled,
   deviceId,
   emitBand,
@@ -45,7 +33,7 @@ export function useDashboardAudioCapture({
   emitBand: (payload: { channelName: Band; velocity: number }) => Promise<unknown>;
   thresholds?: Partial<Levels> | null;
   minIntervalMs?: number | null;
-}) {
+}) => {
   const zero: Levels = { low: 0, medium: 0, high: 0 };
   const negInf: PeaksDb = { low: -Infinity, medium: -Infinity, high: -Infinity };
   const [state, setState] = useState<AudioCaptureState>({
@@ -86,7 +74,7 @@ export function useDashboardAudioCapture({
   }, [minIntervalMs]);
 
   const isMockMode = useMemo(() => {
-    const testing = (globalThis as unknown as { nwWrldBridge?: unknown }).nwWrldBridge;
+    const testing = (globalThis as { nwWrldBridge?: unknown }).nwWrldBridge;
     const t =
       testing && typeof testing === "object" ? (testing as Record<string, unknown>).testing : null;
     const audio = t && typeof t === "object" ? (t as Record<string, unknown>).audio : null;
@@ -96,11 +84,11 @@ export function useDashboardAudioCapture({
   useEffect(() => {
     const stop = async () => {
       runIdRef.current += 1;
-      const onVis = visibilityHandlerRef.current;
+      const storedVisibilityHandler = visibilityHandlerRef.current;
       visibilityHandlerRef.current = null;
-      if (typeof onVis === "function") {
+      if (typeof storedVisibilityHandler === "function") {
         try {
-          document.removeEventListener("visibilitychange", onVis);
+          document.removeEventListener("visibilitychange", storedVisibilityHandler);
         } catch {}
       }
       if (rafRef.current != null) {
@@ -172,9 +160,9 @@ export function useDashboardAudioCapture({
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
         streamRef.current = stream;
         const Ctx =
-          (globalThis as unknown as { AudioContext?: unknown; webkitAudioContext?: unknown })
+          (globalThis as { AudioContext?: unknown; webkitAudioContext?: unknown })
             .AudioContext ||
-          (globalThis as unknown as { webkitAudioContext?: unknown }).webkitAudioContext;
+          (globalThis as { webkitAudioContext?: unknown }).webkitAudioContext;
         if (!Ctx || typeof Ctx !== "function") {
           setState({
             status: "error",
@@ -197,6 +185,10 @@ export function useDashboardAudioCapture({
         analyserRef.current = analyser;
 
         const bins = new Float32Array(analyser.frequencyBinCount);
+        // localStorage reads are synchronous disk hits; sampled once per start() so the
+        // 60fps tick below never touches them (the debug knobs need a capture restart).
+        const lsThresholdAtStart = readLocalStorageNumber("nwWrld.audio.threshold", NaN);
+        const lsMinIntervalAtStart = readLocalStorageNumber("nwWrld.audio.minIntervalMs", NaN);
         const getThreshold = (band: Band) => {
           const thrObj =
             thresholdsRef.current && typeof thresholdsRef.current === "object"
@@ -208,9 +200,8 @@ export function useDashboardAudioCapture({
             (typeof thrObj.low === "number" ||
               typeof thrObj.medium === "number" ||
               typeof thrObj.high === "number");
-          const lsThreshold = readLocalStorageNumber("nwWrld.audio.threshold", NaN);
-          if (!hasAnyDirect && Number.isFinite(lsThreshold)) {
-            return Math.max(0, Math.min(1, lsThreshold));
+          if (!hasAnyDirect && Number.isFinite(lsThresholdAtStart)) {
+            return Math.max(0, Math.min(1, lsThresholdAtStart));
           }
           return typeof direct === "number" && Number.isFinite(direct)
             ? Math.max(0, Math.min(1, direct))
@@ -220,15 +211,14 @@ export function useDashboardAudioCapture({
           const direct = minIntervalMsRef.current;
           if (typeof direct === "number" && Number.isFinite(direct))
             return Math.max(0, Math.min(10_000, direct));
-          const ls = readLocalStorageNumber("nwWrld.audio.minIntervalMs", NaN);
-          if (Number.isFinite(ls)) return Math.max(0, Math.min(10_000, ls));
+          if (Number.isFinite(lsMinIntervalAtStart)) return Math.max(0, Math.min(10_000, lsMinIntervalAtStart));
           return AUDIO_DEFAULTS.minIntervalMs;
         };
 
         const gains: Record<Band, number> = {
-          low: readLocalStorageNumber("nwWrld.audio.gain.low", 6.0),
-          medium: readLocalStorageNumber("nwWrld.audio.gain.medium", 14.0),
-          high: readLocalStorageNumber("nwWrld.audio.gain.high", 18.0),
+          low: readLocalStorageNumber("nwWrld.audio.gain.low", DEFAULT_GAINS.low),
+          medium: readLocalStorageNumber("nwWrld.audio.gain.medium", DEFAULT_GAINS.medium),
+          high: readLocalStorageNumber("nwWrld.audio.gain.high", DEFAULT_GAINS.high),
         };
 
         if (debugRef.current) {
@@ -372,11 +362,24 @@ export function useDashboardAudioCapture({
           if (now - lastUi >= 100) {
             lastLevelsUpdateMsRef.current = now;
             setState((prev) => {
-              const nextLevels = { ...lastLevelsRef.current };
-              const nextPeaksDb = { ...lastPeaksDbRef.current };
               if (prev.status === "error") return prev;
               if (prev.status === "mock") return prev;
               if (prev.status === "idle") return prev;
+              const nl = lastLevelsRef.current;
+              const np = lastPeaksDbRef.current;
+              if (
+                prev.status === "running" &&
+                prev.levels.low === nl.low &&
+                prev.levels.medium === nl.medium &&
+                prev.levels.high === nl.high &&
+                prev.peaksDb.low === np.low &&
+                prev.peaksDb.medium === np.medium &&
+                prev.peaksDb.high === np.high
+              ) {
+                return prev;
+              }
+              const nextLevels = { ...nl };
+              const nextPeaksDb = { ...np };
               if (prev.status === "starting")
                 return { status: "starting", levels: nextLevels, peaksDb: nextPeaksDb };
               return { status: "running", levels: nextLevels, peaksDb: nextPeaksDb };
@@ -397,7 +400,7 @@ export function useDashboardAudioCapture({
           tick().catch(() => {});
         });
 
-        const onVisibilityChange = () => {
+        const handleVisibilityChange = () => {
           try {
             if (!enabled) return;
             if (document.hidden) return;
@@ -409,8 +412,8 @@ export function useDashboardAudioCapture({
           } catch {}
         };
         try {
-          visibilityHandlerRef.current = onVisibilityChange;
-          document.addEventListener("visibilitychange", onVisibilityChange);
+          visibilityHandlerRef.current = handleVisibilityChange;
+          document.addEventListener("visibilitychange", handleVisibilityChange);
         } catch {}
       } catch (e) {
         const message = e instanceof Error ? e.message : String(e);

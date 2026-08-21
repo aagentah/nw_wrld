@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FaPlus, FaEdit, FaTrash } from "react-icons/fa";
+import { FaPlus, FaEdit, FaTrash, FaClone } from "react-icons/fa";
 import { Modal } from "../shared/Modal";
 import { SortableWrapper } from "../shared/SortableWrapper";
 import { SortableList, arrayMove } from "../shared/SortableList";
@@ -7,10 +7,15 @@ import { ModalHeader } from "../components/ModalHeader";
 import { ModalFooter } from "../components/ModalFooter";
 import { Button } from "../components/Button";
 import { RadioButton } from "../components/FormInputs";
-import { updateUserData } from "../core/utils";
+import { randomIdSuffix, updateUserData } from "../core/utils";
 import { EditSetModal } from "./EditSetModal";
 import { ConfirmationModal } from "./ConfirmationModal";
 import { deleteRecordingsForTracks } from "../../shared/json/recordingUtils";
+import {
+  duplicateName,
+  duplicateSet,
+  copyRecordingEntries,
+} from "../../shared/utils/duplicateUtils";
 
 type Set = {
   id: string;
@@ -23,6 +28,7 @@ type SortableSetItemProps = {
   activeSetId: string | null;
   onSetSelect: (setId: string) => void;
   onEdit: (setId: string) => void;
+  onDuplicate: (setId: string) => void;
   onDelete: (setId: string) => void;
   canDelete: boolean;
 };
@@ -32,6 +38,7 @@ const SortableSetItem = ({
   activeSetId,
   onSetSelect,
   onEdit,
+  onDuplicate,
   onDelete,
   canDelete,
 }: SortableSetItemProps) => {
@@ -63,6 +70,16 @@ const SortableSetItem = ({
             <FaEdit />
           </button>
           <button
+            onClick={() => onDuplicate(set.id)}
+            className="text-neutral-500 hover:text-neutral-300 text-[11px]"
+            data-testid="duplicate-set"
+            data-set-id={set.id}
+            aria-label="Duplicate set"
+            title="Duplicate set"
+          >
+            <FaClone />
+          </button>
+          <button
             onClick={() => onDelete(set.id)}
             className="text-neutral-500 hover:text-red-500 text-[11px]"
             disabled={!canDelete}
@@ -88,11 +105,9 @@ type SelectSetModalProps = {
   onClose: () => void;
   userData: UserData;
   setUserData: (updater: unknown) => void;
-  activeTrackId: string | number | null;
   setActiveTrackId: (id: string | number | null) => void;
   activeSetId: string | null;
   setActiveSetId: (id: string | null) => void;
-  recordingData: Record<string, unknown>;
   setRecordingData: (updater: (prev: Record<string, unknown>) => Record<string, unknown>) => void;
   onCreateSet: () => void;
   onConfirmDelete: (message: string, onConfirm: () => void) => void;
@@ -103,11 +118,9 @@ export const SelectSetModal = ({
   onClose,
   userData,
   setUserData,
-  activeTrackId: _activeTrackId,
   setActiveTrackId,
   activeSetId,
   setActiveSetId,
-  recordingData: _recordingData,
   setRecordingData,
   onCreateSet,
   onConfirmDelete,
@@ -129,6 +142,34 @@ export const SelectSetModal = ({
     }
 
     onClose();
+  };
+
+  const handleDuplicateSet = (setId: string) => {
+    const sourceSet = sets.find((s) => s.id === setId);
+    if (!sourceSet) return;
+
+    const { set: newSet, trackIdMap } = duplicateSet(
+      sourceSet as unknown as Record<string, unknown>,
+      {
+        newId: `set_${Date.now()}_${randomIdSuffix()}`,
+        name: duplicateName(
+          sourceSet.name,
+          sets.map((s) => s.name)
+        ),
+        makeTrackId: () => `track_${Date.now()}_${randomIdSuffix()}`,
+        makeModuleId: () => `inst_${Date.now()}_${randomIdSuffix()}`,
+      }
+    );
+
+    updateUserData(setUserData, (draft) => {
+      const d = draft as unknown as UserData;
+      const index = d.sets.findIndex((s) => s.id === setId);
+      d.sets.splice(index === -1 ? d.sets.length : index + 1, 0, newSet as unknown as Set);
+    });
+
+    if (Object.keys(trackIdMap).length > 0) {
+      setRecordingData((prev) => copyRecordingEntries(prev, trackIdMap));
+    }
   };
 
   const handleDeleteSet = (setId: string) => {
@@ -170,6 +211,8 @@ export const SelectSetModal = ({
     });
   };
 
+  if (!isOpen) return null;
+
   return (
     <>
       <Modal isOpen={isOpen} onClose={onClose} size="small">
@@ -199,6 +242,7 @@ export const SelectSetModal = ({
                         activeSetId={activeSetId}
                         onSetSelect={handleSetSelect}
                         onEdit={setEditingSetId}
+                        onDuplicate={handleDuplicateSet}
                         onDelete={handleDeleteSet}
                         canDelete={sets.length > 1}
                       />

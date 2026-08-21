@@ -1,19 +1,10 @@
-import { memo, useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { useAtom } from "jotai";
+import { memo, useState, useCallback, useMemo } from "react";
+import { useAtom, useSetAtom } from "jotai";
 import { remove } from "lodash";
 import { FaPlus } from "react-icons/fa";
 import { SortableList, arrayMove } from "../../shared/SortableList";
-import { useIPCSend } from "../../core/hooks/useIPC";
-import {
-  userDataAtom,
-  recordingDataAtom,
-  activeSetIdAtom,
-  flashingConstructorsAtom,
-  useFlashingChannels,
-} from "../../core/state";
-import { updateActiveSet } from "../../core/utils";
-import { getRecordingForTrack } from "../../../shared/json/recordingUtils";
-import MidiPlayback from "../../../shared/midi/midiPlayback";
+import { userDataAtom, activeSetIdAtom } from "../../core/state";
+import { isPlainObject, updateActiveSet } from "../../core/utils";
 import { Button } from "../Button";
 import { TrackDataModal } from "../../modals/TrackDataModal";
 import { EditTrackModal } from "../../modals/EditTrackModal";
@@ -22,15 +13,6 @@ import type { AudioCaptureState } from "../../core/hooks/useDashboardAudioCaptur
 import type { FileAudioState } from "../../core/hooks/useDashboardFileAudio";
 
 type ModuleInstance = { id: string; type: string };
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return (
-    Boolean(value) &&
-    typeof value === "object" &&
-    !Array.isArray(value) &&
-    Object.prototype.toString.call(value) === "[object Object]"
-  );
-}
 
 type Track = {
   id: string | number;
@@ -47,11 +29,9 @@ type TrackItemProps = {
   predefinedModules: unknown[];
   openRightMenu: (trackIndex: number) => void;
   onConfirmDelete: (message: string, onConfirm: () => void) => void;
-  setActiveTrackId: (id: string | null) => void;
   inputConfig: unknown;
   config: Record<string, unknown> | null;
   isSequencerPlaying: boolean;
-  sequencerCurrentStep: number;
   handleSequencerToggle: (channelName: string, stepIndex: number) => void;
   workspacePath?: string | null;
   workspaceModuleFiles?: string[];
@@ -67,11 +47,9 @@ export const TrackItem = memo(
     predefinedModules,
     openRightMenu,
     onConfirmDelete,
-    setActiveTrackId: _setActiveTrackId,
     inputConfig,
     config: _config,
     isSequencerPlaying,
-    sequencerCurrentStep,
     handleSequencerToggle,
     workspacePath = null,
     workspaceModuleFiles = [],
@@ -79,24 +57,10 @@ export const TrackItem = memo(
     audioCaptureState = null,
     fileAudioState = null,
   }: TrackItemProps) => {
-    const [_userData, setUserData] = useAtom(userDataAtom);
-    const [recordingData] = useAtom(recordingDataAtom);
+    const setUserData = useSetAtom(userDataAtom);
     const [activeSetId] = useAtom(activeSetIdAtom);
-    const [_flashingChannels, flashChannel] = useFlashingChannels();
-    const [_flashingConstructors, setFlashingConstructors] = useAtom(flashingConstructorsAtom);
     const [selectedTrackForData, setSelectedTrackForData] = useState<unknown | null>(null);
     const [isEditTrackModalOpen, setIsEditTrackModalOpen] = useState(false);
-    const [isPlaying, setIsPlaying] = useState(false);
-    const playbackEngineRef = useRef<MidiPlayback | null>(null);
-
-    const sendToProjector = useIPCSend("dashboard-to-projector");
-
-    const stopPlayback = useCallback(() => {
-      if (playbackEngineRef.current) {
-        playbackEngineRef.current.stop();
-        setIsPlaying(false);
-      }
-    }, []);
 
     const handleAddChannel = useCallback(() => {
       const existingChannelNumbers = new Set(Object.keys(track?.channelMappings || {}).map(Number));
@@ -160,85 +124,6 @@ export const TrackItem = memo(
       [setUserData, trackIndex, track.modules, onConfirmDelete, activeSetId]
     );
 
-    const _handlePlayPause = useCallback(async () => {
-      if (!playbackEngineRef.current) {
-        playbackEngineRef.current = new MidiPlayback();
-
-        playbackEngineRef.current.setOnNoteCallback((channelName: string) => {
-          flashChannel(channelName, 100);
-          sendToProjector("channel-trigger", { channelName });
-        });
-
-        playbackEngineRef.current.setOnStopCallback(() => {
-          setIsPlaying(false);
-        });
-
-        try {
-          const recording = getRecordingForTrack(recordingData, String(track.id));
-          const channelsRaw = isPlainObject(recording) ? recording.channels : null;
-          if (!Array.isArray(channelsRaw) || channelsRaw.length === 0) {
-            alert("No recording available. Trigger some channels first.");
-            return;
-          }
-
-          const channels = channelsRaw.map((ch) => {
-            const c = isPlainObject(ch) ? ch : {};
-            return {
-              name: String(c.name ?? ""),
-              midi: 0,
-              sequences: Array.isArray(c.sequences) ? c.sequences : [],
-            };
-          });
-
-          const bpm = track.bpm || 120;
-          playbackEngineRef.current.load(channels, bpm);
-        } catch (error) {
-          console.error("Error loading recording for playback:", error);
-          alert(`Failed to load recording for playback: ${(error as { message?: string })?.message}`);
-          return;
-        }
-      }
-
-      if (!isPlaying) {
-        const keys = track.modules.map((moduleInstance) => `${String(track.id)}:${moduleInstance.id}`);
-        setFlashingConstructors((prev) => {
-          const next = new Set(prev);
-          keys.forEach((k) => next.add(k));
-          return next;
-        });
-        setTimeout(() => {
-          setFlashingConstructors((prev) => {
-            const next = new Set(prev);
-            keys.forEach((k) => next.delete(k));
-            return next;
-          });
-        }, 100);
-
-        sendToProjector("track-activate", { trackName: track.name });
-
-        playbackEngineRef.current.play();
-        setIsPlaying(true);
-      }
-    }, [
-      isPlaying,
-      recordingData,
-      track.id,
-      track.bpm,
-      track.name,
-      track.modules,
-      flashChannel,
-      sendToProjector,
-      setFlashingConstructors,
-    ]);
-
-    useEffect(() => {
-      return () => {
-        if (playbackEngineRef.current) {
-          playbackEngineRef.current.stop();
-        }
-      };
-    }, []);
-
     return (
       <div className="mb-4 pb-4 font-mono">
         <div className="flex flex-col h-full w-full mb-4 relative">
@@ -247,7 +132,6 @@ export const TrackItem = memo(
               trackIndex={trackIndex}
               predefinedModules={predefinedModules}
               openRightMenu={openRightMenu}
-              stopPlayback={stopPlayback}
               onShowTrackData={(t: unknown) => {
                 setSelectedTrackForData(t);
               }}
@@ -305,7 +189,6 @@ export const TrackItem = memo(
                             inputConfig={inputConfig}
                             config={_config}
                             isSequencerPlaying={isSequencerPlaying}
-                            sequencerCurrentStep={sequencerCurrentStep}
                             handleSequencerToggle={handleSequencerToggle}
                             workspacePath={workspacePath}
                             workspaceModuleFiles={workspaceModuleFiles}

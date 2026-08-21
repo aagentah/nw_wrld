@@ -19,16 +19,16 @@ export function registerInputBridge(): void {
 
   ipcMain.handle("input:configure", async (event, payload) => {
     if (!state.inputManager) {
-      return { success: false, reason: "INPUT_MANAGER_MISSING" };
+      return { ok: false, reason: "INPUT_MANAGER_MISSING" };
     }
     const normalized = normalizeInputConfig(payload);
     if (!normalized) {
-      return { success: false, reason: "INVALID_INPUT_CONFIG" };
+      return { ok: false, reason: "INVALID_INPUT_CONFIG" };
     }
     await (state.inputManager as InputManager).initialize(
       normalized as Parameters<InputManager["initialize"]>[0]
     );
-    return { success: true };
+    return { ok: true };
   });
 
   ipcMain.handle("input:get-midi-devices", async () => {
@@ -39,14 +39,14 @@ export function registerInputBridge(): void {
     const p = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : null;
     const channelName = normalizeBand(p ? p.channelName : null);
     const velocity = normalizeVelocity01(p ? p.velocity : null);
-    if (!channelName) return { ok: false };
-    if (velocity == null) return { ok: false };
-    if (!state.inputManager) return { ok: false };
+    if (!channelName) return { ok: false, reason: "INVALID_BAND" };
+    if (velocity == null) return { ok: false, reason: "INVALID_VELOCITY" };
+    if (!state.inputManager) return { ok: false, reason: "INPUT_MANAGER_MISSING" };
     const im = state.inputManager as InputManager;
     const cfg = (im as unknown as { config?: unknown }).config;
     const cfgObj = cfg && typeof cfg === "object" ? (cfg as Record<string, unknown>) : null;
     const currentType = cfgObj && typeof cfgObj.type === "string" ? cfgObj.type : "";
-    if (currentType !== "audio") return { ok: false };
+    if (currentType !== "audio") return { ok: false, reason: "INPUT_TYPE_MISMATCH" };
     im.broadcast("method-trigger", { source: "audio", channelName, velocity });
     return { ok: true };
   });
@@ -55,14 +55,14 @@ export function registerInputBridge(): void {
     const p = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : null;
     const channelName = normalizeBand(p ? p.channelName : null);
     const velocity = normalizeVelocity01(p ? p.velocity : null);
-    if (!channelName) return { ok: false };
-    if (velocity == null) return { ok: false };
-    if (!state.inputManager) return { ok: false };
+    if (!channelName) return { ok: false, reason: "INVALID_BAND" };
+    if (velocity == null) return { ok: false, reason: "INVALID_VELOCITY" };
+    if (!state.inputManager) return { ok: false, reason: "INPUT_MANAGER_MISSING" };
     const im = state.inputManager as InputManager;
     const cfg = (im as unknown as { config?: unknown }).config;
     const cfgObj = cfg && typeof cfg === "object" ? (cfg as Record<string, unknown>) : null;
     const currentType = cfgObj && typeof cfgObj.type === "string" ? cfgObj.type : "";
-    if (currentType !== "file") return { ok: false };
+    if (currentType !== "file") return { ok: false, reason: "INPUT_TYPE_MISMATCH" };
     im.broadcast("method-trigger", { source: "file", channelName, velocity });
     return { ok: true };
   });

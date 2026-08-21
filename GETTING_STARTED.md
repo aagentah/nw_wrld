@@ -15,28 +15,20 @@ This guide covers installation, setup, and basic usage of nw_wrld.
 9. [Editing Modules](#editing-modules)
 10. [Working with Assets](#working-with-assets)
 11. [Advanced: Connect External MIDI/OSC](#advanced-connect-external-midiosc)
-12. [Troubleshooting](#troubleshooting)
-13. [Next Steps](#next-steps)
+12. [Sending MIDI from Strudel (Steps)](#sending-midi-from-strudel-steps)
+13. [Troubleshooting](#troubleshooting)
+14. [Next Steps](#next-steps)
+15. [Further Reading](#further-reading)
 
 ---
 
 ## Installation
 
-### Developer Setup
-
 **Requirements:** Node.js v20+ and basic terminal knowledge
 
-```bash
-# Clone the repository
-git clone https://github.com/aagentah/nw_wrld.git
-cd nw_wrld
+To clone the repository, install dependencies, start the app, and learn what the two windows are, follow the [Installation (For Developers)](README.md#for-developers) section in the README.
 
-# Install dependencies
-npm install
-
-# Start the app
-npm start
-```
+The rest of this guide picks up from your first launch.
 
 ---
 
@@ -55,7 +47,7 @@ You have two options:
 
 nw_wrld will initialize your project folder with:
 
-- **16 starter modules** - Ready-to-use examples (Text, GridOverlay, SpinningCube, etc.)
+- **22 starter modules** - Ready-to-use examples (Text, GridOverlay, SpinningCube, etc.)
 - **Sample assets** - Images and JSON data files for experimentation
 - **Data storage** - Configuration, tracks, and recordings
 
@@ -65,9 +57,11 @@ Your project folder structure will look like this:
 
 ```
 MyProject/
-├── modules/           # Visual modules (16 starter modules included)
-├── assets/            # Images and JSON data
+├── modules/           # Visual modules (22 starter modules included)
+├── assets/            # Images, models, fonts, and JSON data
 │   ├── images/
+│   ├── models/
+│   ├── fonts/
 │   └── json/
 └── nw_wrld_data/      # App data (auto-managed)
 ```
@@ -85,7 +79,7 @@ If your project folder is deleted, moved, or disconnected (e.g., external drive 
 
 1. In the Dashboard, click **[CREATE TRACK]**
 2. Name your track (e.g., "My First Track")
-3. Click **[CREATE]**
+3. Click **[CREATE TRACK]**
 
 Tracks are containers for visual modules and sequencer patterns.
 
@@ -97,7 +91,7 @@ Tracks are containers for visual modules and sequencer patterns.
 2. Select a module from the dropdown (e.g., **Text**, **GridOverlay**, **Corners**)
 3. Configure the module's initial properties if prompted
 
-**What are modules?** Modules are visual elements displayed in the Projector window. Your project includes 16 starter modules covering 2D graphics, 3D visuals, text, and data visualization.
+**What are modules?** Modules are visual elements displayed in the Projector window. Your project includes 22 starter modules covering 2D graphics, 3D visuals, text, and data visualization.
 
 ---
 
@@ -123,11 +117,10 @@ Tracks are containers for visual modules and sequencer patterns.
 
 ## Step 5: Assign Methods to Channels
 
-1. Click on a channel row to select it
-2. Click **[ADD METHOD]** in the right panel
-3. Select a method (e.g., `color`, `scale`, `rotate`, `show`)
-4. Configure method parameters in the modal
-5. Click **[SAVE]**
+1. Click on a channel row to open the method configurator
+2. Use the **add method** dropdown to add a method (e.g., `color`, `scale`, `rotate`, `show`)
+3. Configure method parameters inline - changes save automatically
+4. Close the modal when you're done (the footer buttons are **[EDIT CHANNEL]** and **[DELETE CHANNEL]**)
 
 **What are methods?** Methods are actions you can trigger on modules. Built-in methods include `show`, `hide`, `scale`, `rotate`, `opacity`, and more. Each module can also define custom methods.
 
@@ -140,7 +133,7 @@ When the sequencer playhead hits an active cell, it triggers that channel's assi
 1. Click the **[PLAY]** button in the footer
 2. Watch the playhead move across the 16-step grid
 3. See your visuals respond to the pattern in the Projector window
-4. Adjust BPM in Settings (60-130 BPM)
+4. Adjust BPM in Settings (default 120)
 
 The pattern loops continuously until you click **[STOP]**.
 
@@ -156,7 +149,7 @@ One of nw_wrld's most powerful features is that you can edit modules and see cha
 
 1. Navigate to your project folder (the one you selected on first launch)
 2. Open the `modules/` directory
-3. You'll see all 16 starter modules as `.js` files
+3. You'll see all 22 starter modules as `.js` files
 
 ### Editing Modules
 
@@ -167,12 +160,14 @@ One of nw_wrld's most powerful features is that you can edit modules and see cha
 3. Save the file
 4. nw_wrld automatically detects the change and reloads the module
 
-**Option 2: Use the Built-in Editor (Optional)**
+**Option 2: View the Source via the Module Editor**
 
-1. In Dashboard, go to Settings → Module Editor
-2. Select a module to edit
-3. Make changes in the Monaco editor
-4. Save → hot reload applies automatically
+The Module Editor modal does not edit modules in-app. It shows the module's source read-only and gives you a quick way to jump to the file.
+
+1. In Dashboard, open the Module Editor for a module
+2. Read the source in the read-only viewer to find what you want to change
+3. Click the link to open the file in your own code editor
+4. Edit and save there, and nw_wrld hot-reloads the change automatically
 
 ### What You Can Change
 
@@ -186,18 +181,14 @@ One of nw_wrld's most powerful features is that you can edit modules and see cha
 Open `modules/Text.js` in your project folder and find the color option:
 
 ```javascript
-{
-  name: "color",
-  defaultVal: "#FFFFFF",  // Change this to "#00FF00" for green
-  type: "color",
-}
+{ name: "color", defaultVal: "#ffffff", type: "color" } // change "#ffffff" to "#00ff00" for green
 ```
 
 Save the file and the module reloads automatically.
 
 ### Learning from Examples
 
-Study the 16 starter modules to learn different patterns:
+Study the 22 starter modules to learn different patterns:
 
 - **HelloWorld.js** - Simplest possible module
 - **Text.js** - DOM-based text rendering
@@ -220,6 +211,10 @@ MyProject/
 └── assets/
     ├── images/
     │   └── blueprint.png    # Included starter image
+    ├── models/              # 3D models (OBJ, PLY, PCD, GLTF/GLB, STL)
+    │   └── cube.obj         # Included starter model
+    ├── fonts/               # Fonts for text modules
+    │   └── RobotoMono-VariableFont_wght.ttf
     └── json/
         └── meteor.json       # Included starter dataset
 ```
@@ -227,7 +222,7 @@ MyProject/
 ### Adding Your Own Assets
 
 1. Navigate to your project folder
-2. Add files to `assets/images/` or `assets/json/`
+2. Add files to `assets/images/`, `assets/models/`, `assets/fonts/`, or `assets/json/`
 3. Reference them in your modules using the SDK
 
 ### Loading Assets in Modules
@@ -389,6 +384,12 @@ $: note(r).midi("MIDI_port_name").midichan(1); // send to MIDI_port_name channel
 
 **libasound.so cannot open shared object file (Windows 11 + WSL/Ubuntu):**
 
+Electron needs the ALSA sound libraries, which are not installed by default on minimal WSL/Ubuntu setups. Install them, then start the app again:
+
+```bash
+sudo apt-get install libasound2 libasound2-dev
+```
+
 For more help, see [Troubleshooting](README.md#troubleshooting) in the README or check [GitHub Issues](https://github.com/aagentah/nw_wrld/issues).
 
 ---
@@ -407,8 +408,8 @@ Try these starter modules to see different visual styles:
 
 ### Experiment with Method Parameters
 
-1. Select a channel with an assigned method
-2. Click **Edit Method** to change parameters
+1. Click a channel with an assigned method to open the method configurator
+2. Change the method's parameters inline (they save automatically)
 3. Try different colors, sizes, durations, and intensities
 4. See how parameters affect the visuals
 

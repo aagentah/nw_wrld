@@ -1,7 +1,6 @@
 import {
   memo,
   Fragment,
-  useState,
   useMemo,
   useCallback,
   useEffect,
@@ -28,7 +27,6 @@ import { updateActiveSet, getMethodsByLayer } from "../core/utils";
 import { getActiveSetTracks } from "../../shared/utils/setUtils";
 import { getBaseMethodNames } from "../utils/moduleUtils";
 import { HELP_TEXT } from "../../shared/helpText";
-import { MethodCodeModal } from "./MethodCodeModal";
 
 type MethodOption = {
   name: string;
@@ -54,11 +52,6 @@ type OptionDef = {
   allowRandomization?: boolean;
 };
 
-type _MethodDef = {
-  name: string;
-  options?: OptionDef[];
-};
-
 type ModuleMethod = {
   name: string;
   options?: OptionDef[];
@@ -73,19 +66,17 @@ type PredefinedModule = {
   methods?: unknown[];
 };
 
-type SortableItemProps = {
+type SortableMethodItemProps = {
   id: string;
   method: MethodConfig;
   handleRemoveMethod: (methodName: string) => void;
   changeOption: (methodName: string, optionName: string, value: unknown, field?: string) => void;
   addMissingOption: (methodName: string, optionName: string) => void;
   moduleMethods: ModuleMethod[];
-  moduleName: string | null;
   userColors: string[];
-  onShowMethodCode: (methodName: string) => void;
 };
 
-const SortableItem = memo(
+const SortableMethodItem = memo(
   ({
     id,
     method,
@@ -93,10 +84,8 @@ const SortableItem = memo(
     changeOption,
     addMissingOption,
     moduleMethods,
-    moduleName,
     userColors,
-    onShowMethodCode,
-  }: SortableItemProps) => {
+  }: SortableMethodItemProps) => {
     const toggleRandomization = useCallback(
       (optionName: string, optionDef: OptionDef | null = null) => {
         const option = method.options.find((o) => o.name === optionName);
@@ -238,11 +227,9 @@ const SortableItem = memo(
                 method={method}
                 mode="dashboard"
                 moduleMethods={moduleMethods}
-                moduleName={moduleName}
                 userColors={userColors}
                 dragHandleProps={dragHandleProps}
                 onRemove={handleRemoveMethod}
-                onShowCode={onShowMethodCode}
                 onOptionChange={handleOptionChange}
                 onToggleRandom={(optionName: string, optionDef?: OptionDef | null) =>
                   toggleRandomization(optionName, optionDef || null)
@@ -276,7 +263,7 @@ const SortableItem = memo(
   }
 );
 
-SortableItem.displayName = "SortableItem";
+SortableMethodItem.displayName = "SortableMethodItem";
 
 type SelectedChannel = {
   trackIndex: number;
@@ -309,10 +296,6 @@ export const MethodConfiguratorModal = ({
 }: MethodConfiguratorModalProps) => {
   const [userData, setUserData] = useAtom(userDataAtom);
   const [selectedChannel] = useAtom(selectedChannelAtom);
-  const [selectedMethodForCode, setSelectedMethodForCode] = useState<{
-    moduleName: string | null;
-    methodName: string;
-  } | null>(null);
   const sendToProjector = useIPCSend("dashboard-to-projector");
   const { moduleBase, threeBase } = useMemo(() => getBaseMethodNames(), []);
   const lastNormalizedKeyRef = useRef<string | null>(null);
@@ -952,17 +935,6 @@ export const MethodConfiguratorModal = ({
                           | undefined;
                         if (!instanceData) return;
 
-                        if (ch.isConstructor) {
-                          const _methods = (instanceData as Record<string, unknown>)[
-                            "constructor"
-                          ] as MethodConfig[];
-                          void _methods;
-                        } else {
-                          const methodsObj = instanceData.methods as Record<string, unknown>;
-                          const _methods = methodsObj[channelKey] as MethodConfig[];
-                          void _methods;
-                        }
-
                         const reorderedLayer = arrayMove(
                           currentLayer.configuredMethods,
                           oldIndex,
@@ -973,9 +945,8 @@ export const MethodConfiguratorModal = ({
                           (acc: MethodConfig[], l) => {
                             if (l.name === currentLayer.name) {
                               return [...acc, ...reorderedLayer];
-                            } else {
-                              return [...acc, ...l.configuredMethods];
                             }
+                            return [...acc, ...l.configuredMethods];
                           },
                           []
                         );
@@ -992,24 +963,16 @@ export const MethodConfiguratorModal = ({
                   >
                     <div className="flex items-start overflow-x-auto pt-4">
                       {layer.configuredMethods.map((method, methodIndex) => {
-                        const handleShowMethodCode = (methodName: string) => {
-                          setSelectedMethodForCode({
-                            moduleName: module?.id || module?.name || null,
-                            methodName,
-                          });
-                        };
                         return (
                           <Fragment key={method.name}>
-                            <SortableItem
+                            <SortableMethodItem
                               id={method.name}
                               method={method}
                               handleRemoveMethod={removeMethod}
                               changeOption={changeOption}
                               addMissingOption={addMissingOption}
                               moduleMethods={normalizedModuleMethods}
-                              moduleName={module ? module.name : null}
                               userColors={userColors}
-                              onShowMethodCode={handleShowMethodCode}
                             />
                             {methodIndex < layer.configuredMethods.length - 1 && (
                               <div className="flex-shrink-0 flex items-center w-4 min-h-[40px]">
@@ -1068,13 +1031,6 @@ export const MethodConfiguratorModal = ({
           </ModalFooter>
         )}
       </Modal>
-
-      <MethodCodeModal
-        isOpen={!!selectedMethodForCode}
-        onClose={() => setSelectedMethodForCode(null)}
-        moduleName={selectedMethodForCode?.moduleName}
-        methodName={selectedMethodForCode?.methodName}
-      />
     </>
   );
 };

@@ -1,5 +1,5 @@
 import { memo, useState, useEffect, useMemo, useCallback } from "react";
-import { useAtom, type PrimitiveAtom } from "jotai";
+import { useAtom, useAtomValue, type PrimitiveAtom } from "jotai";
 import * as d3 from "d3";
 import { SortableWrapper } from "../../shared/SortableWrapper";
 import {
@@ -9,8 +9,9 @@ import {
   selectedChannelAtom,
   flashingChannelsAtom,
   flashingConstructorsAtom,
+  sequencerCurrentStepAtom,
 } from "../../core/state";
-import { updateActiveSet } from "../../core/utils";
+import { isPlainObject, randomIdSuffix, updateActiveSet } from "../../core/utils";
 import { TERMINAL_STYLES } from "../../core/constants";
 import { getActiveSetTracks } from "../../../shared/utils/setUtils";
 import { getRecordingForTrack, getSequencerForTrack } from "../../../shared/json/recordingUtils";
@@ -20,7 +21,8 @@ import {
   parsePitchClass,
   pitchClassToName,
 } from "../../../shared/midi/midiUtils";
-import { FaCog, FaExclamationTriangle, FaEye, FaEyeSlash } from "react-icons/fa";
+import { duplicateModuleInstanceInTrack } from "../../../shared/utils/duplicateUtils";
+import { FaClone, FaCog, FaExclamationTriangle, FaEye, FaEyeSlash } from "react-icons/fa";
 import { Tooltip } from "../Tooltip";
 
 type Track = {
@@ -37,20 +39,10 @@ type SelectedChannel = {
   isConstructor: boolean;
 };
 
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return (
-    Boolean(value) &&
-    typeof value === "object" &&
-    !Array.isArray(value) &&
-    Object.prototype.toString.call(value) === "[object Object]"
-  );
-}
-
 type ModuleSelectorProps = {
   trackIndex: number;
   predefinedModules: unknown[];
   openRightMenu: (trackIndex: number) => void;
-  stopPlayback: () => void;
   onShowTrackData: (track: unknown) => void;
   inputConfig: { type?: string } | null;
   onEditTrack?: () => void;
@@ -142,6 +134,65 @@ const groupSequences = (sequences: Array<{ time: number; duration: number }>, th
   return grouped;
 };
 
+type SequencerStepRowProps = {
+  channelNumber: number;
+  channelPattern: unknown;
+  hasMethods: boolean;
+  isSequencerPlaying: boolean;
+  handleSequencerToggle: (channelKey: string, stepIndex: number) => void;
+  rowHeight: number;
+};
+
+const SequencerStepRow = memo(
+  ({
+    channelNumber,
+    channelPattern,
+    hasMethods,
+    isSequencerPlaying,
+    handleSequencerToggle,
+    rowHeight,
+  }: SequencerStepRowProps) => {
+    const sequencerCurrentStep = useAtomValue(sequencerCurrentStepAtom);
+    const channelKey = String(channelNumber);
+    return (
+      <div className="flex gap-0.5 items-center" style={{ height: rowHeight }}>
+        {Array.from({ length: 16 }).map((_, stepIndex) => {
+          const isActive = Array.isArray(channelPattern) && channelPattern.includes(stepIndex);
+          const isCurrentStep = isSequencerPlaying && sequencerCurrentStep === stepIndex;
+
+          return (
+            <button
+              key={stepIndex}
+              type="button"
+              data-testid="sequencer-step"
+              data-channel-number={channelNumber}
+              data-step-index={stepIndex}
+              aria-pressed={isActive}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleSequencerToggle(channelKey, stepIndex);
+              }}
+              className={`
+                w-[22px] h-[11px] border transition-all flex-shrink-0
+                ${
+                  isActive
+                    ? "bg-[#b85c5c] border-[#b85c5c]"
+                    : "bg-[#1a1a1a] border-neutral-700 hover:border-neutral-500"
+                }
+                ${isCurrentStep ? "ring-2 ring-neutral-400" : ""}
+              `}
+              style={{
+                opacity: isActive && !hasMethods ? 0.2 : 1,
+              }}
+              title={`Channel ${channelNumber} - Step ${stepIndex + 1}`}
+            />
+          );
+        })}
+      </div>
+    );
+  }
+);
+
 type NoteSelectorProps = {
   trackIndex: number;
   instanceId: string;
@@ -153,7 +204,6 @@ type NoteSelectorProps = {
   inputConfig: { type?: string } | null;
   config: Record<string, unknown> | null;
   isSequencerPlaying: boolean;
-  sequencerCurrentStep: number;
   handleSequencerToggle: (channelKey: string, stepIndex: number) => void;
   workspacePath?: string | null;
   workspaceModuleFiles?: string[];
@@ -171,7 +221,6 @@ export const NoteSelector = memo(
     inputConfig,
     config,
     isSequencerPlaying,
-    sequencerCurrentStep,
     handleSequencerToggle,
     workspacePath = null,
     workspaceModuleFiles = [],
@@ -243,7 +292,7 @@ export const NoteSelector = memo(
             const channelName = `ch${channelNumber}`;
             return {
               name: channelName,
-              number: parseInt(channelNumber),
+              number: parseInt(channelNumber, 10),
               sequences: recordingMap.get(channelName) || [],
             };
           });
@@ -300,6 +349,14 @@ export const NoteSelector = memo(
 
       return maxTime;
     }, [channelsData]);
+
+    const sequencerPattern = useMemo<Record<string, unknown>>(() => {
+      const sequencerData = getSequencerForTrack(recordingData, String(track.id));
+      const patternRaw = isPlainObject(sequencerData)
+        ? (sequencerData as Record<string, unknown>).pattern
+        : null;
+      return isPlainObject(patternRaw) ? (patternRaw as Record<string, unknown>) : {};
+    }, [recordingData, track.id]);
 
     const toggleSelectChannel = useCallback(
       (channelNumber, isConstructor = false) => {
@@ -430,6 +487,22 @@ export const NoteSelector = memo(
       });
     }, [setUserData, activeSetId, trackIndex, instanceId]);
 
+    const duplicateModule = useCallback(() => {
+      const newInstanceId = `inst_${Date.now()}_${randomIdSuffix()}`;
+      updateActiveSet(setUserData, activeSetId, (activeSet) => {
+        if (!isPlainObject(activeSet)) return;
+        const tracksUnknown = (activeSet as Record<string, unknown>).tracks;
+        if (!Array.isArray(tracksUnknown)) return;
+        const trackDraft = tracksUnknown[trackIndex];
+        if (!isPlainObject(trackDraft)) return;
+        duplicateModuleInstanceInTrack(
+          trackDraft as Record<string, unknown>,
+          instanceId,
+          newInstanceId
+        );
+      });
+    }, [setUserData, activeSetId, trackIndex, instanceId]);
+
     return (
       <div className={`px-12 font-mono ${isDisabled ? "opacity-50" : ""}`}>
         <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -472,6 +545,22 @@ export const NoteSelector = memo(
             >
               {isDisabled ? <FaEyeSlash /> : <FaEye />}
             </button>
+            <button
+              type="button"
+              className="cursor-pointer text-[11px] text-neutral-400 hover:text-neutral-300 transition-colors focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0"
+              onClick={(e) => {
+                e.stopPropagation();
+                duplicateModule();
+                e.currentTarget.blur();
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+              title="Duplicate Module"
+              aria-label="Duplicate Module"
+              data-testid="module-duplicate"
+              data-module-instance-id={instanceId}
+            >
+              <FaClone />
+            </button>
             {onRemoveModule && (
               <div className="flex items-center gap-2">
                 <div
@@ -510,11 +599,7 @@ export const NoteSelector = memo(
                       e.preventDefault();
                       e.stopPropagation();
                       try {
-                        (
-                          globalThis as unknown as {
-                            nwWrldBridge?: { app?: { openProjectorDevTools?: () => void } };
-                          }
-                        )?.nwWrldBridge?.app?.openProjectorDevTools?.();
+                        globalThis.nwWrldBridge?.app?.openProjectorDevTools?.();
                       } catch {}
                     }}
                   >
@@ -657,54 +742,14 @@ export const NoteSelector = memo(
                   </div>
                   <div className="flex-1">
                     {config?.sequencerMode ? (
-                      <div className="flex gap-0.5 items-center" style={{ height: rowHeight }}>
-                        {Array.from({ length: 16 }).map((_, stepIndex) => {
-                          const channelKey = String(channel.number);
-                          const sequencerData = getSequencerForTrack(
-                            recordingData,
-                            String(track.id)
-                          );
-                          const patternRaw = isPlainObject(sequencerData)
-                            ? (sequencerData as Record<string, unknown>).pattern
-                            : null;
-                          const pattern = isPlainObject(patternRaw)
-                            ? (patternRaw as Record<string, unknown>)
-                            : {};
-                          const channelPattern = pattern[channelKey] || [];
-                          const isActive =
-                            Array.isArray(channelPattern) && channelPattern.includes(stepIndex);
-                          const isCurrentStep =
-                            isSequencerPlaying && sequencerCurrentStep === stepIndex;
-
-                          return (
-                            <button
-                              key={stepIndex}
-                              type="button"
-                              data-testid="sequencer-step"
-                              data-channel-number={channel.number}
-                              data-step-index={stepIndex}
-                              aria-pressed={isActive}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleSequencerToggle(channelKey, stepIndex);
-                              }}
-                              className={`
-                                w-[22px] h-[11px] border transition-all flex-shrink-0
-                                ${
-                                  isActive
-                                    ? "bg-[#b85c5c] border-[#b85c5c]"
-                                    : "bg-[#1a1a1a] border-neutral-700 hover:border-neutral-500"
-                                }
-                                ${isCurrentStep ? "ring-2 ring-neutral-400" : ""}
-                              `}
-                              style={{
-                                opacity: isActive && !hasMethods ? 0.2 : 1,
-                              }}
-                              title={`Channel ${channel.number} - Step ${stepIndex + 1}`}
-                            />
-                          );
-                        })}
-                      </div>
+                      <SequencerStepRow
+                        channelNumber={channel.number}
+                        channelPattern={sequencerPattern[String(channel.number)]}
+                        hasMethods={hasMethods}
+                        isSequencerPlaying={isSequencerPlaying}
+                        handleSequencerToggle={handleSequencerToggle}
+                        rowHeight={rowHeight}
+                      />
                     ) : (
                       <svg
                         ref={(ref) =>
@@ -734,7 +779,6 @@ type SortableModuleItemProps = {
   inputConfig: { type?: string } | null;
   config: Record<string, unknown> | null;
   isSequencerPlaying: boolean;
-  sequencerCurrentStep: number;
   handleSequencerToggle: (channelKey: string, stepIndex: number) => void;
   workspacePath?: string | null;
   workspaceModuleFiles?: string[];
@@ -751,7 +795,6 @@ export const SortableModuleItem = memo(
     inputConfig,
     config,
     isSequencerPlaying,
-    sequencerCurrentStep,
     handleSequencerToggle,
     workspacePath = null,
     workspaceModuleFiles = [],
@@ -773,7 +816,6 @@ export const SortableModuleItem = memo(
                 inputConfig={inputConfig}
                 config={config}
                 isSequencerPlaying={isSequencerPlaying}
-                sequencerCurrentStep={sequencerCurrentStep}
                 handleSequencerToggle={handleSequencerToggle}
                 workspacePath={workspacePath}
                 workspaceModuleFiles={workspaceModuleFiles}

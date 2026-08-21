@@ -7,6 +7,7 @@ import { userDataAtom } from "../core/state";
 import { updateUserData } from "../core/utils";
 import { DEFAULT_GLOBAL_MAPPINGS } from "../../shared/config/defaultConfig";
 import { parsePitchClass, pitchClassToName } from "../../shared/midi/midiUtils";
+import { getMaxTrackSlots } from "../core/hooks/useTrackSlots";
 
 type ActiveTab = "midi-pitchClass" | "midi-exactNote" | "osc" | "audio" | "file";
 
@@ -59,7 +60,7 @@ export const InputMappingsModal = ({
   const isMidi = activeTab.startsWith("midi-");
   const isAudioOrFile = activeTab === "audio" || activeTab === "file";
   const midiMode = activeTab === "midi-exactNote" ? "exactNote" : "pitchClass";
-  const trackSlots = isMidi ? 12 : 10;
+  const trackSlots = getMaxTrackSlots(isMidi ? "midi" : activeTab);
   const triggerSlots = 12;
 
   useEffect(() => {

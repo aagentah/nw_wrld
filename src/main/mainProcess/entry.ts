@@ -30,7 +30,7 @@ export function start() {
   registerSandboxIpc();
   registerMessagingIpc({ ipcMain });
   registerWorkspaceSelectionIpc({ createWindow });
-  registerLifecycle({ createWindow });
+  registerLifecycle();
 
   app.whenReady().then(async () => {
     registerProtocols();

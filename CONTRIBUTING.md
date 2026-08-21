@@ -78,7 +78,7 @@ Documentation improvements are always welcome:
 
 ### Prerequisites
 
-- Node.js v18 or higher
+- Node.js v20 or higher
 - Git
 - A code editor (VS Code recommended)
 - Basic familiarity with JavaScript
@@ -99,19 +99,9 @@ cd nw_wrld
 git remote add upstream https://github.com/aagentah/nw_wrld.git
 ```
 
-### Install Dependencies
+### Install and Run
 
-```bash
-npm install
-```
-
-### Run the App
-
-```bash
-npm start
-```
-
-Two windows should open: Dashboard and Projector.
+Install dependencies and start the app by following the [Installation (For Developers)](README.md#for-developers) section of the README. Two windows should open: Dashboard and Projector.
 
 ### Development Workflow
 
@@ -142,9 +132,11 @@ git checkout -b feature/my-awesome-feature
 ### Formatting
 
 - 2 spaces for indentation
-- Semicolons are optional but be consistent
-- Use single quotes for strings
+- Semicolons are required
+- Use double quotes for strings
 - No trailing whitespace
+
+These are enforced by Prettier. Run `npm run format` to auto-format, or `npm run format:check` to verify before submitting.
 
 ### Comments
 
@@ -169,13 +161,17 @@ pulse({ intensity = 1.5, duration = 500 }) {
 
 ### Module Structure
 
-All modules must:
+All modules must (these are validated):
 
-1. Extend `ModuleBase` or `BaseThreeJsModule`
-2. Include the required `@nwWrld` docblock metadata (`name`, `category`, `imports`)
+1. Include the `@nwWrld` docblock metadata (`name`, `category`, `imports`), with `imports` non-empty
+2. Use only allow-listed tokens in `imports`
 3. Default-export the module class
-4. Call `super()` first in constructor
-5. Implement `destroy()` and call `super.destroy()` last
+
+You should also (recommended best practice, not validated):
+
+- Extend `ModuleBase` or `BaseThreeJsModule`
+- Call `super()` first in the constructor
+- Implement `destroy()` and call `super.destroy()` last
 
 Example:
 
@@ -215,7 +211,8 @@ export default MyModule;
 - [ ] Run the app and verify no console errors
 - [ ] Test on your target platform (Mac/Windows)
 - [ ] Update documentation if needed
-- [ ] Add yourself to contributors if it's your first PR
+
+Merged contributions appear automatically on the [GitHub contributors page](https://github.com/aagentah/nw_wrld/graphs/contributors).
 
 ### Commit Messages
 
@@ -251,18 +248,20 @@ Bad:
 
 4. **Be responsive**: Address review feedback promptly
 
-5. **Update your branch** if main has changed:
+5. **Target `develop`**: open your PR against the `develop` branch (this is required)
+
+6. **Update your branch** if `develop` has changed:
 
 ```bash
 git fetch upstream
-git rebase upstream/main
+git rebase upstream/develop
 ```
 
 ### Review Process
 
 - Maintainers will review your PR
 - They may request changes
-- Be patient—reviews take time
+- Be patient, reviews take time
 - Address feedback constructively
 
 ---
@@ -324,16 +323,7 @@ If your module needs assets, there are two cases:
 
 ### Module Categories
 
-Use appropriate categories:
-
-- `Text` - Text-based visuals
-- `GUI` - UI elements and overlays
-- `3D` - Three.js 3D graphics
-- `2D` - Canvas-based 2D graphics
-- `Data` - Data visualization
-- `Effects` - Visual effects and filters
-- `Particle` - Particle systems
-- `Examples` - Tutorial/example modules
+The `category` field in the docblock is a free-form label; it is not validated against a fixed list. The bundled starter modules use `2D`, `3D`, and `Text`. Pick a label that describes your module and stays consistent with related modules. See [MODULE_DEVELOPMENT.md](MODULE_DEVELOPMENT.md) for guidance.
 
 ---
 
@@ -375,7 +365,7 @@ A good bug report includes:
 ```
 - OS: macOS 13.2 / Windows 11
 - Node version: 20.x.x
-- App version: 1.0.0
+- App version: 0.5.0-beta
 ```
 
 ### 2. Steps to Reproduce
@@ -428,6 +418,20 @@ A good feature request includes:
 ---
 
 ## Testing Guidelines
+
+### Automated Checks
+
+Run these before submitting and make sure they pass:
+
+```bash
+npm run typecheck:all
+npm run test:unit
+npm run test:e2e
+npm run lint
+npm run build:renderer
+```
+
+For more detail on the test suites, see [RUNTIME_TS_TESTING_GUIDELINES.md](RUNTIME_TS_TESTING_GUIDELINES.md) for runtime/unit tests and [E2E_TESTING_GUIDELINES.md](E2E_TESTING_GUIDELINES.md) for end-to-end tests.
 
 ### Manual Testing
 
@@ -495,7 +499,6 @@ Open Developer Tools and check for:
 
 Contributors are recognized in:
 
-- README.md contributors section
 - Release notes for significant contributions
 - GitHub contributors page
 
