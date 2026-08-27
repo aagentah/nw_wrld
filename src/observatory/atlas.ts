@@ -1,4 +1,6 @@
+import { claimSupport, exhibitOverview, inspectNode } from "../shared/observatory/contract";
 import type {
+  InspectedNode,
   ObservatoryEvent,
   ObservatoryState,
   PrivateEvidenceGraph,
@@ -28,16 +30,17 @@ export function renderAtlas(
     renderLoadingAtlas(container, localState.statusLine);
     return;
   }
-
   const state = localState.state;
   const selectedRun = selectRun(state, localState);
-  const selectedNode = selectedRun
-    ? (selectedRun.events.find((event) => event.nodeId === localState.selectedNodeId) ?? null)
-    : null;
+  const inspected: InspectedNode =
+    selectedRun && localState.selectedNodeId
+      ? inspectNode(selectedRun, localState.selectedNodeId)
+      : { ok: false };
+  const selectedNode = inspected.ok ? inspected.item : null;
 
   container.append(
     buildHeader(state, selectedRun),
-    buildBody(container, bridge, localState, selectedRun, selectedNode),
+    buildBody(container, bridge, localState, selectedRun, inspected),
     buildChronology(container, bridge, localState, selectedRun, selectedNode),
     buildStatusLine(localState.statusLine)
   );
@@ -95,7 +98,21 @@ function buildHeader(
   const runId = selectedRun ? ` · ${shortRunId(selectedRun.identity.sourceRunId)}` : "";
   badge.textContent = `contract v${state.contractVersion} · private${runId}`;
 
-  header.append(heading, badge);
+  const facts = document.createElement("div");
+  facts.className = "atlas-facts";
+  const provenance = document.createElement("div");
+  provenance.dataset.testid = "provenance-mode";
+  provenance.textContent = selectedRun
+    ? `provenance: ${selectedRun.identity.provenanceMode}`
+    : "provenance: —";
+  const effect = document.createElement("div");
+  effect.dataset.testid = "effect-capability";
+  effect.textContent = selectedRun
+    ? `effect: ${selectedRun.identity.effectCapability}`
+    : "effect: —";
+  facts.append(provenance, effect);
+
+  header.append(heading, badge, facts);
   return header;
 }
 
@@ -104,7 +121,7 @@ function buildBody(
   bridge: ObservatoryBridge | undefined,
   localState: AtlasLocalState,
   selectedRun: PrivateEvidenceGraph | null,
-  selectedNode: ObservatoryEvent | null
+  inspected: InspectedNode
 ): HTMLElement {
   const body = document.createElement("div");
   body.className = "atlas-body";
@@ -117,8 +134,12 @@ function buildBody(
     main.append(buildRunSwitcher(container, bridge, localState, localState.state.runs));
   }
 
+  if (selectedRun) {
+    main.append(buildOverview(container, bridge, localState, selectedRun));
+  }
+
   main.append(buildSpine(container, bridge, localState, selectedRun));
-  body.append(main, buildInspector(selectedRun, selectedNode));
+  body.append(main, buildInspector(selectedRun, inspected));
   return body;
 }
 
@@ -223,6 +244,73 @@ function buildRunSwitcher(
   }
 
   return switcher;
+}
+
+function buildOverview(
+  container: HTMLElement,
+  bridge: ObservatoryBridge | undefined,
+  localState: AtlasLocalState,
+  selectedRun: PrivateEvidenceGraph
+): HTMLElement {
+  const overview = exhibitOverview(selectedRun);
+  const section = document.createElement("section");
+  section.id = "overview";
+  section.dataset.testid = "overview";
+
+  const heading = document.createElement("h2");
+  heading.textContent = "OVERVIEW";
+  section.append(heading);
+
+  const facts = document.createElement("dl");
+  facts.className = "overview-facts";
+  const rows: Array<[string, string]> = [
+    ["Human goal", overview.humanGoal],
+    ["Before", overview.result.before ?? "unobserved"],
+    ["After", overview.result.after ?? "not recorded"],
+    [
+      "Material AI contribution",
+      overview.materialAiContribution.map((item) => item.summary).join(" · ") || "none",
+    ],
+    ["Central-claim support", overview.centralClaimSupport],
+    [
+      "Effect-gate status",
+      overview.effectGateStatus.map((gate) => `${gate.chainId}: ${gate.status}`).join(" · ") ||
+        "none",
+    ],
+    [
+      "Limitations",
+      overview.limitations.map((limit) => `${limit.kind}: ${limit.summary}`).join(" · ") || "none",
+    ],
+    ["Provenance mode", overview.provenanceMode],
+    ["Effect capability", overview.effectCapability],
+  ];
+  for (const [label, value] of rows) {
+    const dt = document.createElement("dt");
+    dt.textContent = label;
+    const dd = document.createElement("dd");
+    dd.textContent = value;
+    facts.append(dt, dd);
+  }
+  section.append(facts);
+
+  const drills = document.createElement("div");
+  drills.className = "overview-drills";
+  for (const target of overview.drillTargets) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `drill-target${
+      localState.selectedNodeId === target.id ? " is-selected" : ""
+    }`;
+    button.dataset.testid = "drill-target";
+    button.textContent = `${target.kind} · ${target.id}`;
+    button.addEventListener("click", () => {
+      localState.selectedNodeId = target.id;
+      renderAtlas(container, bridge, localState);
+    });
+    drills.append(button);
+  }
+  section.append(drills);
+  return section;
 }
 
 function buildSpine(
@@ -337,7 +425,7 @@ function buildOutcomePlaceholder(runEnded: boolean): HTMLElement {
 
 function buildInspector(
   selectedRun: PrivateEvidenceGraph | null,
-  selectedNode: ObservatoryEvent | null
+  inspected: InspectedNode
 ): HTMLElement {
   const inspector = document.createElement("aside");
   inspector.id = "inspector";
@@ -349,25 +437,65 @@ function buildInspector(
   const breadcrumb = document.createElement("div");
   breadcrumb.className = "breadcrumb";
   breadcrumb.dataset.testid = "breadcrumb";
-  breadcrumb.textContent = buildBreadcrumb(selectedRun, selectedNode);
+  breadcrumb.textContent = buildBreadcrumb(selectedRun, inspected);
 
   inspector.append(heading, breadcrumb);
 
-  if (selectedNode === null) {
+  if (!inspected.ok) {
     const emptyState = document.createElement("div");
     emptyState.className = "muted";
-    emptyState.textContent = "Select node on spine or chronology lane.";
+    emptyState.textContent = "Select node on spine, chronology, or overview.";
     inspector.append(emptyState);
     return inspector;
   }
 
   const nodeTitle = document.createElement("div");
   nodeTitle.className = "inspector-node-title";
-  nodeTitle.textContent = `EVIDENCE NODE #${selectedNode.seq}`;
+  nodeTitle.textContent = `EVIDENCE NODE #${inspected.item.seq} · ${inspected.item.evidenceKind}`;
+
+  const support =
+    inspected.item.kind === "claim" && selectedRun
+      ? claimSupport(selectedRun, inspected.item.nodeId)
+      : null;
+  const facts = document.createElement("dl");
+  facts.className = "inspector-facts";
+  const rows: Array<[string, string]> = [
+    ["Kind", inspected.item.kind],
+    ["Evidence", inspected.item.evidenceKind],
+    ["Actor", inspected.item.actor],
+    ["Provenance mode", inspected.orientation.provenanceMode],
+    ["Effect capability", inspected.orientation.effectCapability],
+  ];
+  if (support) rows.push(["Claim support", support]);
+  if (inspected.relianceLimits.length) {
+    rows.push([
+      "Reliance limits",
+      inspected.relianceLimits.map((limit) => `${limit.kind}: ${limit.summary}`).join(" · "),
+    ]);
+  }
+  if (inspected.traces.evidence.length) {
+    rows.push(["Evidence nodes", inspected.traces.evidence.map((event) => event.summary).join(" · ")]);
+  }
+  if (inspected.traces.claims.length) {
+    rows.push(["Claims", inspected.traces.claims.map((event) => event.summary).join(" · ")]);
+  }
+  if (inspected.traces.links.length) {
+    rows.push([
+      "Links",
+      inspected.traces.links.map((link) => `${link.kind}: ${link.label}`).join(" · "),
+    ]);
+  }
+  for (const [label, value] of rows) {
+    const dt = document.createElement("dt");
+    dt.textContent = label;
+    const dd = document.createElement("dd");
+    dd.textContent = value;
+    facts.append(dt, dd);
+  }
 
   const detail = document.createElement("pre");
-  detail.textContent = JSON.stringify(selectedNode, null, 2);
-  inspector.append(nodeTitle, detail);
+  detail.textContent = JSON.stringify(inspected.item, null, 2);
+  inspector.append(nodeTitle, facts, detail);
   return inspector;
 }
 
@@ -591,15 +719,14 @@ function selectRun(
 ): PrivateEvidenceGraph | null {
   const selected = state.runs.find((run) => run.identity.sourceRunId === localState.selectedRunId);
   const fallback = selected ?? state.runs.find((run) => !isRunEnded(run)) ?? state.runs[0] ?? null;
-
   localState.selectedRunId = fallback?.identity.sourceRunId ?? null;
   if (
     localState.selectedNodeId !== null &&
-    !fallback?.events.some((event) => event.nodeId === localState.selectedNodeId)
+    fallback &&
+    !inspectNode(fallback, localState.selectedNodeId).ok
   ) {
     localState.selectedNodeId = null;
   }
-
   return fallback;
 }
 
@@ -609,17 +736,24 @@ function isRunEnded(run: PrivateEvidenceGraph | null): boolean {
 
 function buildBreadcrumb(
   selectedRun: PrivateEvidenceGraph | null,
-  selectedNode: ObservatoryEvent | null
+  inspected: InspectedNode
 ): string {
-  const destination = selectedRun?.destination || "—";
-  const outcome = selectedRun?.events.find((event) => event.kind === "outcome");
-  const outcomeLabel = outcome
-    ? `OUTCOME: ${outcome.summary}`
-    : isRunEnded(selectedRun)
-      ? "NO OUTCOME RECORDED"
-      : "OUTCOME PENDING";
-  const inspectedItem = selectedNode
-    ? `NODE #${selectedNode.seq}: ${selectedNode.kind}`
+  const destination = inspected.ok
+    ? inspected.orientation.destination
+    : selectedRun?.destination || "—";
+  const outcomeLabel = inspected.ok
+    ? inspected.orientation.outcome
+      ? `OUTCOME: ${inspected.orientation.outcome}`
+      : isRunEnded(selectedRun)
+        ? "NO OUTCOME RECORDED"
+        : "OUTCOME PENDING"
+    : selectedRun?.events.find((event) => event.kind === "outcome")
+      ? `OUTCOME: ${selectedRun.events.find((event) => event.kind === "outcome")?.summary}`
+      : isRunEnded(selectedRun)
+        ? "NO OUTCOME RECORDED"
+        : "OUTCOME PENDING";
+  const inspectedItem = inspected.ok
+    ? `NODE #${inspected.item.seq}: ${inspected.item.kind}`
     : "SELECT NODE";
   return `${destination} → ${outcomeLabel} → ${inspectedItem}`;
 }

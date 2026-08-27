@@ -2,13 +2,19 @@ import { neverPersistClassForKey } from "../observatory/contract";
 import {
   OBSERVATORY_CONTRACT_VERSION,
   type DeclaredEnvironment,
+  type EffectCapability,
+  type EffectDisposition,
+  type EvidenceKind,
   type JsonValue,
+  type NamedLink,
   type ObservatoryEvent,
   type ObservatoryEventKind,
   type PrivateEvidenceGraph,
+  type ProvenanceMode,
+  type RelianceLimit,
+  type RelianceLimitKind,
   type WithheldOccurrence,
 } from "../observatory/types";
-
 type PlainObject = Record<string, unknown>;
 
 const ID_PATTERN = /^[a-z0-9_:-]{8,80}$/;
@@ -23,12 +29,51 @@ const EVENT_KINDS: Record<ObservatoryEventKind, true> = {
   artifact: true,
   outcome: true,
   withheld_at_capture: true,
+  claim: true,
+  capability_request: true,
+  scope_granted: true,
 };
 const WITHHELD_CLASSES: Record<WithheldOccurrence["class"], true> = {
   secret: true,
   token: true,
   credential: true,
   key: true,
+};
+const PROVENANCE_MODES: Record<ProvenanceMode, true> = {
+  "authentic live": true,
+  recorded: true,
+  sanitized: true,
+  simulated: true,
+  "fresh re-execution": true,
+};
+const EFFECT_CAPABILITIES: Record<EffectCapability, true> = {
+  disabled: true,
+  "approval-gated": true,
+  enabled: true,
+};
+const EVIDENCE_KINDS: Record<EvidenceKind, true> = {
+  "source-observed": true,
+  "human-declared": true,
+  "ai-declared": true,
+  "curator-derived": true,
+};
+const RELIANCE_LIMIT_KINDS: Record<RelianceLimitKind, true> = {
+  uncertainty: true,
+  "scope-bounds": true,
+  nondeterminism: true,
+  "redaction-impact": true,
+  "unverified-claims": true,
+};
+const LINK_KINDS: Record<NamedLink["kind"], true> = {
+  source: true,
+  wayfinder: true,
+};
+const EFFECT_DISPOSITIONS: Record<EffectDisposition, true> = {
+  approved: true,
+  rejected: true,
+  failed: true,
+  abandoned: true,
+  unobserved: true,
 };
 function isPlainObject(value: unknown): value is PlainObject {
   return (
@@ -89,6 +134,20 @@ function parseIdentity(value: unknown): PrivateEvidenceGraph["identity"] | null 
   if (!isPlainObject(value)) return null;
   const sourceRunId = asNonEmptyString(value.sourceRunId);
   const exhibitId = asNonEmptyString(value.exhibitId);
+  const provenanceMode =
+    value.provenanceMode === undefined
+      ? "authentic live"
+      : typeof value.provenanceMode === "string" &&
+          PROVENANCE_MODES[value.provenanceMode as ProvenanceMode]
+        ? (value.provenanceMode as ProvenanceMode)
+        : null;
+  const effectCapability =
+    value.effectCapability === undefined
+      ? "approval-gated"
+      : typeof value.effectCapability === "string" &&
+          EFFECT_CAPABILITIES[value.effectCapability as EffectCapability]
+        ? (value.effectCapability as EffectCapability)
+        : null;
   if (
     !sourceRunId ||
     !exhibitId ||
@@ -96,7 +155,9 @@ function parseIdentity(value: unknown): PrivateEvidenceGraph["identity"] | null 
     !ID_PATTERN.test(exhibitId) ||
     sourceRunId === exhibitId ||
     value.contractVersion !== OBSERVATORY_CONTRACT_VERSION ||
-    value.consentState !== "private"
+    value.consentState !== "private" ||
+    !provenanceMode ||
+    !effectCapability
   ) {
     return null;
   }
@@ -105,6 +166,8 @@ function parseIdentity(value: unknown): PrivateEvidenceGraph["identity"] | null 
     exhibitId,
     contractVersion: OBSERVATORY_CONTRACT_VERSION,
     consentState: "private",
+    provenanceMode,
+    effectCapability,
   };
 }
 
@@ -146,6 +209,77 @@ function parseWithheld(value: unknown): WithheldOccurrence[] | undefined {
   }
   return withheld;
 }
+
+function parseNodeIds(value: unknown): string[] | undefined {
+  if (!Array.isArray(value) || value.length === 0) return undefined;
+  const nodeIds: string[] = [];
+  for (const item of value) {
+    const nodeId = asNonEmptyString(item);
+    if (!nodeId) return undefined;
+    nodeIds.push(nodeId);
+  }
+  return nodeIds;
+}
+
+function parseRelianceLimits(value: unknown): RelianceLimit[] | undefined {
+  if (!Array.isArray(value) || value.length === 0) return undefined;
+  const limits: RelianceLimit[] = [];
+  for (const item of value) {
+    if (!isPlainObject(item)) return undefined;
+    const summary = asNonEmptyString(item.summary);
+    if (
+      !summary ||
+      typeof item.kind !== "string" ||
+      !RELIANCE_LIMIT_KINDS[item.kind as RelianceLimitKind]
+    ) {
+      return undefined;
+    }
+    limits.push({ kind: item.kind as RelianceLimitKind, summary });
+  }
+  return limits;
+}
+function parseNamedLinks(value: unknown): NamedLink[] | undefined {
+  if (!Array.isArray(value) || value.length === 0) return undefined;
+  const links: NamedLink[] = [];
+  for (const item of value) {
+    if (!isPlainObject(item)) return undefined;
+    const label = asNonEmptyString(item.label);
+    const href = asNonEmptyString(item.href);
+    if (
+      !label ||
+      !href ||
+      typeof item.kind !== "string" ||
+      !LINK_KINDS[item.kind as NamedLink["kind"]]
+    ) {
+      return undefined;
+    }
+    links.push({ kind: item.kind as NamedLink["kind"], label, href });
+  }
+  return links;
+}
+
+function evidenceKindFromRaw(
+  raw: PlainObject,
+  kind: ObservatoryEventKind
+): EvidenceKind | null {
+  if (Object.prototype.hasOwnProperty.call(raw, "evidenceKind")) {
+    if (
+      typeof raw.evidenceKind === "string" &&
+      EVIDENCE_KINDS[raw.evidenceKind as EvidenceKind]
+    ) {
+      return raw.evidenceKind as EvidenceKind;
+    }
+    return null;
+  }
+  if (kind === "withheld_at_capture") return "source-observed";
+  if (raw.actor === "operator") return "human-declared";
+  if (raw.actor === "source") return "source-observed";
+  if (raw.actor === "curator") return "curator-derived";
+  return "ai-declared";
+}
+
+
+
 
 function parseEvents(value: unknown): ObservatoryEvent[] | null {
   if (!Array.isArray(value)) return null;
@@ -190,7 +324,17 @@ function parseEvents(value: unknown): ObservatoryEvent[] | null {
       hasOutcome = true;
     }
 
-    const event: ObservatoryEvent = { nodeId, seq: index, kind, actor, summary, at };
+    const evidenceKind = evidenceKindFromRaw(raw, kind);
+    if (!evidenceKind) return null;
+    const event: ObservatoryEvent = {
+      nodeId,
+      seq: index,
+      kind,
+      actor,
+      summary,
+      at,
+      evidenceKind,
+    };
     if (Object.prototype.hasOwnProperty.call(raw, "payload")) {
       const payload = parseJsonValue(raw.payload);
       if (payload === undefined) return null;
@@ -203,6 +347,50 @@ function parseEvents(value: unknown): ObservatoryEvent[] | null {
     }
     if (kind === "withheld_at_capture" && (!event.withheld || event.payload !== undefined)) {
       return null;
+    }
+    if (kind === "claim") {
+      if (raw.central === true) event.central = true;
+      else if (Object.prototype.hasOwnProperty.call(raw, "central")) return null;
+      if (Object.prototype.hasOwnProperty.call(raw, "supports")) {
+        const supports = parseNodeIds(raw.supports);
+        if (!supports) return null;
+        event.supports = supports;
+      }
+      if (Object.prototype.hasOwnProperty.call(raw, "contradicts")) {
+        const contradicts = parseNodeIds(raw.contradicts);
+        if (!contradicts) return null;
+        event.contradicts = contradicts;
+      }
+    } else if (
+      Object.prototype.hasOwnProperty.call(raw, "central") ||
+      Object.prototype.hasOwnProperty.call(raw, "supports") ||
+      Object.prototype.hasOwnProperty.call(raw, "contradicts")
+    ) {
+      return null;
+    }
+    if (Object.prototype.hasOwnProperty.call(raw, "chainId")) {
+      const chainId = asNonEmptyString(raw.chainId);
+      if (!chainId) return null;
+      event.chainId = chainId;
+    }
+    if (Object.prototype.hasOwnProperty.call(raw, "disposition")) {
+      if (
+        typeof raw.disposition !== "string" ||
+        !EFFECT_DISPOSITIONS[raw.disposition as EffectDisposition]
+      ) {
+        return null;
+      }
+      event.disposition = raw.disposition as EffectDisposition;
+    }
+    if (Object.prototype.hasOwnProperty.call(raw, "relianceLimits")) {
+      const relianceLimits = parseRelianceLimits(raw.relianceLimits);
+      if (!relianceLimits) return null;
+      event.relianceLimits = relianceLimits;
+    }
+    if (Object.prototype.hasOwnProperty.call(raw, "links")) {
+      const links = parseNamedLinks(raw.links);
+      if (!links) return null;
+      event.links = links;
     }
     events.push(event);
   }

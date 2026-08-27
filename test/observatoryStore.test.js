@@ -179,6 +179,31 @@ test("load skips malformed, incompatible, and never-persist-poisoned files while
   }
 });
 
+test("ticket-13 graphs without provenance or evidenceKind still load", () => {
+  const rootDir = createStoreRoot();
+  try {
+    const producingStore = new ObservatoryStore(rootDir);
+    const sourceRunId = startOperatorCapture(producingStore);
+    startSourceRun(producingStore, sourceRunId);
+    const filePath = graphPath(rootDir, sourceRunId);
+    const legacy = JSON.parse(fs.readFileSync(filePath, "utf8"));
+    delete legacy.identity.provenanceMode;
+    delete legacy.identity.effectCapability;
+    for (const event of legacy.events) delete event.evidenceKind;
+    fs.writeFileSync(filePath, `${JSON.stringify(legacy)}\n`);
+
+    const restoredStore = new ObservatoryStore(rootDir);
+    assert.deepEqual(restoredStore.loadAll(), { loaded: 1, skipped: 0 });
+    const graph = restoredStore.getState().runs[0];
+    assert.equal(graph.identity.provenanceMode, "authentic live");
+    assert.equal(graph.identity.effectCapability, "approval-gated");
+    assert.ok(graph.events.every((event) => typeof event.evidenceKind === "string"));
+  } finally {
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  }
+});
+
+
 test("valid graph loads never rewrite disk and repeated loading is identical", () => {
   const rootDir = createStoreRoot();
   try {
@@ -210,16 +235,17 @@ test("scripted source-run emission records run_start through artifact plus one w
       delayMs: 0,
     });
 
-    assert.deepEqual(result, { emitted: 11, refusals: [] });
+    assert.deepEqual(result, { emitted: 14, refusals: [] });
     const graph = store.getState().runs[0];
-    assert.equal(graph.events.length, 12);
+    assert.equal(graph.events.length, 15);
     assert.equal(graph.events[0].kind, "run_start");
     assert.equal(graph.events.filter((event) => event.kind === "withheld_at_capture").length, 1);
+    assert.equal(graph.events.filter((event) => event.kind === "claim").length, 1);
     const persisted = fs.readFileSync(graphPath(rootDir, sourceRunId), "utf8");
     assert.equal(persisted.includes("sk-live-9f2c4d7e"), false);
     const restoredStore = new ObservatoryStore(rootDir);
     assert.deepEqual(restoredStore.loadAll(), { loaded: 1, skipped: 0 });
-    assert.equal(restoredStore.getState().runs[0].events.length, 12);
+    assert.equal(restoredStore.getState().runs[0].events.length, 15);
   } finally {
     fs.rmSync(rootDir, { recursive: true, force: true });
   }

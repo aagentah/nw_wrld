@@ -47,6 +47,7 @@
 
       #atlas-header,
       #controls,
+      #overview,
       #spine,
       #chronology,
       #inspector,
@@ -83,6 +84,15 @@
         text-align: right;
       }
 
+      .atlas-facts {
+        grid-column: 1 / -1;
+        display: flex;
+        justify-content: flex-end;
+        gap: 16px;
+        color: #8b949e;
+        font-size: 0.78rem;
+      }
+
       .atlas-body {
         display: grid;
         min-height: 0;
@@ -98,6 +108,7 @@
       }
 
       #controls,
+      #overview,
       #spine,
       #chronology,
       #inspector {
@@ -227,6 +238,15 @@
         color: #dc6670;
       }
 
+      .kind-claim {
+        color: #e8a33d;
+      }
+
+      .kind-capability_request,
+      .kind-scope_granted {
+        color: #b595dc;
+      }
+
       .node-actor,
       .node-time,
       .muted {
@@ -287,11 +307,53 @@
       }
 
       #inspector h2,
-      #chronology h2 {
+      #chronology h2,
+      #overview h2 {
         margin: 0;
         color: #e8a33d;
         font-size: 0.82rem;
         letter-spacing: 0.08em;
+      }
+
+      .overview-facts,
+      .inspector-facts {
+        display: grid;
+        grid-template-columns: minmax(120px, 0.4fr) minmax(0, 1fr);
+        gap: 6px 12px;
+        margin: 0;
+      }
+
+      .overview-facts dt,
+      .inspector-facts dt {
+        color: #8b949e;
+        font-size: 0.72rem;
+      }
+
+      .overview-facts dd,
+      .inspector-facts dd {
+        margin: 0;
+        color: #d5dbe1;
+        font-size: 0.78rem;
+      }
+
+      .overview-drills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 10px;
+      }
+
+      .drill-target {
+        border: 1px solid #2a3138;
+        padding: 5px 7px;
+        background: #171c22;
+        color: #8b949e;
+        font-size: 0.7rem;
+      }
+
+      .drill-target.is-selected {
+        border-color: #e8a33d;
+        color: #e8a33d;
       }
 
       .breadcrumb {

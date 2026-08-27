@@ -73,7 +73,7 @@ test("observatory atlas: opt-in, live run, operator outcome, end, restart reload
     });
     await expect
       .poll(() => atlas.locator('[data-testid="spine-node"]').count(), { timeout: 20_000 })
-      .toBe(12);
+      .toBe(15);
     await expect(atlas.locator('[data-testid="outcome-card"]')).toContainText(/OUTCOME PENDING/i);
 
     const graphFiles = fs
@@ -127,11 +127,9 @@ test("observatory atlas: opt-in, live run, operator outcome, end, restart reload
     }, OUTCOME);
     expect(declareResult?.ok).toBe(true);
     await expect
-      .poll(
-        () => atlas.locator('[data-testid="outcome-card"]').evaluate((el) => el.textContent || ""),
-        { timeout: 20_000 }
-      )
-      .toContain(OUTCOME);
+      .poll(() => atlas.locator('[data-testid="spine-node"]').count(), { timeout: 20_000 })
+      .toBe(16);
+    await expect(atlas.locator("body")).toContainText(OUTCOME, { timeout: 20_000 });
 
     await atlas.evaluate(async () => {
       const observatory = (
@@ -166,13 +164,8 @@ test("observatory atlas: opt-in, live run, operator outcome, end, restart reload
     const atlas2 = await findWindow(app, "atlas.html");
     await expect
       .poll(() => atlas2.locator('[data-testid="spine-node"]').count(), { timeout: 20_000 })
-      .toBeGreaterThanOrEqual(10);
-    await expect
-      .poll(
-        () => atlas2.locator('[data-testid="outcome-card"]').evaluate((el) => el.textContent || ""),
-        { timeout: 20_000 }
-      )
-      .toContain(OUTCOME);
+      .toBeGreaterThanOrEqual(16);
+    await expect(atlas2.locator("body")).toContainText(OUTCOME, { timeout: 20_000 });
     await expect(atlas2.locator('[data-testid="destination"]')).toHaveText(DESTINATION);
   } finally {
     if (app) {

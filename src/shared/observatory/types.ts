@@ -9,7 +9,126 @@ export const OBSERVATORY_CONTRACT_VERSION = 1;
 
 export type NeverPersistClass = "secret" | "token" | "credential" | "key";
 
-/** Event kinds that can exist inside a private evidence graph. */
+export type ProvenanceMode =
+  | "authentic live"
+  | "recorded"
+  | "sanitized"
+  | "simulated"
+  | "fresh re-execution";
+
+export type EffectCapability = "disabled" | "approval-gated" | "enabled";
+
+export type EvidenceKind =
+  | "source-observed"
+  | "human-declared"
+  | "ai-declared"
+  | "curator-derived";
+
+export type ClaimSupport = "supported" | "partial" | "unverified" | "contradicted";
+
+export type EffectStageKind =
+  | "requested-capability"
+  | "granted-scope"
+  | "proposal"
+  | "approval-or-rejection"
+  | "attempt"
+  | "observed-effect";
+
+export type EffectStageStatus = "present" | "missing" | "rejected" | "failed" | "unobserved";
+
+export type EffectDisposition = "approved" | "rejected" | "failed" | "abandoned" | "unobserved";
+
+export type EffectStage = {
+  kind: EffectStageKind;
+  status: EffectStageStatus;
+  nodeId: string | null;
+  summary: string | null;
+};
+
+export type MaterialEffectChain = {
+  chainId: string;
+  stages: EffectStage[];
+  nonResult: boolean;
+};
+
+
+
+
+export type RelianceLimitKind =
+  | "uncertainty"
+  | "scope-bounds"
+  | "nondeterminism"
+  | "redaction-impact"
+  | "unverified-claims";
+
+export type RelianceLimit = {
+  kind: RelianceLimitKind;
+  summary: string;
+};
+
+export type NamedLink = {
+  kind: "source" | "wayfinder";
+  label: string;
+  href: string;
+};
+
+export type NodeTrace = {
+  evidence: ObservatoryEvent[];
+  claims: ObservatoryEvent[];
+  sourceEvents: ObservatoryEvent[];
+  actors: string[];
+  decisions: ObservatoryEvent[];
+  links: NamedLink[];
+};
+
+export type InspectedNode =
+  | {
+      ok: true;
+      item: ObservatoryEvent;
+      relianceLimits: RelianceLimit[];
+      orientation: {
+        destination: string;
+        outcome: string | null;
+        provenanceMode: ProvenanceMode;
+        effectCapability: EffectCapability;
+      };
+      traces: NodeTrace;
+    }
+  | { ok: false };
+
+export type ResolvedLink =
+  | { ok: true; item: ObservatoryEvent }
+  | { ok: true; link: NamedLink }
+  | { ok: false };
+
+export type DrillTargetKind =
+  | "actor"
+  | "move"
+  | "claim"
+  | "effect"
+  | "result"
+  | "limitation";
+
+export type DrillTarget = {
+  id: string;
+  kind: DrillTargetKind;
+};
+
+export type ExhibitOverview = {
+  humanGoal: string;
+  result: { before: string | null; after: string | null };
+  materialAiContribution: Array<{ nodeId: string; actor: string; summary: string }>;
+  centralClaimSupport: ClaimSupport;
+  effectGateStatus: Array<{ chainId: string; status: EffectStageStatus; nonResult: boolean }>;
+  limitations: Array<{ hostNodeId: string; kind: RelianceLimitKind; summary: string }>;
+  provenanceMode: ProvenanceMode;
+  effectCapability: EffectCapability;
+  drillTargets: DrillTarget[];
+};
+
+
+
+
 export type ObservatoryEventKind =
   | "run_start"
   | "run_end"
@@ -20,7 +139,10 @@ export type ObservatoryEventKind =
   | "approval_resolved"
   | "artifact"
   | "outcome"
-  | "withheld_at_capture";
+  | "withheld_at_capture"
+  | "claim"
+  | "capability_request"
+  | "scope_granted";
 
 /**
  * Kinds an emitter may try to record that the contract refuses as evidence.
@@ -63,6 +185,14 @@ export type ObservatoryEventInput = {
   payload?: JsonValue;
   environment?: EnvironmentDeclarationInput;
   at: string;
+  evidenceKind?: EvidenceKind;
+  central?: boolean;
+  supports?: string[];
+  contradicts?: string[];
+  chainId?: string;
+  disposition?: EffectDisposition;
+  relianceLimits?: RelianceLimit[];
+  links?: NamedLink[];
 };
 
 /** What is actually inspectable evidence inside the graph. */
@@ -73,8 +203,16 @@ export type ObservatoryEvent = {
   actor: string;
   summary: string;
   at: string;
+  evidenceKind: EvidenceKind;
   payload?: JsonValue;
   withheld?: WithheldOccurrence[];
+  central?: boolean;
+  supports?: string[];
+  contradicts?: string[];
+  chainId?: string;
+  disposition?: EffectDisposition;
+  relianceLimits?: RelianceLimit[];
+  links?: NamedLink[];
 };
 
 export type PrivateEvidenceGraph = {
@@ -83,6 +221,8 @@ export type PrivateEvidenceGraph = {
     exhibitId: string;
     contractVersion: number;
     consentState: "private";
+    provenanceMode: ProvenanceMode;
+    effectCapability: EffectCapability;
   };
   destination: string;
   environment: DeclaredEnvironment | null;
