@@ -93,6 +93,7 @@ const nwWrldBridge = {
     declareOutcome: (payload: unknown) =>
       ipcRenderer.invoke("bridge:observatory:declareOutcome", payload),
     endRun: (payload: unknown) => ipcRenderer.invoke("bridge:observatory:endRun", payload),
+    graduate: (payload: unknown) => ipcRenderer.invoke("bridge:observatory:graduate", payload),
     onState: (handler: ObservatoryStateHandler) => {
       if (typeof handler !== "function") return undefined;
       const wrapped = (_event: IpcRendererEvent, payload: unknown) => {

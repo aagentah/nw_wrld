@@ -48,6 +48,7 @@
       #atlas-header,
       #controls,
       #overview,
+      #preview,
       #spine,
       #chronology,
       #inspector,
@@ -109,6 +110,7 @@
 
       #controls,
       #overview,
+      #preview,
       #spine,
       #chronology,
       #inspector {
@@ -234,6 +236,11 @@
         color: #7bc96f;
       }
 
+      .kind-withheld,
+      .kind-substitution {
+        color: #dc6670;
+      }
+
       .kind-withheld_at_capture {
         color: #dc6670;
       }
@@ -308,7 +315,8 @@
 
       #inspector h2,
       #chronology h2,
-      #overview h2 {
+      #overview h2,
+      #preview h2 {
         margin: 0;
         color: #e8a33d;
         font-size: 0.82rem;
@@ -349,6 +357,25 @@
         background: #171c22;
         color: #8b949e;
         font-size: 0.7rem;
+      }
+
+      .preview-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .preview-legal {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #8b949e;
+        font-size: 0.75rem;
+      }
+
+      .preview-veto {
+        color: #dc6670;
       }
 
       .drill-target.is-selected {

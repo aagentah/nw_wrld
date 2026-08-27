@@ -9,6 +9,44 @@ export const OBSERVATORY_CONTRACT_VERSION = 1;
 
 export type NeverPersistClass = "secret" | "token" | "credential" | "key";
 
+export type PrivateOnlyClass =
+  | "local-path"
+  | "private-repo"
+  | "identifier"
+  | "raw-tool-io"
+  | "local-context-prompt";
+
+export type DisclosureKind = "withheld" | "withheld-at-capture" | "substitution";
+
+export type DisclosureClass = NeverPersistClass | PrivateOnlyClass | "stand-in";
+
+export type EventDisclosure = {
+  kind: DisclosureKind;
+  class: DisclosureClass;
+  reason: string;
+  sourceNodeId: string;
+  affectedClaimIds: string[];
+};
+
+export type DisclosureRecord = EventDisclosure & {
+  nodeId: string;
+};
+
+export type SealVetoCode =
+  | "NEVER_PERSIST_UNPURGED"
+  | "CENTRAL_CLAIM_UNSUPPORTED"
+  | "PROJECTION_NOT_EFFECT_DISABLED"
+  | "PRIVATE_CHAIN_INCOMPLETE"
+  | "LEGAL_OR_THIRD_PARTY_CONSTRAINT";
+
+export type GraduationRefusalCode =
+  | "OPERATOR_CONSENT_REQUIRED"
+  | "NEVER_PERSIST_UNRESTORABLE"
+  | "GRADUATION_ABORTED"
+  | "NOT_INSTRUMENTED"
+  | "INVALID_INPUT"
+  | SealVetoCode;
+
 export type ProvenanceMode =
   | "authentic live"
   | "recorded"
@@ -18,11 +56,7 @@ export type ProvenanceMode =
 
 export type EffectCapability = "disabled" | "approval-gated" | "enabled";
 
-export type EvidenceKind =
-  | "source-observed"
-  | "human-declared"
-  | "ai-declared"
-  | "curator-derived";
+export type EvidenceKind = "source-observed" | "human-declared" | "ai-declared" | "curator-derived";
 
 export type ClaimSupport = "supported" | "partial" | "unverified" | "contradicted";
 
@@ -50,9 +84,6 @@ export type MaterialEffectChain = {
   stages: EffectStage[];
   nonResult: boolean;
 };
-
-
-
 
 export type RelianceLimitKind =
   | "uncertainty"
@@ -101,13 +132,7 @@ export type ResolvedLink =
   | { ok: true; link: NamedLink }
   | { ok: false };
 
-export type DrillTargetKind =
-  | "actor"
-  | "move"
-  | "claim"
-  | "effect"
-  | "result"
-  | "limitation";
+export type DrillTargetKind = "actor" | "move" | "claim" | "effect" | "result" | "limitation";
 
 export type DrillTarget = {
   id: string;
@@ -126,9 +151,6 @@ export type ExhibitOverview = {
   drillTargets: DrillTarget[];
 };
 
-
-
-
 export type ObservatoryEventKind =
   | "run_start"
   | "run_end"
@@ -140,6 +162,8 @@ export type ObservatoryEventKind =
   | "artifact"
   | "outcome"
   | "withheld_at_capture"
+  | "withheld"
+  | "substitution"
   | "claim"
   | "capability_request"
   | "scope_granted";
@@ -213,6 +237,7 @@ export type ObservatoryEvent = {
   disposition?: EffectDisposition;
   relianceLimits?: RelianceLimit[];
   links?: NamedLink[];
+  disclosure?: EventDisclosure;
 };
 
 export type PrivateEvidenceGraph = {
@@ -220,7 +245,7 @@ export type PrivateEvidenceGraph = {
     sourceRunId: string;
     exhibitId: string;
     contractVersion: number;
-    consentState: "private";
+    consentState: "private" | "presentable" | "sealed";
     provenanceMode: ProvenanceMode;
     effectCapability: EffectCapability;
   };
@@ -259,7 +284,85 @@ export type ApplyEventResult =
   | { ok: false; code: ObservatoryRefusalCode };
 
 /** Read-only projection the operator instrument renders. */
+export type SubstitutionInput = {
+  sourceNodeId: string;
+  summary: string;
+  reason: string;
+};
+
+export type GraduationOptions = {
+  restoreNodeIds?: readonly string[];
+  narrowedClaimIds?: readonly string[];
+  substitutions?: readonly SubstitutionInput[];
+  legalOrThirdPartyConstraint?: boolean;
+  privateChainInspectable?: boolean;
+  effectCapability?: EffectCapability;
+  aestheticFit?: boolean;
+  previousProjections?: readonly PresentableProjection[];
+};
+
+export type GraduateInput = GraduationOptions & {
+  initiator: string;
+  at: string;
+  abort?: boolean;
+};
+
+export type ClaimDowngrade = {
+  claimId: string;
+  before: ClaimSupport;
+  after: ClaimSupport;
+};
+
+export type WithholdDowngradeReport = {
+  disclosures: DisclosureRecord[];
+  downgrades: ClaimDowngrade[];
+  restorableNodeIds: string[];
+  provenanceMode: "sanitized" | "simulated" | "recorded";
+  effectCapability: "disabled";
+  presentableClaim: "recorded-playback";
+  vetoes: SealVetoCode[];
+};
+
+export type PresentableProjection = {
+  identity: {
+    sourceRunId: string;
+    exhibitId: string;
+    projectionId: string;
+    projectionVersion: number;
+    contractVersion: number;
+    consentState: "presentable" | "sealed";
+    provenanceMode: ProvenanceMode;
+    effectCapability: "disabled";
+    presentableClaim: "recorded-playback";
+  };
+  destination: string;
+  environment: DeclaredEnvironment | null;
+  events: ObservatoryEvent[];
+  createdAt: string;
+  withdrawnAt: string | null;
+};
+
+export type GraduationPreview = {
+  report: WithholdDowngradeReport;
+  projection: PresentableProjection;
+};
+
+export type GraduateResult =
+  | {
+      ok: true;
+      projection: PresentableProjection;
+      withdrawn: PresentableProjection[];
+      report: WithholdDowngradeReport;
+    }
+  | {
+      ok: false;
+      code: GraduationRefusalCode;
+      vetoes?: SealVetoCode[];
+      report?: WithholdDowngradeReport;
+    };
+
 export type ObservatoryState = {
   contractVersion: number;
   runs: PrivateEvidenceGraph[];
+  projections: PresentableProjection[];
 };

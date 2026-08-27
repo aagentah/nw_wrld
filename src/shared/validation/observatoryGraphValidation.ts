@@ -2,13 +2,17 @@ import { neverPersistClassForKey } from "../observatory/contract";
 import {
   OBSERVATORY_CONTRACT_VERSION,
   type DeclaredEnvironment,
+  type DisclosureClass,
+  type DisclosureKind,
   type EffectCapability,
   type EffectDisposition,
+  type EventDisclosure,
   type EvidenceKind,
   type JsonValue,
   type NamedLink,
   type ObservatoryEvent,
   type ObservatoryEventKind,
+  type PresentableProjection,
   type PrivateEvidenceGraph,
   type ProvenanceMode,
   type RelianceLimit,
@@ -29,6 +33,8 @@ const EVENT_KINDS: Record<ObservatoryEventKind, true> = {
   artifact: true,
   outcome: true,
   withheld_at_capture: true,
+  withheld: true,
+  substitution: true,
   claim: true,
   capability_request: true,
   scope_granted: true,
@@ -38,6 +44,23 @@ const WITHHELD_CLASSES: Record<WithheldOccurrence["class"], true> = {
   token: true,
   credential: true,
   key: true,
+};
+const DISCLOSURE_KINDS: Record<DisclosureKind, true> = {
+  withheld: true,
+  "withheld-at-capture": true,
+  substitution: true,
+};
+const DISCLOSURE_CLASSES: Record<DisclosureClass, true> = {
+  secret: true,
+  token: true,
+  credential: true,
+  key: true,
+  "local-path": true,
+  "private-repo": true,
+  identifier: true,
+  "raw-tool-io": true,
+  "local-context-prompt": true,
+  "stand-in": true,
 };
 const PROVENANCE_MODES: Record<ProvenanceMode, true> = {
   "authentic live": true,
@@ -188,8 +211,43 @@ function parseEnvironment(value: unknown): DeclaredEnvironment | null | undefine
     versions[name] = versionValue;
   }
   if (Object.keys(versions).length === 0) return undefined;
-
   return { repoIdentity, versions, capabilityScope, startedAt, endedAt };
+}
+
+function parseDisclosure(value: unknown): EventDisclosure | null {
+  if (!isPlainObject(value)) return null;
+  const reason = asNonEmptyString(value.reason);
+  const sourceNodeId = asNonEmptyString(value.sourceNodeId);
+  const affectedClaimIds = Object.prototype.hasOwnProperty.call(value, "affectedClaimIds")
+    ? (parseNodeIds(value.affectedClaimIds) ?? [])
+    : [];
+  if (
+    !reason ||
+    !sourceNodeId ||
+    typeof value.kind !== "string" ||
+    !DISCLOSURE_KINDS[value.kind as DisclosureKind] ||
+    typeof value.class !== "string" ||
+    !DISCLOSURE_CLASSES[value.class as DisclosureClass] ||
+    (Object.prototype.hasOwnProperty.call(value, "affectedClaimIds") &&
+      !Array.isArray(value.affectedClaimIds))
+  ) {
+    return null;
+  }
+  if (
+    Object.prototype.hasOwnProperty.call(value, "affectedClaimIds") &&
+    Array.isArray(value.affectedClaimIds) &&
+    value.affectedClaimIds.length > 0 &&
+    affectedClaimIds.length === 0
+  ) {
+    return null;
+  }
+  return {
+    kind: value.kind as DisclosureKind,
+    class: value.class as DisclosureClass,
+    reason,
+    sourceNodeId,
+    affectedClaimIds,
+  };
 }
 
 function parseWithheld(value: unknown): WithheldOccurrence[] | undefined {
@@ -258,15 +316,9 @@ function parseNamedLinks(value: unknown): NamedLink[] | undefined {
   return links;
 }
 
-function evidenceKindFromRaw(
-  raw: PlainObject,
-  kind: ObservatoryEventKind
-): EvidenceKind | null {
+function evidenceKindFromRaw(raw: PlainObject, kind: ObservatoryEventKind): EvidenceKind | null {
   if (Object.prototype.hasOwnProperty.call(raw, "evidenceKind")) {
-    if (
-      typeof raw.evidenceKind === "string" &&
-      EVIDENCE_KINDS[raw.evidenceKind as EvidenceKind]
-    ) {
+    if (typeof raw.evidenceKind === "string" && EVIDENCE_KINDS[raw.evidenceKind as EvidenceKind]) {
       return raw.evidenceKind as EvidenceKind;
     }
     return null;
@@ -277,9 +329,6 @@ function evidenceKindFromRaw(
   if (raw.actor === "curator") return "curator-derived";
   return "ai-declared";
 }
-
-
-
 
 function parseEvents(value: unknown): ObservatoryEvent[] | null {
   if (!Array.isArray(value)) return null;
@@ -335,6 +384,14 @@ function parseEvents(value: unknown): ObservatoryEvent[] | null {
       at,
       evidenceKind,
     };
+    if (Object.prototype.hasOwnProperty.call(raw, "disclosure")) {
+      const disclosure = parseDisclosure(raw.disclosure);
+      if (!disclosure) return null;
+      event.disclosure = disclosure;
+    }
+    if ((kind === "withheld" || kind === "substitution") && !event.disclosure) {
+      return null;
+    }
     if (Object.prototype.hasOwnProperty.call(raw, "payload")) {
       const payload = parseJsonValue(raw.payload);
       if (payload === undefined) return null;
@@ -431,5 +488,84 @@ export function parseObservatoryGraphFile(value: unknown): PrivateEvidenceGraph 
     return null;
   }
 
+  if (events.some((event) => event.kind === "withheld" || event.kind === "substitution")) {
+    return null;
+  }
   return { identity, destination, environment, events, createdAt, updatedAt };
+}
+
+function parseProjectionIdentity(value: unknown): PresentableProjection["identity"] | null {
+  if (!isPlainObject(value)) return null;
+  const sourceRunId = asNonEmptyString(value.sourceRunId);
+  const exhibitId = asNonEmptyString(value.exhibitId);
+  const projectionId = asNonEmptyString(value.projectionId);
+  const provenanceMode =
+    value.provenanceMode === "recorded" ||
+    value.provenanceMode === "sanitized" ||
+    value.provenanceMode === "simulated"
+      ? value.provenanceMode
+      : null;
+  if (
+    !sourceRunId ||
+    !exhibitId ||
+    !projectionId ||
+    !ID_PATTERN.test(sourceRunId) ||
+    !ID_PATTERN.test(exhibitId) ||
+    !ID_PATTERN.test(projectionId) ||
+    sourceRunId === exhibitId ||
+    value.contractVersion !== OBSERVATORY_CONTRACT_VERSION ||
+    (value.consentState !== "presentable" && value.consentState !== "sealed") ||
+    !Number.isInteger(value.projectionVersion) ||
+    (value.projectionVersion as number) < 1 ||
+    value.effectCapability !== "disabled" ||
+    value.presentableClaim !== "recorded-playback" ||
+    !provenanceMode
+  ) {
+    return null;
+  }
+  return {
+    sourceRunId,
+    exhibitId,
+    projectionId,
+    projectionVersion: value.projectionVersion as number,
+    contractVersion: OBSERVATORY_CONTRACT_VERSION,
+    consentState: value.consentState,
+    provenanceMode,
+    effectCapability: "disabled",
+    presentableClaim: "recorded-playback",
+  };
+}
+
+/**
+ * Validates one JSON presentable projection at the disk boundary.
+ */
+export function parseObservatoryProjectionFile(value: unknown): PresentableProjection | null {
+  if (!isPlainObject(value)) return null;
+  const identity = parseProjectionIdentity(value.identity);
+  const destination = typeof value.destination === "string" ? value.destination : null;
+  const environment = parseEnvironment(value.environment);
+  const events = parseEvents(value.events);
+  const createdAt = asNonEmptyString(value.createdAt);
+  const withdrawnAt =
+    value.withdrawnAt === null ? null : (asNonEmptyString(value.withdrawnAt) ?? undefined);
+  if (
+    !identity ||
+    destination === null ||
+    environment === undefined ||
+    !events ||
+    !createdAt ||
+    withdrawnAt === undefined
+  ) {
+    return null;
+  }
+  if (identity.consentState === "sealed" && withdrawnAt === null) return null;
+  if (identity.consentState === "presentable" && withdrawnAt !== null) return null;
+  for (const event of events) {
+    if (event.kind === "withheld" && event.disclosure?.kind !== "withheld") return null;
+    if (event.kind === "substitution" && event.disclosure?.kind !== "substitution") return null;
+    if (event.kind === "withheld_at_capture" && event.disclosure?.kind !== "withheld-at-capture") {
+      return null;
+    }
+  }
+  return { identity, destination, environment, events, createdAt, withdrawnAt };
 }

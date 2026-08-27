@@ -63,6 +63,48 @@ const normalizeDeclareOutcomePayload = (value: unknown): DeclareOutcomePayload |
   return { sourceRunId, outcome };
 };
 
+type GraduatePayload = {
+  sourceRunId: string;
+  restoreNodeIds: string[];
+  narrowedClaimIds: string[];
+  abort?: boolean;
+  legalOrThirdPartyConstraint?: boolean;
+};
+
+const normalizeStringIdList = (value: unknown): string[] | null => {
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) return null;
+  const ids: string[] = [];
+  for (const item of value) {
+    const id = asNonEmptyTrimmedString(item);
+    if (!id) return null;
+    ids.push(id);
+  }
+  return ids;
+};
+
+const normalizeGraduatePayload = (value: unknown): GraduatePayload | null => {
+  if (!isPlainObject(value)) return null;
+  const sourceRunId = asNonEmptyTrimmedString(value.sourceRunId);
+  const restoreNodeIds = normalizeStringIdList(value.restoreNodeIds);
+  const narrowedClaimIds = normalizeStringIdList(value.narrowedClaimIds);
+  if (!sourceRunId || !restoreNodeIds || !narrowedClaimIds) return null;
+  if (value.abort !== undefined && typeof value.abort !== "boolean") return null;
+  if (
+    value.legalOrThirdPartyConstraint !== undefined &&
+    typeof value.legalOrThirdPartyConstraint !== "boolean"
+  ) {
+    return null;
+  }
+  return {
+    sourceRunId,
+    restoreNodeIds,
+    narrowedClaimIds,
+    ...(value.abort === true ? { abort: true } : {}),
+    ...(value.legalOrThirdPartyConstraint === true ? { legalOrThirdPartyConstraint: true } : {}),
+  };
+};
+
 export function registerObservatoryBridge(): void {
   ipcMain.handle("bridge:observatory:getState", async (event) => {
     if (!isAtlasWindowSender(event)) {
@@ -137,6 +179,22 @@ export function registerObservatoryBridge(): void {
       kind: "run_end",
       actor: "source",
       summary: "Instrumented source run ended",
+      at: new Date().toISOString(),
+    });
+  });
+
+  ipcMain.handle("bridge:observatory:graduate", async (event, payload: unknown) => {
+    if (!isAtlasWindowSender(event)) {
+      return { ok: false, code: "OPERATOR_CONSENT_REQUIRED" };
+    }
+
+    const input = normalizeGraduatePayload(payload);
+    if (!input) return { ok: false, code: "INVALID_INPUT" };
+
+    const { sourceRunId, ...options } = input;
+    return ensureObservatoryStore().graduate(sourceRunId, {
+      ...options,
+      initiator: "operator",
       at: new Date().toISOString(),
     });
   });

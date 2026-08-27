@@ -1,5 +1,11 @@
-import { claimSupport, exhibitOverview, inspectNode } from "../shared/observatory/contract";
+import {
+  claimSupport,
+  exhibitOverview,
+  inspectNode,
+  previewGraduation,
+} from "../shared/observatory/contract";
 import type {
+  GraduationPreview,
   InspectedNode,
   ObservatoryEvent,
   ObservatoryState,
@@ -17,6 +23,10 @@ export type AtlasLocalState = {
   lastPulseSeqByRun: Map<string, number>;
   emitterInFlight: boolean;
   statusLine: string;
+  preview: GraduationPreview | null;
+  restoreNodeIds: string[];
+  narrowedClaimIds: string[];
+  legalOrThirdPartyConstraint: boolean;
 };
 
 export function renderAtlas(
@@ -136,6 +146,12 @@ function buildBody(
 
   if (selectedRun) {
     main.append(buildOverview(container, bridge, localState, selectedRun));
+    if (
+      localState.preview &&
+      localState.preview.projection.identity.sourceRunId === selectedRun.identity.sourceRunId
+    ) {
+      main.append(buildGraduationPreview(container, bridge, localState, selectedRun));
+    }
   }
 
   main.append(buildSpine(container, bridge, localState, selectedRun));
@@ -176,7 +192,15 @@ function buildControls(
     const endedNote = document.createElement("span");
     endedNote.className = "muted";
     endedNote.textContent = "Run ended — read-only inspection";
-    controls.append(endedNote);
+    const preview = document.createElement("button");
+    preview.type = "button";
+    preview.className = "action-button primary";
+    preview.dataset.testid = "preview-projection";
+    preview.textContent = localState.preview ? "REFRESH PREVIEW" : "PREVIEW PROJECTION";
+    preview.addEventListener("click", () => {
+      openGraduationPreview(container, bridge, localState, selectedRun);
+    });
+    controls.append(endedNote, preview);
     return controls;
   }
 
@@ -474,7 +498,10 @@ function buildInspector(
     ]);
   }
   if (inspected.traces.evidence.length) {
-    rows.push(["Evidence nodes", inspected.traces.evidence.map((event) => event.summary).join(" · ")]);
+    rows.push([
+      "Evidence nodes",
+      inspected.traces.evidence.map((event) => event.summary).join(" · "),
+    ]);
   }
   if (inspected.traces.claims.length) {
     rows.push(["Claims", inspected.traces.claims.map((event) => event.summary).join(" · ")]);
@@ -719,7 +746,14 @@ function selectRun(
 ): PrivateEvidenceGraph | null {
   const selected = state.runs.find((run) => run.identity.sourceRunId === localState.selectedRunId);
   const fallback = selected ?? state.runs.find((run) => !isRunEnded(run)) ?? state.runs[0] ?? null;
-  localState.selectedRunId = fallback?.identity.sourceRunId ?? null;
+  const nextId = fallback?.identity.sourceRunId ?? null;
+  if (localState.preview && localState.preview.projection.identity.sourceRunId !== nextId) {
+    localState.preview = null;
+    localState.restoreNodeIds = [];
+    localState.narrowedClaimIds = [];
+    localState.legalOrThirdPartyConstraint = false;
+  }
+  localState.selectedRunId = nextId;
   if (
     localState.selectedNodeId !== null &&
     fallback &&
@@ -756,6 +790,203 @@ function buildBreadcrumb(
     ? `NODE #${inspected.item.seq}: ${inspected.item.kind}`
     : "SELECT NODE";
   return `${destination} → ${outcomeLabel} → ${inspectedItem}`;
+}
+
+function recomputePreview(localState: AtlasLocalState, selectedRun: PrivateEvidenceGraph): void {
+  const previousProjections = (localState.state?.projections ?? []).filter(
+    (projection) =>
+      projection.identity.sourceRunId === selectedRun.identity.sourceRunId &&
+      projection.withdrawnAt === null
+  );
+  localState.preview = previewGraduation(selectedRun, {
+    restoreNodeIds: localState.restoreNodeIds,
+    narrowedClaimIds: localState.narrowedClaimIds,
+    legalOrThirdPartyConstraint: localState.legalOrThirdPartyConstraint,
+    previousProjections,
+  });
+}
+
+function openGraduationPreview(
+  container: HTMLElement,
+  bridge: ObservatoryBridge | undefined,
+  localState: AtlasLocalState,
+  selectedRun: PrivateEvidenceGraph
+): void {
+  recomputePreview(localState, selectedRun);
+  localState.statusLine = localState.preview.report.vetoes.length
+    ? `preview blocked: ${localState.preview.report.vetoes.join(", ")}`
+    : `preview ${localState.preview.projection.identity.provenanceMode} · recorded playback · effect disabled`;
+  renderAtlas(container, bridge, localState);
+}
+
+function buildGraduationPreview(
+  container: HTMLElement,
+  bridge: ObservatoryBridge | undefined,
+  localState: AtlasLocalState,
+  selectedRun: PrivateEvidenceGraph
+): HTMLElement {
+  const preview = localState.preview;
+  const section = document.createElement("section");
+  section.id = "preview";
+  section.dataset.testid = "graduation-preview";
+
+  const heading = document.createElement("h2");
+  heading.textContent = "GRADUATION PREVIEW";
+  section.append(heading);
+
+  if (!preview) return section;
+
+  const facts = document.createElement("dl");
+  facts.className = "overview-facts";
+  const rows: Array<[string, string]> = [
+    ["Presentable claim", preview.report.presentableClaim],
+    ["Provenance mode", preview.report.provenanceMode],
+    ["Effect capability", preview.report.effectCapability],
+    ["Projection version", String(preview.projection.identity.projectionVersion)],
+    ["Vetoes", preview.report.vetoes.length ? preview.report.vetoes.join(" · ") : "none"],
+    [
+      "Disclosures",
+      preview.report.disclosures
+        .map((item) => `${item.kind}/${item.class}: ${item.reason}`)
+        .join(" · ") || "none",
+    ],
+    [
+      "Downgrades",
+      preview.report.downgrades
+        .map((item) => `${item.claimId}: ${item.before} → ${item.after}`)
+        .join(" · ") || "none",
+    ],
+  ];
+  for (const [label, value] of rows) {
+    const dt = document.createElement("dt");
+    dt.textContent = label;
+    const dd = document.createElement("dd");
+    dd.textContent = value;
+    if (label === "Vetoes" && preview.report.vetoes.length) dd.className = "preview-veto";
+    facts.append(dt, dd);
+  }
+  section.append(facts);
+
+  const actions = document.createElement("div");
+  actions.className = "preview-actions";
+
+  for (const nodeId of preview.report.restorableNodeIds) {
+    const restore = document.createElement("button");
+    restore.type = "button";
+    restore.className = "action-button";
+    restore.dataset.testid = "restore-payload";
+    const restoring = localState.restoreNodeIds.includes(nodeId);
+    restore.textContent = restoring ? `KEEP WITHHELD ${nodeId}` : `RESTORE ${nodeId}`;
+    restore.addEventListener("click", () => {
+      localState.restoreNodeIds = restoring
+        ? localState.restoreNodeIds.filter((id) => id !== nodeId)
+        : [...localState.restoreNodeIds, nodeId];
+      openGraduationPreview(container, bridge, localState, selectedRun);
+    });
+    actions.append(restore);
+  }
+
+  for (const downgrade of preview.report.downgrades) {
+    const narrow = document.createElement("button");
+    narrow.type = "button";
+    narrow.className = "action-button";
+    narrow.dataset.testid = "narrow-claim";
+    const narrowed = localState.narrowedClaimIds.includes(downgrade.claimId);
+    narrow.textContent = narrowed
+      ? `KEEP CLAIM ${downgrade.claimId}`
+      : `NARROW CLAIM ${downgrade.claimId}`;
+    narrow.addEventListener("click", () => {
+      localState.narrowedClaimIds = narrowed
+        ? localState.narrowedClaimIds.filter((id) => id !== downgrade.claimId)
+        : [...localState.narrowedClaimIds, downgrade.claimId];
+      openGraduationPreview(container, bridge, localState, selectedRun);
+    });
+    actions.append(narrow);
+  }
+
+  const legal = document.createElement("label");
+  legal.className = "preview-legal";
+  const legalBox = document.createElement("input");
+  legalBox.type = "checkbox";
+  legalBox.dataset.testid = "legal-constraint";
+  legalBox.checked = localState.legalOrThirdPartyConstraint;
+  legalBox.addEventListener("change", () => {
+    localState.legalOrThirdPartyConstraint = legalBox.checked;
+    openGraduationPreview(container, bridge, localState, selectedRun);
+  });
+  legal.append(legalBox, " Legal or third-party confidential constraint");
+  actions.append(legal);
+
+  const abort = document.createElement("button");
+  abort.type = "button";
+  abort.className = "action-button end";
+  abort.dataset.testid = "abort-graduation";
+  abort.textContent = "ABORT";
+  abort.addEventListener("click", () => {
+    localState.preview = null;
+    localState.restoreNodeIds = [];
+    localState.narrowedClaimIds = [];
+    localState.legalOrThirdPartyConstraint = false;
+    localState.statusLine = "Graduation aborted";
+    renderAtlas(container, bridge, localState);
+  });
+
+  const consent = document.createElement("button");
+  consent.type = "button";
+  consent.className = "action-button outcome";
+  consent.dataset.testid = "consent-graduate";
+  consent.disabled = bridge?.graduate === undefined || preview.report.vetoes.length > 0;
+  consent.textContent = "CONSENT AND GRADUATE";
+  consent.addEventListener("click", () => {
+    void consentGraduate(container, bridge, localState, selectedRun);
+  });
+
+  actions.append(abort, consent);
+  section.append(actions);
+  return section;
+}
+
+async function consentGraduate(
+  container: HTMLElement,
+  bridge: ObservatoryBridge | undefined,
+  localState: AtlasLocalState,
+  selectedRun: PrivateEvidenceGraph
+): Promise<void> {
+  if (bridge?.graduate === undefined) {
+    localState.statusLine = "refused: OBSERVATORY_BRIDGE_UNAVAILABLE";
+    renderAtlas(container, bridge, localState);
+    return;
+  }
+  if (
+    !localState.preview ||
+    localState.preview.projection.identity.sourceRunId !== selectedRun.identity.sourceRunId
+  ) {
+    localState.statusLine = "refused: INVALID_INPUT";
+    renderAtlas(container, bridge, localState);
+    return;
+  }
+  try {
+    const result = await bridge.graduate({
+      sourceRunId: selectedRun.identity.sourceRunId,
+      restoreNodeIds: localState.restoreNodeIds,
+      narrowedClaimIds: localState.narrowedClaimIds,
+      legalOrThirdPartyConstraint: localState.legalOrThirdPartyConstraint,
+    });
+    if (!result.ok) {
+      localState.statusLine = `refused: ${result.code}`;
+      renderAtlas(container, bridge, localState);
+      return;
+    }
+    localState.preview = null;
+    localState.restoreNodeIds = [];
+    localState.narrowedClaimIds = [];
+    localState.legalOrThirdPartyConstraint = false;
+    localState.statusLine = `Graduated ${result.projection.identity.projectionId} · recorded playback · effect disabled`;
+    await refreshState(bridge, localState);
+  } catch (error) {
+    localState.statusLine = formatActionError(error);
+  }
+  renderAtlas(container, bridge, localState);
 }
 
 function shortRunId(sourceRunId: string): string {

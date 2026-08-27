@@ -10,12 +10,17 @@ import type {
   ApplyEventResult,
   ClaimSupport,
   DeclaredEnvironment,
+  DisclosureRecord,
   EffectStage,
   EffectStageKind,
   EffectStageStatus,
   EvidenceKind,
-  InspectedNode,
   ExhibitOverview,
+  GraduateInput,
+  GraduateResult,
+  GraduationOptions,
+  GraduationPreview,
+  InspectedNode,
   JsonValue,
   MaterialEffectChain,
   NamedLink,
@@ -23,8 +28,11 @@ import type {
   NodeTrace,
   ObservatoryEvent,
   ObservatoryEventInput,
+  PresentableProjection,
   PrivateEvidenceGraph,
+  PrivateOnlyClass,
   ResolvedLink,
+  SealVetoCode,
   StartCaptureInput,
   StartCaptureResult,
   WithheldOccurrence,
@@ -74,17 +82,95 @@ const KEY_TOKEN_TO_CLASS: ReadonlyArray<readonly [string, NeverPersistClass]> = 
   ["apikey", "key"],
   ["key", "key"],
 ];
-
-export function neverPersistClassForKey(key: string): NeverPersistClass | null {
-  const tokens = key
+function keyTokens(key: string): string[] {
+  return key
     .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
     .split(/[^a-zA-Z0-9]+/)
     .filter(Boolean)
     .map((token) => token.toLowerCase());
+}
+
+export function neverPersistClassForKey(key: string): NeverPersistClass | null {
+  const tokens = keyTokens(key);
   for (const [marker, klass] of KEY_TOKEN_TO_CLASS) {
     if (tokens.includes(marker)) return klass;
   }
   return null;
+}
+
+const PRIVATE_ONLY_KEY_TOKEN_TO_CLASS: ReadonlyArray<readonly [string, PrivateOnlyClass]> = [
+  ["filepath", "local-path"],
+  ["filename", "local-path"],
+  ["homedir", "local-path"],
+  ["path", "local-path"],
+  ["cwd", "local-path"],
+  ["diff", "private-repo"],
+  ["repo", "private-repo"],
+  ["contents", "private-repo"],
+  ["excerpt", "private-repo"],
+  ["identifier", "identifier"],
+  ["username", "identifier"],
+  ["userid", "identifier"],
+  ["email", "identifier"],
+  ["hostname", "identifier"],
+  ["account", "identifier"],
+  ["prompt", "local-context-prompt"],
+  ["stdout", "raw-tool-io"],
+  ["stderr", "raw-tool-io"],
+  ["stdin", "raw-tool-io"],
+];
+
+export function privateOnlyClassForKey(key: string): PrivateOnlyClass | null {
+  const tokens = keyTokens(key);
+  const collapsed = tokens.join("");
+  for (const [marker, klass] of PRIVATE_ONLY_KEY_TOKEN_TO_CLASS) {
+    if (tokens.includes(marker) || collapsed === marker) return klass;
+  }
+  return null;
+}
+
+const looksLikeLocalPath = (value: string): boolean => /^(~|\/|[A-Za-z]:[\\/])/.test(value);
+
+export type PrivateOnlyScrub = {
+  value: JsonValue;
+  withheld: Array<{ class: PrivateOnlyClass; path: string }>;
+};
+
+/**
+ * Replaces private-only payload values with typed withheld markers. Never-persist
+ * keys are left untouched — capture already scrubbed them.
+ */
+export function scrubPrivateOnly(value: JsonValue): PrivateOnlyScrub {
+  const withheld: Array<{ class: PrivateOnlyClass; path: string }> = [];
+  const walk = (v: JsonValue, path: string): JsonValue => {
+    if (Array.isArray(v)) {
+      return v.map((item, i) => walk(item, `${path}[${i}]`));
+    }
+    if (isJsonObject(v)) {
+      const out: { [key: string]: JsonValue } = {};
+      for (const [k, val] of Object.entries(v)) {
+        const keyPath = path ? `${path}.${k}` : k;
+        if (neverPersistClassForKey(k)) {
+          out[k] = val;
+          continue;
+        }
+        const klass = privateOnlyClassForKey(k);
+        if (klass) {
+          withheld.push({ class: klass, path: keyPath });
+          out[k] = { withheld: true, class: klass };
+        } else {
+          out[k] = walk(val, keyPath);
+        }
+      }
+      return out;
+    }
+    if (typeof v === "string" && looksLikeLocalPath(v)) {
+      withheld.push({ class: "local-path", path });
+      return { withheld: true, class: "local-path" };
+    }
+    return v;
+  };
+  return { value: walk(value, ""), withheld };
 }
 
 const isJsonObject = (value: JsonValue): value is { [key: string]: JsonValue } =>
@@ -141,7 +227,6 @@ function evidenceKindFor(
   return EVIDENCE_KIND_BY_ACTOR[input.actor] ?? "ai-declared";
 }
 
-
 // --- Opt-in ----------------------------------------------------------------
 
 /**
@@ -186,13 +271,17 @@ export function applyEvent(
   const started = graph.environment !== null;
   const ended = graph.environment !== null && graph.environment.endedAt !== null;
 
-  // Reserved: withheld nodes are derived by capture, never submitted.
-  if (input.kind === "withheld_at_capture") {
-    return { ok: false, code: "INVALID_EVENT" };
-  }
   // Hidden reasoning is not inspectable evidence.
   if (input.kind === "reasoning" || input.kind === "thinking") {
     return { ok: false, code: "HIDDEN_REASONING_NOT_EVIDENCE" };
+  }
+  // Reserved: withheld/substitution nodes are derived by capture or Graduation.
+  if (
+    input.kind === "withheld_at_capture" ||
+    input.kind === "withheld" ||
+    input.kind === "substitution"
+  ) {
+    return { ok: false, code: "INVALID_EVENT" };
   }
 
   if (input.kind === "run_start") {
@@ -286,13 +375,40 @@ export function applyEvent(
   return { ok: true, graph: nextGraph, event: appended[0] };
 }
 
-function eventById(graph: PrivateEvidenceGraph, nodeId: string): ObservatoryEvent | undefined {
+type EventGraph = { events: ObservatoryEvent[] };
+
+function eventById(graph: EventGraph, nodeId: string): ObservatoryEvent | undefined {
   return graph.events.find((event) => event.nodeId === nodeId);
 }
 
+function isDisclosureKind(kind: ObservatoryEvent["kind"]): boolean {
+  return kind === "withheld" || kind === "withheld_at_capture" || kind === "substitution";
+}
+
+function isWithheldSource(graph: EventGraph, event: ObservatoryEvent): boolean {
+  return graph.events.some(
+    (candidate) =>
+      (candidate.kind === "withheld" || candidate.kind === "substitution") &&
+      candidate.disclosure?.sourceNodeId === event.nodeId
+  );
+}
+
+function isRaisingEvidence(
+  graph: EventGraph,
+  event: ObservatoryEvent,
+  role: "support" | "contradict"
+): boolean {
+  if (event.evidenceKind === "curator-derived") return false;
+  if (event.evidenceKind === "human-declared" && event.kind === "move") return false;
+  if (isDisclosureKind(event.kind)) return false;
+  if (role === "support" && isWithheldSource(graph, event)) return false;
+  return true;
+}
+
 function raisingEvidence(
-  graph: PrivateEvidenceGraph,
-  nodeIds: readonly string[] | undefined
+  graph: EventGraph,
+  nodeIds: readonly string[] | undefined,
+  role: "support" | "contradict"
 ): { present: ObservatoryEvent[]; missing: boolean } {
   const ids = nodeIds ?? [];
   const present: ObservatoryEvent[] = [];
@@ -303,17 +419,17 @@ function raisingEvidence(
       missing = true;
       continue;
     }
-    if (event.evidenceKind !== "curator-derived") present.push(event);
+    if (isRaisingEvidence(graph, event, role)) present.push(event);
   }
   return { present, missing };
 }
 
-/** Support earned by visible non-curator evidence linked to a claim. */
-export function claimSupport(graph: PrivateEvidenceGraph, nodeId: string): ClaimSupport | null {
+/** Support earned by visible non-attestation evidence linked to a claim. */
+export function claimSupport(graph: EventGraph, nodeId: string): ClaimSupport | null {
   const claim = eventById(graph, nodeId);
   if (!claim || claim.kind !== "claim") return null;
-  const supports = raisingEvidence(graph, claim.supports);
-  const contradicts = raisingEvidence(graph, claim.contradicts);
+  const supports = raisingEvidence(graph, claim.supports, "support");
+  const contradicts = raisingEvidence(graph, claim.contradicts, "contradict");
   if (contradicts.present.length > 0) return "contradicted";
   if (supports.present.length === 0) return "unverified";
   if (supports.missing || supports.present.length < (claim.supports ?? []).length) return "partial";
@@ -348,16 +464,12 @@ export function effectChains(graph: PrivateEvidenceGraph): MaterialEffectChain[]
     else eventsByChainId.set(event.chainId, [event]);
   }
   return [...eventsByChainId.entries()].map(([chainId, events]) => {
-    const stages: EffectStage[] = EFFECT_STAGE_ORDER.map((kind) =>
-      stageFromEvents(kind, events)
-    );
+    const stages: EffectStage[] = EFFECT_STAGE_ORDER.map((kind) => stageFromEvents(kind, events));
     const nonResult =
       events.some((event) => event.disposition === "abandoned") ||
       stages.some(
         (stage) =>
-          stage.status === "rejected" ||
-          stage.status === "failed" ||
-          stage.status === "unobserved"
+          stage.status === "rejected" || stage.status === "failed" || stage.status === "unobserved"
       );
     return { chainId, stages, nonResult };
   });
@@ -481,7 +593,8 @@ export function exhibitOverview(graph: PrivateEvidenceGraph): ExhibitOverview {
   const chains = effectChains(graph);
   const effectGateStatus = chains.map((chain) => ({
     chainId: chain.chainId,
-    status: chain.stages.find((stage) => stage.kind === "approval-or-rejection")?.status ?? "missing",
+    status:
+      chain.stages.find((stage) => stage.kind === "approval-or-rejection")?.status ?? "missing",
     nonResult: chain.nonResult,
   }));
 
@@ -524,4 +637,311 @@ export function exhibitOverview(graph: PrivateEvidenceGraph): ExhibitOverview {
   };
 }
 
+function cloneJsonValue(value: JsonValue): JsonValue {
+  return JSON.parse(JSON.stringify(value)) as JsonValue;
+}
 
+function cloneEvent(event: ObservatoryEvent): ObservatoryEvent {
+  const next: ObservatoryEvent = {
+    nodeId: event.nodeId,
+    seq: event.seq,
+    kind: event.kind,
+    actor: event.actor,
+    summary: event.summary,
+    at: event.at,
+    evidenceKind: event.evidenceKind,
+  };
+  if (event.payload !== undefined) next.payload = cloneJsonValue(event.payload);
+  if (event.withheld) next.withheld = event.withheld.map((item) => ({ ...item }));
+  if (event.central) next.central = true;
+  if (event.supports) next.supports = [...event.supports];
+  if (event.contradicts) next.contradicts = [...event.contradicts];
+  if (event.chainId) next.chainId = event.chainId;
+  if (event.disposition) next.disposition = event.disposition;
+  if (event.relianceLimits) {
+    next.relianceLimits = event.relianceLimits.map((limit) => ({ ...limit }));
+  }
+  if (event.links) next.links = event.links.map((link) => ({ ...link }));
+  if (event.disclosure) {
+    next.disclosure = {
+      ...event.disclosure,
+      affectedClaimIds: [...event.disclosure.affectedClaimIds],
+    };
+  }
+  return next;
+}
+
+function cloneEnvironment(environment: DeclaredEnvironment | null): DeclaredEnvironment | null {
+  if (!environment) return null;
+  return { ...environment, versions: { ...environment.versions } };
+}
+
+function claimsAffectedBy(graph: EventGraph, sourceNodeId: string): string[] {
+  return graph.events
+    .filter(
+      (event) =>
+        event.kind === "claim" &&
+        ((event.supports ?? []).includes(sourceNodeId) ||
+          (event.contradicts ?? []).includes(sourceNodeId))
+    )
+    .map((event) => event.nodeId);
+}
+
+function payloadHasUnpurgedNeverPersist(value: JsonValue): boolean {
+  if (Array.isArray(value)) return value.some(payloadHasUnpurgedNeverPersist);
+  if (!isJsonObject(value)) return false;
+  for (const [k, val] of Object.entries(value)) {
+    const klass = neverPersistClassForKey(k);
+    if (klass) {
+      if (!isJsonObject(val) || val.withheldAtCapture !== true || val.class !== klass) {
+        return true;
+      }
+      continue;
+    }
+    if (payloadHasUnpurgedNeverPersist(val)) return true;
+  }
+  return false;
+}
+
+function graphHasUnpurgedNeverPersist(graph: EventGraph): boolean {
+  return graph.events.some(
+    (event) => event.payload !== undefined && payloadHasUnpurgedNeverPersist(event.payload)
+  );
+}
+
+function privateChainComplete(
+  graph: PrivateEvidenceGraph,
+  inspectable: boolean | undefined
+): boolean {
+  if (inspectable === false) return false;
+  if (graph.environment === null || graph.environment.endedAt === null) return false;
+  return graph.events.every((event) => inspectNode(graph, event.nodeId).ok);
+}
+
+function eventCarriesNeverPersist(event: ObservatoryEvent): boolean {
+  if (event.kind === "withheld_at_capture") return true;
+  if (event.payload === undefined || !isJsonObject(event.payload)) return false;
+  return Object.keys(event.payload).some((key) => neverPersistClassForKey(key) !== null);
+}
+
+/** Class-withhold private-only material and recompute claim support. Does not consent. */
+export function previewGraduation(
+  graph: PrivateEvidenceGraph,
+  options: GraduationOptions = {}
+): GraduationPreview {
+  const restore = new Set(options.restoreNodeIds ?? []);
+  const narrowed = new Set(options.narrowedClaimIds ?? []);
+  const substitutionsBySource = new Map(
+    (options.substitutions ?? []).map((item) => [item.sourceNodeId, item])
+  );
+
+  const events: ObservatoryEvent[] = [];
+  const disclosures: DisclosureRecord[] = [];
+  const restorableNodeIds: string[] = [];
+
+  for (const event of graph.events) {
+    const substitution = substitutionsBySource.get(event.nodeId);
+    if (substitution) {
+      const replaced = cloneEvent(event);
+      replaced.summary = substitution.summary;
+      delete replaced.payload;
+      events.push(replaced);
+      const affectedClaimIds = claimsAffectedBy(graph, event.nodeId);
+      const nodeId = `w${events.length}-${randomId(6)}`;
+      const disclosure = {
+        kind: "substitution" as const,
+        class: "stand-in" as const,
+        reason: substitution.reason,
+        sourceNodeId: event.nodeId,
+        affectedClaimIds,
+      };
+      events.push({
+        nodeId,
+        seq: 0,
+        kind: "substitution",
+        actor: "operator",
+        summary: substitution.reason,
+        at: event.at,
+        evidenceKind: "curator-derived",
+        disclosure,
+      });
+      disclosures.push({ nodeId, ...disclosure });
+      continue;
+    }
+
+    const copied = cloneEvent(event);
+    if (narrowed.has(event.nodeId) && event.kind === "claim") {
+      delete copied.central;
+    }
+
+    if (event.kind === "withheld_at_capture") {
+      const prior = graph.events[graph.events.indexOf(event) - 1];
+      const sourceNodeId = prior?.nodeId ?? event.nodeId;
+      const affectedClaimIds = [
+        ...new Set([
+          ...claimsAffectedBy(graph, event.nodeId),
+          ...claimsAffectedBy(graph, sourceNodeId),
+        ]),
+      ];
+      const klass = event.withheld?.[0]?.class ?? "secret";
+      copied.disclosure = {
+        kind: "withheld-at-capture",
+        class: klass,
+        reason: "never-persist material used; value was not stored",
+        sourceNodeId,
+        affectedClaimIds,
+      };
+      events.push(copied);
+      disclosures.push({ nodeId: copied.nodeId, ...copied.disclosure });
+      continue;
+    }
+
+    if (copied.payload !== undefined && !restore.has(event.nodeId)) {
+      const scrub = scrubPrivateOnly(copied.payload);
+      if (scrub.withheld.length > 0) {
+        copied.payload = scrub.value;
+        restorableNodeIds.push(event.nodeId);
+        const affectedClaimIds = claimsAffectedBy(graph, event.nodeId);
+        events.push(copied);
+        const classes = [...new Set(scrub.withheld.map((item) => item.class))];
+        for (const klass of classes) {
+          const nodeId = `w${events.length}-${randomId(6)}`;
+          const disclosure = {
+            kind: "withheld" as const,
+            class: klass,
+            reason: `private-only ${klass} withheld from projection`,
+            sourceNodeId: event.nodeId,
+            affectedClaimIds,
+          };
+          events.push({
+            nodeId,
+            seq: 0,
+            kind: "withheld",
+            actor: "source",
+            summary: disclosure.reason,
+            at: event.at,
+            evidenceKind: "source-observed",
+            disclosure,
+          });
+          disclosures.push({ nodeId, ...disclosure });
+        }
+        continue;
+      }
+    }
+
+    events.push(copied);
+  }
+
+  for (let index = 0; index < events.length; index += 1) {
+    events[index].seq = index;
+  }
+
+  const hasSubstitution = disclosures.some((item) => item.kind === "substitution");
+  const hasWithheld = disclosures.some(
+    (item) => item.kind === "withheld" || item.kind === "withheld-at-capture"
+  );
+  const provenanceMode = hasSubstitution ? "simulated" : hasWithheld ? "sanitized" : "recorded";
+
+  const previous = options.previousProjections ?? [];
+  const projectionVersion =
+    previous.reduce((max, item) => Math.max(max, item.identity.projectionVersion), 0) + 1;
+  const requestedEffect = options.effectCapability ?? "disabled";
+
+  const projection: PresentableProjection = {
+    identity: {
+      sourceRunId: graph.identity.sourceRunId,
+      exhibitId: graph.identity.exhibitId,
+      projectionId: `pj_${randomId(16)}`,
+      projectionVersion,
+      contractVersion: OBSERVATORY_CONTRACT_VERSION,
+      consentState: "presentable",
+      provenanceMode,
+      effectCapability: "disabled",
+      presentableClaim: "recorded-playback",
+    },
+    destination: graph.destination,
+    environment: cloneEnvironment(graph.environment),
+    events,
+    createdAt: graph.updatedAt,
+    withdrawnAt: null,
+  };
+
+  const downgrades = [];
+  for (const claim of graph.events.filter((event) => event.kind === "claim")) {
+    if (narrowed.has(claim.nodeId)) continue;
+    const before = claimSupport(graph, claim.nodeId) ?? "unverified";
+    const after = claimSupport(projection, claim.nodeId) ?? "unverified";
+    if (before !== after) {
+      downgrades.push({ claimId: claim.nodeId, before, after });
+    }
+  }
+
+  const vetoes: SealVetoCode[] = [];
+  if (graphHasUnpurgedNeverPersist(graph)) vetoes.push("NEVER_PERSIST_UNPURGED");
+
+  const centralUnsupported = projection.events.some((event) => {
+    if (event.kind !== "claim" || !event.central) return false;
+    const support = claimSupport(projection, event.nodeId);
+    return support === "unverified" || support === "contradicted";
+  });
+  if (centralUnsupported) vetoes.push("CENTRAL_CLAIM_UNSUPPORTED");
+  if (requestedEffect !== "disabled") vetoes.push("PROJECTION_NOT_EFFECT_DISABLED");
+  if (!privateChainComplete(graph, options.privateChainInspectable)) {
+    vetoes.push("PRIVATE_CHAIN_INCOMPLETE");
+  }
+  if (options.legalOrThirdPartyConstraint) vetoes.push("LEGAL_OR_THIRD_PARTY_CONSTRAINT");
+
+  return {
+    report: {
+      disclosures,
+      downgrades,
+      restorableNodeIds,
+      provenanceMode,
+      effectCapability: "disabled",
+      presentableClaim: "recorded-playback",
+      vetoes,
+    },
+    projection,
+  };
+}
+
+/** Operator consent over a withhold/downgrade report. AI cannot Graduate. */
+export function graduate(graph: PrivateEvidenceGraph, input: GraduateInput): GraduateResult {
+  if (input.initiator !== "operator") {
+    return { ok: false, code: "OPERATOR_CONSENT_REQUIRED" };
+  }
+  if (input.abort) {
+    return { ok: false, code: "GRADUATION_ABORTED" };
+  }
+
+  const preview = previewGraduation(graph, input);
+  for (const nodeId of input.restoreNodeIds ?? []) {
+    if (preview.report.restorableNodeIds.includes(nodeId)) continue;
+    const event = eventById(graph, nodeId);
+    if (!event || eventCarriesNeverPersist(event)) {
+      return { ok: false, code: "NEVER_PERSIST_UNRESTORABLE", report: preview.report };
+    }
+  }
+
+  if (preview.report.vetoes.length > 0) {
+    return {
+      ok: false,
+      code: preview.report.vetoes[0],
+      vetoes: preview.report.vetoes,
+      report: preview.report,
+    };
+  }
+
+  const withdrawn = (input.previousProjections ?? []).map((item) => ({
+    ...item,
+    identity: { ...item.identity, consentState: "sealed" as const },
+    withdrawnAt: input.at,
+  }));
+
+  return {
+    ok: true,
+    projection: { ...preview.projection, createdAt: input.at },
+    withdrawn,
+    report: preview.report,
+  };
+}

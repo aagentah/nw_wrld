@@ -1,5 +1,6 @@
 import type {
   ApplyEventResult,
+  GraduateResult,
   ObservatoryRefusalCode,
   ObservatoryState,
   StartCaptureResult,
@@ -30,6 +31,7 @@ declare global {
             runTestEmitter?: (payload: unknown) => Promise<ObservatoryBridgeResult>;
             declareOutcome?: (payload: unknown) => Promise<ApplyEventResult>;
             endRun?: (payload: unknown) => Promise<ApplyEventResult>;
+            graduate?: (payload: unknown) => Promise<GraduateResult>;
             onState?: (handler: (state: ObservatoryState) => void) => void | (() => void);
           };
           messaging?: {

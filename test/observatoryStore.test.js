@@ -203,7 +203,6 @@ test("ticket-13 graphs without provenance or evidenceKind still load", () => {
   }
 });
 
-
 test("valid graph loads never rewrite disk and repeated loading is identical", () => {
   const rootDir = createStoreRoot();
   try {
@@ -246,6 +245,97 @@ test("scripted source-run emission records run_start through artifact plus one w
     const restoredStore = new ObservatoryStore(rootDir);
     assert.deepEqual(restoredStore.loadAll(), { loaded: 1, skipped: 0 });
     assert.equal(restoredStore.getState().runs[0].events.length, 15);
+  } finally {
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  }
+});
+
+test("graduation persists an immutable projection without binding private graphs", () => {
+  const rootDir = createStoreRoot();
+  try {
+    const store = new ObservatoryStore(rootDir);
+    const sourceRunId = startOperatorCapture(store);
+    startSourceRun(store, sourceRunId);
+    const artifact = store.recordEvent(sourceRunId, {
+      kind: "artifact",
+      actor: "source",
+      summary: "Passing reproduction",
+      payload: { passing: true },
+      at: "2026-08-26T00:00:02.000Z",
+    });
+    assert.equal(artifact.ok, true);
+    const claim = store.recordEvent(sourceRunId, {
+      kind: "claim",
+      actor: "operator",
+      summary: "Repair holds",
+      central: true,
+      supports: [artifact.event.nodeId],
+      at: "2026-08-26T00:00:03.000Z",
+    });
+    assert.equal(claim.ok, true);
+    assert.equal(
+      store.recordEvent(sourceRunId, {
+        kind: "outcome",
+        actor: "operator",
+        summary: "Repaired",
+        at: "2026-08-26T00:00:04.000Z",
+      }).ok,
+      true
+    );
+    assert.equal(
+      store.recordEvent(sourceRunId, {
+        kind: "run_end",
+        actor: "source",
+        summary: "Instrumented source run ended",
+        at: "2026-08-26T00:00:05.000Z",
+      }).ok,
+      true
+    );
+
+    assert.deepEqual(store.getState().projections, []);
+    assert.equal(fs.existsSync(path.join(rootDir, "projections")), false);
+
+    const first = store.graduate(sourceRunId, {
+      initiator: "operator",
+      at: "2026-08-26T00:00:06.000Z",
+    });
+    assert.equal(first.ok, true);
+    assert.equal(first.projection.identity.sourceRunId, sourceRunId);
+    assert.equal(first.projection.identity.effectCapability, "disabled");
+    assert.equal(first.projection.identity.presentableClaim, "recorded-playback");
+    const projectionPath = path.join(
+      rootDir,
+      "projections",
+      `${first.projection.identity.projectionId}.json`
+    );
+    assert.equal(fs.existsSync(projectionPath), true);
+    assert.equal(store.getState().runs[0].identity.consentState, "private");
+    assert.equal(store.getState().projections.length, 1);
+
+    const restoredStore = new ObservatoryStore(rootDir);
+    assert.deepEqual(restoredStore.loadAll(), { loaded: 1, skipped: 0 });
+    assert.equal(restoredStore.getState().projections.length, 1);
+    assert.equal(
+      restoredStore.getState().projections[0].identity.projectionId,
+      first.projection.identity.projectionId
+    );
+
+    const second = restoredStore.graduate(sourceRunId, {
+      initiator: "operator",
+      at: "2026-08-26T00:00:07.000Z",
+      narrowedClaimIds: [claim.event.nodeId],
+    });
+    assert.equal(second.ok, true);
+    assert.equal(second.projection.identity.projectionVersion, 2);
+    assert.equal(second.withdrawn[0].identity.projectionId, first.projection.identity.projectionId);
+    assert.equal(restoredStore.getState().projections.filter((item) => item.withdrawnAt).length, 1);
+
+    const refusedAi = store.graduate(sourceRunId, {
+      initiator: "ai:implementer",
+      at: "2026-08-26T00:00:08.000Z",
+    });
+    assert.equal(refusedAi.ok, false);
+    assert.equal(refusedAi.code, "OPERATOR_CONSENT_REQUIRED");
   } finally {
     fs.rmSync(rootDir, { recursive: true, force: true });
   }

@@ -15,6 +15,10 @@ function mountAtlas(): void {
     lastPulseSeqByRun: new Map(),
     emitterInFlight: false,
     statusLine: "Loading private Route Atlas…",
+    preview: null,
+    restoreNodeIds: [],
+    narrowedClaimIds: [],
+    legalOrThirdPartyConstraint: false,
   };
 
   renderAtlas(container, bridge, localState);
