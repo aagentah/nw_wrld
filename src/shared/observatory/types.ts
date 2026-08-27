@@ -7,6 +7,32 @@
 
 export const OBSERVATORY_CONTRACT_VERSION = 1;
 
+export const PROGRAM_SLOT_ORDER = [
+  "decision-ready-planning",
+  "proven-repair",
+  "regression-safe-delivery",
+  "controlled-service-change",
+] as const;
+
+export type OutcomeClass = (typeof PROGRAM_SLOT_ORDER)[number];
+
+export type SourceRunOrigin = "observatory-instrumented" | "demo" | "uninstrumented-reconstruction";
+
+export type SlotOccupancy = "empty" | "presentable-hole" | "filled" | "withdrawn";
+
+export type ProgramSlotOccupant = {
+  sourceRunId: string;
+  exhibitId: string;
+  projectionId: string | null;
+  projectionVersion: number | null;
+};
+
+export type ProgramSlot = {
+  outcomeClass: OutcomeClass;
+  occupancy: SlotOccupancy;
+  occupant: ProgramSlotOccupant | null;
+};
+
 export type NeverPersistClass = "secret" | "token" | "credential" | "key";
 
 export type PrivateOnlyClass =
@@ -45,7 +71,16 @@ export type GraduationRefusalCode =
   | "GRADUATION_ABORTED"
   | "NOT_INSTRUMENTED"
   | "INVALID_INPUT"
+  | "SEALED"
   | SealVetoCode;
+
+export type OccupancyRefusalCode =
+  | "OPERATOR_CONSENT_REQUIRED"
+  | "NOT_INSTRUMENTED"
+  | "NOT_GRADUATED"
+  | "ALREADY_SEALED"
+  | "ALREADY_GRADUATED"
+  | "INVALID_INPUT";
 
 export type ProvenanceMode =
   | "authentic live"
@@ -248,6 +283,8 @@ export type PrivateEvidenceGraph = {
     consentState: "private" | "presentable" | "sealed";
     provenanceMode: ProvenanceMode;
     effectCapability: EffectCapability;
+    outcomeClass: OutcomeClass | null;
+    origin: SourceRunOrigin;
   };
   destination: string;
   environment: DeclaredEnvironment | null;
@@ -273,6 +310,8 @@ export type StartCaptureInput = {
   initiator: string;
   destination: string;
   at: string;
+  outcomeClass?: OutcomeClass | null;
+  origin?: SourceRunOrigin;
 };
 
 export type StartCaptureResult =
@@ -334,11 +373,14 @@ export type PresentableProjection = {
     provenanceMode: ProvenanceMode;
     effectCapability: "disabled";
     presentableClaim: "recorded-playback";
+    outcomeClass: OutcomeClass | null;
+    origin: SourceRunOrigin;
   };
   destination: string;
   environment: DeclaredEnvironment | null;
   events: ObservatoryEvent[];
   createdAt: string;
+  sourceCreatedAt: string;
   withdrawnAt: string | null;
 };
 

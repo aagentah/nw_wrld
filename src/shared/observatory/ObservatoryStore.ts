@@ -6,12 +6,20 @@ import {
   parseObservatoryGraphFile,
   parseObservatoryProjectionFile,
 } from "../validation/observatoryGraphValidation";
-import { applyEvent, graduate as graduateGraph, startCapture } from "./contract";
+import {
+  applyEvent,
+  graduate as graduateGraph,
+  revoke as revokeProjections,
+  seal as sealGraph,
+  startCapture,
+  withOrigin,
+} from "./contract";
 import { OBSERVATORY_CONTRACT_VERSION } from "./types";
 import type {
   ApplyEventResult,
   GraduateInput,
   GraduateResult,
+  OccupancyRefusalCode,
   ObservatoryEventInput,
   ObservatoryState,
   PresentableProjection,
@@ -166,8 +174,7 @@ export class ObservatoryStore {
     if (!graph) return { ok: false, code: "NOT_INSTRUMENTED" };
 
     const previousProjections = [...this.projectionsById.values()].filter(
-      (projection) =>
-        projection.identity.sourceRunId === sourceRunId && projection.withdrawnAt === null
+      (projection) => projection.identity.sourceRunId === sourceRunId
     );
     const result = graduateGraph(graph, { ...input, previousProjections });
     if (!result.ok) return result;
@@ -181,6 +188,65 @@ export class ObservatoryStore {
     this.persistProjection(result.projection);
     this.notify();
     return result;
+  }
+
+  seal(
+    sourceRunId: string,
+    input: { initiator: string; at: string }
+  ): { ok: true; graph: PrivateEvidenceGraph } | { ok: false; code: OccupancyRefusalCode } {
+    const graph = this.graphsBySourceRunId.get(sourceRunId);
+    if (!graph) return { ok: false, code: "NOT_INSTRUMENTED" };
+    const previousProjections = [...this.projectionsById.values()].filter(
+      (projection) => projection.identity.sourceRunId === sourceRunId
+    );
+    const result = sealGraph(graph, { ...input, previousProjections });
+    if (!result.ok) return result;
+    this.persist(result.graph);
+    this.graphsBySourceRunId.set(sourceRunId, result.graph);
+    this.notify();
+    return result;
+  }
+
+  markDemo(
+    sourceRunId: string
+  ): { ok: true; graph: PrivateEvidenceGraph } | { ok: false; code: OccupancyRefusalCode } {
+    const graph = this.graphsBySourceRunId.get(sourceRunId);
+    if (!graph) return { ok: false, code: "NOT_INSTRUMENTED" };
+    const next = withOrigin(graph, "demo");
+    this.persist(next);
+    this.graphsBySourceRunId.set(sourceRunId, next);
+    this.notify();
+    return { ok: true, graph: next };
+  }
+
+  revoke(
+    sourceRunId: string,
+    input: { initiator: string; at: string }
+  ): { ok: true; withdrawn: PresentableProjection[] } | { ok: false; code: OccupancyRefusalCode } {
+    const live = [...this.projectionsById.values()].filter(
+      (projection) =>
+        projection.identity.sourceRunId === sourceRunId && projection.withdrawnAt === null
+    );
+    const result = revokeProjections(live, input);
+    if (!result.ok) return result;
+    for (const withdrawn of result.withdrawn) {
+      this.projectionsById.set(withdrawn.identity.projectionId, withdrawn);
+      this.persistProjection(withdrawn);
+    }
+    this.notify();
+    return result;
+  }
+
+  deletePrivateGraph(
+    sourceRunId: string
+  ): { ok: true } | { ok: false; code: OccupancyRefusalCode } {
+    const graph = this.graphsBySourceRunId.get(sourceRunId);
+    if (!graph) return { ok: false, code: "NOT_INSTRUMENTED" };
+    const filePath = path.join(this.graphsDir, `${sourceRunId}.json`);
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    this.graphsBySourceRunId.delete(sourceRunId);
+    this.notify();
+    return { ok: true };
   }
 
   subscribe(listener: ObservatoryStateListener): () => void {

@@ -3,13 +3,17 @@ import {
   exhibitOverview,
   inspectNode,
   previewGraduation,
+  programSlots,
 } from "../shared/observatory/contract";
 import type {
   GraduationPreview,
   InspectedNode,
   ObservatoryEvent,
   ObservatoryState,
+  OutcomeClass,
   PrivateEvidenceGraph,
+  ProgramSlot,
+  SlotOccupancy,
 } from "../shared/observatory/types";
 
 export type ObservatoryBridge = NonNullable<
@@ -27,6 +31,20 @@ export type AtlasLocalState = {
   restoreNodeIds: string[];
   narrowedClaimIds: string[];
   legalOrThirdPartyConstraint: boolean;
+};
+
+const SLOT_TITLES: Record<OutcomeClass, string> = {
+  "decision-ready-planning": "decision-ready planning",
+  "proven-repair": "proven repair",
+  "regression-safe-delivery": "regression-safe delivery",
+  "controlled-service-change": "controlled service change",
+};
+
+const OCCUPANCY_LABELS: Record<SlotOccupancy, string> = {
+  empty: "empty",
+  "presentable-hole": "presentable hole",
+  filled: "filled",
+  withdrawn: "withdrawn",
 };
 
 export function renderAtlas(
@@ -139,6 +157,9 @@ function buildBody(
   const main = document.createElement("main");
   main.className = "atlas-main";
   main.append(buildControls(container, bridge, localState, selectedRun));
+  if (localState.state) {
+    main.prepend(buildProgram(localState.state));
+  }
 
   if (localState.state && localState.state.runs.length > 1) {
     main.append(buildRunSwitcher(container, bridge, localState, localState.state.runs));
@@ -168,23 +189,39 @@ function buildControls(
   const controls = document.createElement("section");
   controls.id = "controls";
 
+  const destinationInput = document.createElement("input");
+  destinationInput.id = "destination-input";
+  destinationInput.type = "text";
+  destinationInput.placeholder = "Destination — human goal source run";
+
+  const classSelect = document.createElement("select");
+  classSelect.id = "outcome-class-input";
+  classSelect.dataset.testid = "outcome-class";
+  const extraOption = document.createElement("option");
+  extraOption.value = "";
+  extraOption.textContent = "extra private run";
+  classSelect.append(extraOption);
+  for (const [outcomeClass, title] of Object.entries(SLOT_TITLES) as Array<
+    [OutcomeClass, string]
+  >) {
+    const option = document.createElement("option");
+    option.value = outcomeClass;
+    option.textContent = title;
+    classSelect.append(option);
+  }
+  const optIn = document.createElement("button");
+  optIn.type = "button";
+  optIn.className = "action-button primary";
+  optIn.dataset.testid = "opt-in";
+  optIn.disabled = bridge?.startCapture === undefined;
+  optIn.textContent = "OPT IN — START CAPTURE";
+  optIn.addEventListener("click", () => {
+    const outcomeClass = classSelect.value === "" ? null : (classSelect.value as OutcomeClass);
+    void startCapture(container, bridge, localState, destinationInput.value, outcomeClass);
+  });
+  controls.append(destinationInput, classSelect, optIn);
+
   if (selectedRun === null) {
-    const destinationInput = document.createElement("input");
-    destinationInput.id = "destination-input";
-    destinationInput.type = "text";
-    destinationInput.placeholder = "Destination — human goal source run";
-
-    const optIn = document.createElement("button");
-    optIn.type = "button";
-    optIn.className = "action-button primary";
-    optIn.dataset.testid = "opt-in";
-    optIn.disabled = bridge?.startCapture === undefined;
-    optIn.textContent = "OPT IN — START CAPTURE";
-    optIn.addEventListener("click", () => {
-      void startCapture(container, bridge, localState, destinationInput.value);
-    });
-
-    controls.append(destinationInput, optIn);
     return controls;
   }
 
@@ -201,6 +238,7 @@ function buildControls(
       openGraduationPreview(container, bridge, localState, selectedRun);
     });
     controls.append(endedNote, preview);
+    appendOccupancyActions(controls, container, bridge, localState, selectedRun);
     return controls;
   }
 
@@ -240,6 +278,7 @@ function buildControls(
   });
 
   controls.append(emitter, outcomeInput, declareOutcome, endRun);
+  appendOccupancyActions(controls, container, bridge, localState, selectedRun);
   return controls;
 }
 
@@ -587,11 +626,181 @@ function buildStatusLine(statusLine: string): HTMLElement {
   return status;
 }
 
+function buildProgram(state: ObservatoryState): HTMLElement {
+  const program = document.createElement("section");
+  program.id = "program";
+  program.dataset.testid = "program";
+  program.setAttribute("aria-label", "Showcase program");
+
+  for (const slot of programSlots(state)) {
+    program.append(buildProgramSlot(slot));
+  }
+  return program;
+}
+
+function buildProgramSlot(slot: ProgramSlot): HTMLElement {
+  const bay = document.createElement("article");
+  bay.className = "program-slot";
+  bay.dataset.testid = `program-slot-${slot.outcomeClass}`;
+  bay.dataset.occupancy = slot.occupancy;
+
+  const title = document.createElement("div");
+  title.className = "program-slot-title";
+  title.textContent = SLOT_TITLES[slot.outcomeClass];
+
+  const occupancy = document.createElement("div");
+  occupancy.className = "program-slot-occupancy";
+  occupancy.dataset.testid = `occupancy-${slot.outcomeClass}`;
+  occupancy.textContent = OCCUPANCY_LABELS[slot.occupancy];
+
+  const occupant = document.createElement("div");
+  occupant.className = "program-slot-occupant muted";
+  occupant.textContent = slot.occupant
+    ? `${shortRunId(slot.occupant.sourceRunId)}${
+        slot.occupant.projectionVersion ? ` · v${slot.occupant.projectionVersion}` : ""
+      }`
+    : "available";
+
+  bay.append(title, occupancy, occupant);
+  return bay;
+}
+
+function slotForRun(state: ObservatoryState | null, sourceRunId: string): ProgramSlot | undefined {
+  if (!state) return undefined;
+  return programSlots(state).find((slot) => slot.occupant?.sourceRunId === sourceRunId);
+}
+
+function appendOccupancyActions(
+  controls: HTMLElement,
+  container: HTMLElement,
+  bridge: ObservatoryBridge | undefined,
+  localState: AtlasLocalState,
+  selectedRun: PrivateEvidenceGraph
+): void {
+  const slot = slotForRun(localState.state, selectedRun.identity.sourceRunId);
+  if (slot?.occupancy === "presentable-hole") {
+    const sealButton = document.createElement("button");
+    sealButton.type = "button";
+    sealButton.className = "action-button";
+    sealButton.dataset.testid = "seal-run";
+    sealButton.disabled = bridge?.seal === undefined;
+    sealButton.textContent = "SEAL";
+    sealButton.addEventListener("click", () => {
+      void sealSelectedRun(container, bridge, localState, selectedRun);
+    });
+    controls.append(sealButton);
+  }
+  if (slot?.occupancy === "filled") {
+    const revokeButton = document.createElement("button");
+    revokeButton.type = "button";
+    revokeButton.className = "action-button";
+    revokeButton.dataset.testid = "revoke-run";
+    revokeButton.disabled = bridge?.revoke === undefined;
+    revokeButton.textContent = "REVOKE";
+    revokeButton.addEventListener("click", () => {
+      void revokeSelectedRun(container, bridge, localState, selectedRun);
+    });
+    controls.append(revokeButton);
+  }
+
+  const deleteButton = document.createElement("button");
+  deleteButton.type = "button";
+  deleteButton.className = "action-button end";
+  deleteButton.dataset.testid = "delete-private-graph";
+  deleteButton.disabled = bridge?.deletePrivateGraph === undefined;
+  deleteButton.textContent = "DELETE PRIVATE GRAPH";
+  deleteButton.addEventListener("click", () => {
+    void deleteSelectedPrivateGraph(container, bridge, localState, selectedRun);
+  });
+  controls.append(deleteButton);
+}
+
+async function sealSelectedRun(
+  container: HTMLElement,
+  bridge: ObservatoryBridge | undefined,
+  localState: AtlasLocalState,
+  selectedRun: PrivateEvidenceGraph
+): Promise<void> {
+  if (bridge?.seal === undefined) {
+    localState.statusLine = "refused: OBSERVATORY_BRIDGE_UNAVAILABLE";
+    renderAtlas(container, bridge, localState);
+    return;
+  }
+  try {
+    const result = await bridge.seal({ sourceRunId: selectedRun.identity.sourceRunId });
+    if (result.ok) {
+      localState.statusLine = "Sealed — slot empty and available";
+      await refreshState(bridge, localState);
+    } else {
+      localState.statusLine = `refused: ${result.code}`;
+    }
+  } catch (error: unknown) {
+    localState.statusLine = formatActionError(error);
+  }
+  renderAtlas(container, bridge, localState);
+}
+
+async function revokeSelectedRun(
+  container: HTMLElement,
+  bridge: ObservatoryBridge | undefined,
+  localState: AtlasLocalState,
+  selectedRun: PrivateEvidenceGraph
+): Promise<void> {
+  if (bridge?.revoke === undefined) {
+    localState.statusLine = "refused: OBSERVATORY_BRIDGE_UNAVAILABLE";
+    renderAtlas(container, bridge, localState);
+    return;
+  }
+  try {
+    const result = await bridge.revoke({ sourceRunId: selectedRun.identity.sourceRunId });
+    if (result.ok) {
+      localState.statusLine = "Revoked — audience occupancy withdrawn";
+      await refreshState(bridge, localState);
+    } else {
+      localState.statusLine = `refused: ${result.code}`;
+    }
+  } catch (error: unknown) {
+    localState.statusLine = formatActionError(error);
+  }
+  renderAtlas(container, bridge, localState);
+}
+
+async function deleteSelectedPrivateGraph(
+  container: HTMLElement,
+  bridge: ObservatoryBridge | undefined,
+  localState: AtlasLocalState,
+  selectedRun: PrivateEvidenceGraph
+): Promise<void> {
+  if (bridge?.deletePrivateGraph === undefined) {
+    localState.statusLine = "refused: OBSERVATORY_BRIDGE_UNAVAILABLE";
+    renderAtlas(container, bridge, localState);
+    return;
+  }
+  try {
+    const result = await bridge.deletePrivateGraph({
+      sourceRunId: selectedRun.identity.sourceRunId,
+    });
+    if (result.ok) {
+      localState.selectedRunId = null;
+      localState.selectedNodeId = null;
+      localState.preview = null;
+      localState.statusLine = "Private graph deleted";
+      await refreshState(bridge, localState);
+    } else {
+      localState.statusLine = `refused: ${result.code}`;
+    }
+  } catch (error: unknown) {
+    localState.statusLine = formatActionError(error);
+  }
+  renderAtlas(container, bridge, localState);
+}
+
 async function startCapture(
   container: HTMLElement,
   bridge: ObservatoryBridge | undefined,
   localState: AtlasLocalState,
-  destination: string
+  destination: string,
+  outcomeClass: OutcomeClass | null
 ): Promise<void> {
   if (bridge?.startCapture === undefined) {
     localState.statusLine = "refused: OBSERVATORY_BRIDGE_UNAVAILABLE";
@@ -600,7 +809,11 @@ async function startCapture(
   }
 
   try {
-    const result = await bridge.startCapture({ initiator: "operator", destination });
+    const result = await bridge.startCapture({
+      initiator: "operator",
+      destination,
+      ...(outcomeClass ? { outcomeClass } : {}),
+    });
     if (result.ok) {
       localState.selectedRunId = result.graph.identity.sourceRunId;
       localState.selectedNodeId = null;
@@ -794,9 +1007,7 @@ function buildBreadcrumb(
 
 function recomputePreview(localState: AtlasLocalState, selectedRun: PrivateEvidenceGraph): void {
   const previousProjections = (localState.state?.projections ?? []).filter(
-    (projection) =>
-      projection.identity.sourceRunId === selectedRun.identity.sourceRunId &&
-      projection.withdrawnAt === null
+    (projection) => projection.identity.sourceRunId === selectedRun.identity.sourceRunId
   );
   localState.preview = previewGraduation(selectedRun, {
     restoreNodeIds: localState.restoreNodeIds,

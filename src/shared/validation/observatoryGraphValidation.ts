@@ -14,14 +14,43 @@ import {
   type ObservatoryEventKind,
   type PresentableProjection,
   type PrivateEvidenceGraph,
+  type OutcomeClass,
   type ProvenanceMode,
   type RelianceLimit,
   type RelianceLimitKind,
+  type SourceRunOrigin,
   type WithheldOccurrence,
 } from "../observatory/types";
 type PlainObject = Record<string, unknown>;
 
 const ID_PATTERN = /^[a-z0-9_:-]{8,80}$/;
+const OUTCOME_CLASSES: Record<OutcomeClass, true> = {
+  "decision-ready-planning": true,
+  "proven-repair": true,
+  "regression-safe-delivery": true,
+  "controlled-service-change": true,
+};
+const ORIGINS: Record<SourceRunOrigin, true> = {
+  "observatory-instrumented": true,
+  demo: true,
+  "uninstrumented-reconstruction": true,
+};
+
+function parseOutcomeClass(value: unknown): OutcomeClass | null | undefined {
+  if (value === undefined || value === null) return null;
+  if (typeof value === "string" && OUTCOME_CLASSES[value as OutcomeClass]) {
+    return value as OutcomeClass;
+  }
+  return undefined;
+}
+
+function parseOrigin(value: unknown): SourceRunOrigin | null {
+  if (value === undefined) return "observatory-instrumented";
+  if (typeof value === "string" && ORIGINS[value as SourceRunOrigin]) {
+    return value as SourceRunOrigin;
+  }
+  return null;
+}
 const EVENT_KINDS: Record<ObservatoryEventKind, true> = {
   run_start: true,
   run_end: true,
@@ -178,19 +207,24 @@ function parseIdentity(value: unknown): PrivateEvidenceGraph["identity"] | null 
     !ID_PATTERN.test(exhibitId) ||
     sourceRunId === exhibitId ||
     value.contractVersion !== OBSERVATORY_CONTRACT_VERSION ||
-    value.consentState !== "private" ||
+    (value.consentState !== "private" && value.consentState !== "sealed") ||
     !provenanceMode ||
     !effectCapability
   ) {
     return null;
   }
+  const outcomeClass = parseOutcomeClass(value.outcomeClass);
+  const origin = parseOrigin(value.origin);
+  if (outcomeClass === undefined || !origin) return null;
   return {
     sourceRunId,
     exhibitId,
     contractVersion: OBSERVATORY_CONTRACT_VERSION,
-    consentState: "private",
+    consentState: value.consentState,
     provenanceMode,
     effectCapability,
+    outcomeClass,
+    origin,
   };
 }
 
@@ -523,6 +557,9 @@ function parseProjectionIdentity(value: unknown): PresentableProjection["identit
   ) {
     return null;
   }
+  const outcomeClass = parseOutcomeClass(value.outcomeClass);
+  const origin = parseOrigin(value.origin);
+  if (outcomeClass === undefined || !origin) return null;
   return {
     sourceRunId,
     exhibitId,
@@ -533,6 +570,8 @@ function parseProjectionIdentity(value: unknown): PresentableProjection["identit
     provenanceMode,
     effectCapability: "disabled",
     presentableClaim: "recorded-playback",
+    outcomeClass,
+    origin,
   };
 }
 
@@ -546,6 +585,8 @@ export function parseObservatoryProjectionFile(value: unknown): PresentableProje
   const environment = parseEnvironment(value.environment);
   const events = parseEvents(value.events);
   const createdAt = asNonEmptyString(value.createdAt);
+  const sourceCreatedAt =
+    value.sourceCreatedAt === undefined ? createdAt : asNonEmptyString(value.sourceCreatedAt);
   const withdrawnAt =
     value.withdrawnAt === null ? null : (asNonEmptyString(value.withdrawnAt) ?? undefined);
   if (
@@ -554,6 +595,7 @@ export function parseObservatoryProjectionFile(value: unknown): PresentableProje
     environment === undefined ||
     !events ||
     !createdAt ||
+    !sourceCreatedAt ||
     withdrawnAt === undefined
   ) {
     return null;
@@ -567,5 +609,5 @@ export function parseObservatoryProjectionFile(value: unknown): PresentableProje
       return null;
     }
   }
-  return { identity, destination, environment, events, createdAt, withdrawnAt };
+  return { identity, destination, environment, events, sourceCreatedAt, createdAt, withdrawnAt };
 }

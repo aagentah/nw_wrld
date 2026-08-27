@@ -9,6 +9,11 @@ import { state } from "../state";
 type StartCapturePayload = {
   initiator: string;
   destination: string;
+  outcomeClass?:
+    | "decision-ready-planning"
+    | "proven-repair"
+    | "regression-safe-delivery"
+    | "controlled-service-change";
 };
 
 type SourceRunPayload = {
@@ -37,13 +42,32 @@ const isAtlasWindowSender = (event: IpcMainInvokeEvent): boolean =>
   state.observatoryWindowWebContentsId !== null &&
   event.sender.id === state.observatoryWindowWebContentsId;
 
+const OUTCOME_CLASSES = {
+  "decision-ready-planning": true,
+  "proven-repair": true,
+  "regression-safe-delivery": true,
+  "controlled-service-change": true,
+} as const;
+
 const normalizeStartCapturePayload = (value: unknown): StartCapturePayload | null => {
   if (!isPlainObject(value) || typeof value.initiator !== "string") return null;
   if (value.destination !== undefined && typeof value.destination !== "string") return null;
+  let outcomeClass: StartCapturePayload["outcomeClass"];
+  if (
+    value.outcomeClass !== undefined &&
+    value.outcomeClass !== null &&
+    value.outcomeClass !== ""
+  ) {
+    if (typeof value.outcomeClass !== "string" || !(value.outcomeClass in OUTCOME_CLASSES)) {
+      return null;
+    }
+    outcomeClass = value.outcomeClass as StartCapturePayload["outcomeClass"];
+  }
 
   return {
     initiator: value.initiator,
     destination: typeof value.destination === "string" ? value.destination.trim() : "",
+    ...(outcomeClass ? { outcomeClass } : {}),
   };
 };
 
@@ -144,6 +168,8 @@ export function registerObservatoryBridge(): void {
     if (run.environment?.endedAt) {
       return { ok: false, code: "RUN_ENDED" } satisfies EmitterStartResult;
     }
+    const marked = store.markDemo(input.sourceRunId);
+    if (!marked.ok) return { ok: false, code: "NOT_INSTRUMENTED" } satisfies EmitterStartResult;
 
     await emitScriptedSourceRun((eventInput) => store.recordEvent(input.sourceRunId, eventInput), {
       delayMs: 0,
@@ -197,5 +223,38 @@ export function registerObservatoryBridge(): void {
       initiator: "operator",
       at: new Date().toISOString(),
     });
+  });
+
+  ipcMain.handle("bridge:observatory:seal", async (event, payload: unknown) => {
+    if (!isAtlasWindowSender(event)) {
+      return { ok: false, code: "OPERATOR_CONSENT_REQUIRED" };
+    }
+    const input = normalizeSourceRunPayload(payload);
+    if (!input) return { ok: false, code: "INVALID_INPUT" };
+    return ensureObservatoryStore().seal(input.sourceRunId, {
+      initiator: "operator",
+      at: new Date().toISOString(),
+    });
+  });
+
+  ipcMain.handle("bridge:observatory:revoke", async (event, payload: unknown) => {
+    if (!isAtlasWindowSender(event)) {
+      return { ok: false, code: "OPERATOR_CONSENT_REQUIRED" };
+    }
+    const input = normalizeSourceRunPayload(payload);
+    if (!input) return { ok: false, code: "INVALID_INPUT" };
+    return ensureObservatoryStore().revoke(input.sourceRunId, {
+      initiator: "operator",
+      at: new Date().toISOString(),
+    });
+  });
+
+  ipcMain.handle("bridge:observatory:deletePrivateGraph", async (event, payload: unknown) => {
+    if (!isAtlasWindowSender(event)) {
+      return { ok: false, code: "OPERATOR_CONSENT_REQUIRED" };
+    }
+    const input = normalizeSourceRunPayload(payload);
+    if (!input) return { ok: false, code: "INVALID_INPUT" };
+    return ensureObservatoryStore().deletePrivateGraph(input.sourceRunId);
   });
 }

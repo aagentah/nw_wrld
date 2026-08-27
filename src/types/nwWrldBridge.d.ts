@@ -1,8 +1,11 @@
 import type {
   ApplyEventResult,
   GraduateResult,
+  OccupancyRefusalCode,
   ObservatoryRefusalCode,
   ObservatoryState,
+  PrivateEvidenceGraph,
+  PresentableProjection,
   StartCaptureResult,
 } from "../shared/observatory/types";
 
@@ -32,6 +35,20 @@ declare global {
             declareOutcome?: (payload: unknown) => Promise<ApplyEventResult>;
             endRun?: (payload: unknown) => Promise<ApplyEventResult>;
             graduate?: (payload: unknown) => Promise<GraduateResult>;
+            seal?: (
+              payload: unknown
+            ) => Promise<
+              { ok: true; graph: PrivateEvidenceGraph } | { ok: false; code: OccupancyRefusalCode }
+            >;
+            revoke?: (
+              payload: unknown
+            ) => Promise<
+              | { ok: true; withdrawn: PresentableProjection[] }
+              | { ok: false; code: OccupancyRefusalCode }
+            >;
+            deletePrivateGraph?: (
+              payload: unknown
+            ) => Promise<{ ok: true } | { ok: false; code: OccupancyRefusalCode }>;
             onState?: (handler: (state: ObservatoryState) => void) => void | (() => void);
           };
           messaging?: {

@@ -30,6 +30,7 @@ import type {
   ObservatoryEventInput,
   PresentableProjection,
   PrivateEvidenceGraph,
+  ProgramSlot,
   PrivateOnlyClass,
   ResolvedLink,
   SealVetoCode,
@@ -37,11 +38,12 @@ import type {
   StartCaptureResult,
   WithheldOccurrence,
 } from "./types";
-import { OBSERVATORY_CONTRACT_VERSION } from "./types";
+import { OBSERVATORY_CONTRACT_VERSION, PROGRAM_SLOT_ORDER } from "./types";
+import type { OccupancyRefusalCode, OutcomeClass, SlotOccupancy, SourceRunOrigin } from "./types";
 
 const ID_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789";
 
-export { OBSERVATORY_CONTRACT_VERSION } from "./types";
+export { OBSERVATORY_CONTRACT_VERSION, PROGRAM_SLOT_ORDER } from "./types";
 /** Opaque, stable id fragment. Uniqueness matters; secrecy does not. */
 export function randomId(length = 12): string {
   let out = "";
@@ -239,6 +241,21 @@ export function startCapture(input: StartCaptureInput): StartCaptureResult {
   if (input.initiator !== "operator") {
     return { ok: false, code: "OPERATOR_CONSENT_REQUIRED" };
   }
+  if (
+    input.origin !== undefined &&
+    input.origin !== "observatory-instrumented" &&
+    input.origin !== "demo" &&
+    input.origin !== "uninstrumented-reconstruction"
+  ) {
+    return { ok: false, code: "INVALID_INPUT" };
+  }
+  if (
+    input.outcomeClass !== undefined &&
+    input.outcomeClass !== null &&
+    !(PROGRAM_SLOT_ORDER as readonly string[]).includes(input.outcomeClass)
+  ) {
+    return { ok: false, code: "INVALID_INPUT" };
+  }
   const graph: PrivateEvidenceGraph = {
     identity: {
       sourceRunId: `sr_${randomId(16)}`,
@@ -247,6 +264,8 @@ export function startCapture(input: StartCaptureInput): StartCaptureResult {
       consentState: "private",
       provenanceMode: "authentic live",
       effectCapability: "approval-gated",
+      outcomeClass: input.outcomeClass ?? null,
+      origin: input.origin ?? "observatory-instrumented",
     },
     destination: input.destination,
     environment: null,
@@ -858,11 +877,14 @@ export function previewGraduation(
       provenanceMode,
       effectCapability: "disabled",
       presentableClaim: "recorded-playback",
+      outcomeClass: graph.identity.outcomeClass,
+      origin: graph.identity.origin,
     },
     destination: graph.destination,
     environment: cloneEnvironment(graph.environment),
     events,
     createdAt: graph.updatedAt,
+    sourceCreatedAt: graph.createdAt,
     withdrawnAt: null,
   };
 
@@ -913,6 +935,9 @@ export function graduate(graph: PrivateEvidenceGraph, input: GraduateInput): Gra
   if (input.abort) {
     return { ok: false, code: "GRADUATION_ABORTED" };
   }
+  if (graph.identity.consentState === "sealed") {
+    return { ok: false, code: "SEALED" };
+  }
 
   const preview = previewGraduation(graph, input);
   for (const nodeId of input.restoreNodeIds ?? []) {
@@ -932,16 +957,178 @@ export function graduate(graph: PrivateEvidenceGraph, input: GraduateInput): Gra
     };
   }
 
-  const withdrawn = (input.previousProjections ?? []).map((item) => ({
-    ...item,
-    identity: { ...item.identity, consentState: "sealed" as const },
-    withdrawnAt: input.at,
-  }));
+  const withdrawn = (input.previousProjections ?? [])
+    .filter((item) => item.withdrawnAt === null)
+    .map((item) => ({
+      ...item,
+      identity: { ...item.identity, consentState: "sealed" as const },
+      withdrawnAt: input.at,
+    }));
 
   return {
     ok: true,
     projection: { ...preview.projection, createdAt: input.at },
     withdrawn,
     report: preview.report,
+  };
+}
+
+/** Operator Seal of a never-Graduated run. Not an occupant; the slot stays available. */
+export function seal(
+  graph: PrivateEvidenceGraph,
+  input: { initiator: string; at: string; previousProjections?: readonly PresentableProjection[] }
+): { ok: true; graph: PrivateEvidenceGraph } | { ok: false; code: OccupancyRefusalCode } {
+  if (input.initiator !== "operator") {
+    return { ok: false, code: "OPERATOR_CONSENT_REQUIRED" };
+  }
+  if (graph.identity.consentState === "sealed") {
+    return { ok: false, code: "ALREADY_SEALED" };
+  }
+  if ((input.previousProjections ?? []).length > 0) {
+    return { ok: false, code: "ALREADY_GRADUATED" };
+  }
+  return {
+    ok: true,
+    graph: {
+      ...graph,
+      identity: { ...graph.identity, consentState: "sealed" },
+      updatedAt: input.at,
+    },
+  };
+}
+
+/** Purpose-built demos cannot occupy a program slot. */
+export function withOrigin(
+  graph: PrivateEvidenceGraph,
+  origin: SourceRunOrigin
+): PrivateEvidenceGraph {
+  return {
+    ...graph,
+    identity: { ...graph.identity, origin },
+  };
+}
+
+/** Revoke after Graduation: keep the private occupant, withdraw the presentable projection. */
+export function revoke(
+  projections: readonly PresentableProjection[],
+  input: { initiator: string; at: string }
+): { ok: true; withdrawn: PresentableProjection[] } | { ok: false; code: OccupancyRefusalCode } {
+  if (input.initiator !== "operator") {
+    return { ok: false, code: "OPERATOR_CONSENT_REQUIRED" };
+  }
+  const live = projections.filter((projection) => projection.withdrawnAt === null);
+  if (live.length === 0) return { ok: false, code: "NOT_GRADUATED" };
+  return {
+    ok: true,
+    withdrawn: live.map((item) => ({
+      ...item,
+      identity: { ...item.identity, consentState: "sealed" as const },
+      withdrawnAt: input.at,
+    })),
+  };
+}
+
+function isInstrumentOrigin(origin: string | undefined): boolean {
+  return origin === "observatory-instrumented";
+}
+
+function occupancyStart(
+  graph: PrivateEvidenceGraph | undefined,
+  projections: readonly PresentableProjection[]
+): string {
+  if (graph) return graph.createdAt;
+  const first = [...projections].sort((left, right) =>
+    left.sourceCreatedAt.localeCompare(right.sourceCreatedAt)
+  )[0];
+  return first?.sourceCreatedAt ?? "";
+}
+
+/** Four program slots in encounter order, derived from graphs and projections. */
+export function programSlots(input: {
+  runs: readonly PrivateEvidenceGraph[];
+  projections: readonly PresentableProjection[];
+}): ProgramSlot[] {
+  return PROGRAM_SLOT_ORDER.map((outcomeClass) =>
+    slotFor(outcomeClass, input.runs, input.projections)
+  );
+}
+
+function slotFor(
+  outcomeClass: OutcomeClass,
+  runs: readonly PrivateEvidenceGraph[],
+  projections: readonly PresentableProjection[]
+): ProgramSlot {
+  const classProjections = projections.filter(
+    (projection) =>
+      isInstrumentOrigin(projection.identity.origin) &&
+      projection.identity.outcomeClass === outcomeClass
+  );
+  const projectionsByRun = new Map<string, PresentableProjection[]>();
+  for (const projection of classProjections) {
+    const list = projectionsByRun.get(projection.identity.sourceRunId) ?? [];
+    list.push(projection);
+    projectionsByRun.set(projection.identity.sourceRunId, list);
+  }
+
+  const graphById = new Map(runs.map((graph) => [graph.identity.sourceRunId, graph]));
+  const candidateIds = new Set<string>([
+    ...runs
+      .filter(
+        (graph) =>
+          isInstrumentOrigin(graph.identity.origin) &&
+          graph.identity.outcomeClass === outcomeClass &&
+          graph.identity.consentState !== "sealed"
+      )
+      .map((graph) => graph.identity.sourceRunId),
+    ...projectionsByRun.keys(),
+  ]);
+
+  const candidates = [...candidateIds]
+    .map((sourceRunId) => {
+      const graph = graphById.get(sourceRunId);
+      const runProjections = projectionsByRun.get(sourceRunId) ?? [];
+      return {
+        sourceRunId,
+        graph,
+        projections: runProjections,
+        start: occupancyStart(graph, runProjections),
+        exhibitId: graph?.identity.exhibitId ?? runProjections[0]?.identity.exhibitId ?? "",
+      };
+    })
+    .filter((candidate) => {
+      if (
+        candidate.graph?.identity.consentState === "sealed" &&
+        candidate.projections.length === 0
+      ) {
+        return false;
+      }
+      const origin = candidate.graph?.identity.origin ?? candidate.projections[0]?.identity.origin;
+      const cls =
+        candidate.graph?.identity.outcomeClass ?? candidate.projections[0]?.identity.outcomeClass;
+      return isInstrumentOrigin(origin) && cls === outcomeClass;
+    })
+    .sort(
+      (left, right) =>
+        left.start.localeCompare(right.start) || left.sourceRunId.localeCompare(right.sourceRunId)
+    );
+
+  const occupant = candidates[0];
+  if (!occupant) {
+    return { outcomeClass, occupancy: "empty", occupant: null };
+  }
+
+  const live = occupant.projections.filter((projection) => projection.withdrawnAt === null);
+  const occupancy: SlotOccupancy =
+    live.length > 0 ? "filled" : occupant.projections.length > 0 ? "withdrawn" : "presentable-hole";
+  const current = live[0] ?? occupant.projections[0] ?? null;
+  return {
+    outcomeClass,
+    occupancy,
+    occupant: {
+      sourceRunId: occupant.sourceRunId,
+      exhibitId: occupant.exhibitId,
+      projectionId: current?.identity.projectionId ?? null,
+      projectionVersion: current?.identity.projectionVersion ?? null,
+    },
   };
 }

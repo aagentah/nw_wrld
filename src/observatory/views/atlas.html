@@ -46,6 +46,7 @@
       }
 
       #atlas-header,
+      #program,
       #controls,
       #overview,
       #preview,
@@ -109,6 +110,7 @@
       }
 
       #controls,
+      #program,
       #overview,
       #preview,
       #spine,
@@ -124,7 +126,8 @@
         gap: 8px;
       }
 
-      #controls input {
+      #controls input,
+      #controls select {
         min-width: 220px;
         flex: 1 1 260px;
         border: 1px solid #2a3138;
@@ -177,6 +180,54 @@
       .run-switcher button.is-selected {
         border-color: #e8a33d;
         color: #e8a33d;
+      }
+
+      #program {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 8px;
+        padding: 12px;
+      }
+
+      .program-slot {
+        min-height: 92px;
+        padding: 10px;
+        background: #0b0e11;
+      }
+
+      .program-slot[data-occupancy="empty"] {
+        border: 1px dashed #8b949e;
+      }
+
+      .program-slot[data-occupancy="presentable-hole"] {
+        border: 1px solid #3d4650;
+        box-shadow: inset 0 0 0 7px #12161b;
+      }
+
+      .program-slot[data-occupancy="filled"] {
+        border: 1px solid #7bc96f;
+      }
+
+      .program-slot[data-occupancy="withdrawn"] {
+        border: 1px solid #dc6670;
+      }
+
+      .program-slot-title {
+        color: #d5dbe1;
+        font-size: 0.78rem;
+      }
+
+      .program-slot-occupancy {
+        margin-top: 6px;
+        color: #e8a33d;
+        font-size: 0.75rem;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .program-slot-occupant {
+        margin-top: 4px;
+        font-size: 0.72rem;
       }
 
       #spine {

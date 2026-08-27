@@ -13,6 +13,9 @@ const { emitScriptedSourceRun } = require(
 const { OBSERVATORY_CONTRACT_VERSION } = require(
   path.join(__dirname, "..", "dist", "runtime", "shared", "observatory", "types.js")
 );
+const { claimSupport, programSlots } = require(
+  path.join(__dirname, "..", "dist", "runtime", "shared", "observatory", "contract.js")
+);
 
 function createStoreRoot() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "nw-wrld-observatory-"));
@@ -336,6 +339,190 @@ test("graduation persists an immutable projection without binding private graphs
     });
     assert.equal(refusedAi.ok, false);
     assert.equal(refusedAi.code, "OPERATOR_CONSENT_REQUIRED");
+  } finally {
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  }
+});
+
+function graduateReadyRun(store, outcomeClass) {
+  const started = store.startCapture({
+    initiator: "operator",
+    destination: "Prove occupancy persistence",
+    at: "2026-08-27T16:00:00.000Z",
+    outcomeClass,
+  });
+  assert.equal(started.ok, true);
+  const sourceRunId = started.graph.identity.sourceRunId;
+  startSourceRun(store, sourceRunId);
+  const artifact = store.recordEvent(sourceRunId, {
+    kind: "artifact",
+    actor: "source",
+    summary: "Passing reproduction",
+    payload: { passing: true },
+    at: "2026-08-27T16:00:02.000Z",
+  });
+  assert.equal(artifact.ok, true);
+  assert.equal(
+    store.recordEvent(sourceRunId, {
+      kind: "claim",
+      actor: "operator",
+      summary: "Repair holds",
+      central: true,
+      supports: [artifact.event.nodeId],
+      at: "2026-08-27T16:00:03.000Z",
+    }).ok,
+    true
+  );
+  assert.equal(
+    store.recordEvent(sourceRunId, {
+      kind: "outcome",
+      actor: "operator",
+      summary: "Repaired",
+      at: "2026-08-27T16:00:04.000Z",
+    }).ok,
+    true
+  );
+  assert.equal(
+    store.recordEvent(sourceRunId, {
+      kind: "run_end",
+      actor: "source",
+      summary: "Instrumented source run ended",
+      at: "2026-08-27T16:00:05.000Z",
+    }).ok,
+    true
+  );
+  return sourceRunId;
+}
+
+test("seal, revoke, re-Graduation, and delete persist occupancy", () => {
+  const rootDir = createStoreRoot();
+  try {
+    const store = new ObservatoryStore(rootDir);
+    const holeId = store.startCapture({
+      initiator: "operator",
+      destination: "Plan the next authentic map",
+      at: "2026-08-27T16:00:00.000Z",
+      outcomeClass: "decision-ready-planning",
+    }).graph.identity.sourceRunId;
+
+    const sealedId = store.startCapture({
+      initiator: "operator",
+      destination: "Delivery that will be Sealed",
+      at: "2026-08-27T16:00:01.000Z",
+      outcomeClass: "regression-safe-delivery",
+    }).graph.identity.sourceRunId;
+    assert.equal(
+      store.seal(sealedId, { initiator: "operator", at: "2026-08-27T16:00:02.000Z" }).ok,
+      true
+    );
+
+    const repairId = graduateReadyRun(store, "proven-repair");
+    const graduated = store.graduate(repairId, {
+      initiator: "operator",
+      at: "2026-08-27T16:00:06.000Z",
+    });
+    assert.equal(graduated.ok, true);
+
+    const revoked = store.revoke(repairId, {
+      initiator: "operator",
+      at: "2026-08-27T16:00:07.000Z",
+    });
+    assert.equal(revoked.ok, true);
+
+    const beforeReload = programSlots(store.getState());
+    assert.equal(beforeReload[0].occupancy, "presentable-hole");
+    assert.equal(beforeReload[0].occupant.sourceRunId, holeId);
+    assert.equal(beforeReload[1].occupancy, "withdrawn");
+    assert.equal(beforeReload[1].occupant.sourceRunId, repairId);
+    assert.equal(beforeReload[2].occupancy, "empty");
+
+    const restored = new ObservatoryStore(rootDir);
+    restored.loadAll();
+    const afterReload = programSlots(restored.getState());
+    assert.equal(afterReload[0].occupancy, "presentable-hole");
+    assert.equal(afterReload[1].occupancy, "withdrawn");
+    assert.equal(afterReload[2].occupancy, "empty");
+    assert.equal(
+      restored.getState().runs.find((run) => run.identity.sourceRunId === sealedId).identity
+        .consentState,
+      "sealed"
+    );
+
+    const again = restored.graduate(repairId, {
+      initiator: "operator",
+      at: "2026-08-27T16:00:08.000Z",
+    });
+    assert.equal(again.ok, true);
+    assert.equal(again.projection.identity.projectionVersion, 2);
+    assert.equal(programSlots(restored.getState())[1].occupancy, "filled");
+
+    const serviceId = graduateReadyRun(store, "controlled-service-change");
+    const serviceGrad = store.graduate(serviceId, {
+      initiator: "operator",
+      at: "2026-08-27T16:00:09.000Z",
+    });
+    assert.equal(serviceGrad.ok, true);
+    const claim = serviceGrad.projection.events.find((event) => event.kind === "claim");
+    assert.equal(store.deletePrivateGraph(serviceId).ok, true);
+    assert.equal(fs.existsSync(graphPath(rootDir, serviceId)), false);
+    assert.equal(
+      store.getState().runs.some((run) => run.identity.sourceRunId === serviceId),
+      false
+    );
+    const afterDelete = programSlots(store.getState());
+    assert.equal(afterDelete[3].occupancy, "filled");
+    assert.equal(afterDelete[3].occupant.sourceRunId, serviceId);
+    assert.equal(claimSupport(serviceGrad.projection, claim.nodeId), "supported");
+
+    assert.equal(store.deletePrivateGraph(holeId).ok, true);
+    assert.equal(programSlots(store.getState())[0].occupancy, "empty");
+  } finally {
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  }
+});
+
+test("markDemo vacates a classed occupant so the scripted emitter cannot fill a slot", () => {
+  const rootDir = createStoreRoot();
+  try {
+    const store = new ObservatoryStore(rootDir);
+    const sourceRunId = store.startCapture({
+      initiator: "operator",
+      destination: "Demo capture",
+      at: "2026-08-27T16:00:00.000Z",
+      outcomeClass: "decision-ready-planning",
+    }).graph.identity.sourceRunId;
+    assert.equal(programSlots(store.getState())[0].occupancy, "presentable-hole");
+    assert.equal(store.markDemo(sourceRunId).ok, true);
+    assert.equal(store.getState().runs[0].identity.origin, "demo");
+    assert.equal(programSlots(store.getState())[0].occupancy, "empty");
+  } finally {
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  }
+});
+
+test("invalid sourceCreatedAt on a projection file is skipped at the disk boundary", () => {
+  const rootDir = createStoreRoot();
+  try {
+    const store = new ObservatoryStore(rootDir);
+    const sourceRunId = graduateReadyRun(store, "proven-repair");
+    const graduated = store.graduate(sourceRunId, {
+      initiator: "operator",
+      at: "2026-08-27T16:00:06.000Z",
+    });
+    assert.equal(graduated.ok, true);
+    const projectionPath = path.join(
+      rootDir,
+      "projections",
+      `${graduated.projection.identity.projectionId}.json`
+    );
+    const raw = JSON.parse(fs.readFileSync(projectionPath, "utf8"));
+    raw.sourceCreatedAt = 42;
+    fs.writeFileSync(projectionPath, `${JSON.stringify(raw)}\n`);
+
+    const restored = new ObservatoryStore(rootDir);
+    const load = restored.loadAll();
+    assert.equal(load.skipped >= 1, true);
+    assert.equal(restored.getState().projections.length, 0);
   } finally {
     fs.rmSync(rootDir, { recursive: true, force: true });
   }
