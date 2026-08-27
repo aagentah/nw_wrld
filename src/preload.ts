@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from "electron";
 import type { IpcRendererEvent } from "electron";
+import type { ObservatoryState } from "./shared/observatory/types";
 
 const isTopLevelFrame = () => {
   try {
@@ -24,6 +25,7 @@ const nwWrldAppBridge = {
 };
 
 type IpcHandler = (event: IpcRendererEvent, payload: unknown) => void;
+type ObservatoryStateHandler = (state: ObservatoryState) => void;
 
 const nwWrldBridge = {
   project: {
@@ -81,6 +83,24 @@ const nwWrldBridge = {
     getRepositoryUrl: () => ipcRenderer.sendSync("bridge:app:getRepositoryUrl") as unknown,
     isPackaged: () => ipcRenderer.sendSync("bridge:app:isPackaged") as unknown,
     openProjectorDevTools: () => ipcRenderer.send("bridge:app:openProjectorDevTools"),
+  },
+  observatory: {
+    getState: () => ipcRenderer.invoke("bridge:observatory:getState"),
+    startCapture: (payload: unknown) =>
+      ipcRenderer.invoke("bridge:observatory:startCapture", payload),
+    runTestEmitter: (payload: unknown) =>
+      ipcRenderer.invoke("bridge:observatory:runTestEmitter", payload),
+    declareOutcome: (payload: unknown) =>
+      ipcRenderer.invoke("bridge:observatory:declareOutcome", payload),
+    endRun: (payload: unknown) => ipcRenderer.invoke("bridge:observatory:endRun", payload),
+    onState: (handler: ObservatoryStateHandler) => {
+      if (typeof handler !== "function") return undefined;
+      const wrapped = (_event: IpcRendererEvent, payload: unknown) => {
+        handler(payload as ObservatoryState);
+      };
+      ipcRenderer.on("observatory:state", wrapped);
+      return () => ipcRenderer.removeListener("observatory:state", wrapped);
+    },
   },
   messaging: {
     sendToProjector: (type: unknown, props: unknown = {}) =>

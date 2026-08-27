@@ -18,6 +18,9 @@ export const srcDir = path.resolve(__dirname, "..", "..", "..", "..", "src");
 export const state: {
   projector1Window: unknown | null;
   dashboardWindow: unknown | null;
+  observatoryWindow: unknown | null;
+  observatoryWindowWebContentsId: number | null;
+  observatoryStore: unknown | null;
   inputManager: unknown | null;
   isWorkspaceSwitchInProgress: boolean;
   workspaceWatcher: FSWatcher | null;
@@ -39,6 +42,9 @@ export const state: {
 } = {
   projector1Window: null,
   dashboardWindow: null,
+  observatoryWindow: null,
+  observatoryWindowWebContentsId: null,
+  observatoryStore: null,
   inputManager: null,
   isWorkspaceSwitchInProgress: false,
   workspaceWatcher: null,

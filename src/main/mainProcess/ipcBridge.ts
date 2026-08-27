@@ -3,6 +3,7 @@ import { registerInputBridge } from "./ipcBridge/registerInputBridge";
 import { registerJsonBridge } from "./ipcBridge/registerJsonBridge";
 import { registerLogBridge } from "./ipcBridge/registerLogBridge";
 import { registerOsBridge } from "./ipcBridge/registerOsBridge";
+import { registerObservatoryBridge } from "./ipcBridge/registerObservatoryBridge";
 import { registerProjectBridge } from "./ipcBridge/registerProjectBridge";
 import { registerTestAudioBridge } from "./ipcBridge/registerTestAudioBridge";
 import { registerTestFileBridge } from "./ipcBridge/registerTestFileBridge";
@@ -15,6 +16,7 @@ export function registerIpcBridge(): void {
   registerJsonBridge();
   registerAppBridge();
   registerOsBridge();
+  registerObservatoryBridge();
   registerInputBridge();
   registerTestMidiBridge();
   registerTestAudioBridge();

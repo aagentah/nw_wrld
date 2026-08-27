@@ -11,9 +11,14 @@ export async function launchNwWrld({
   const repoRoot = path.join(__dirname, "..", "..", "..");
   const appPath = path.join(repoRoot, "src");
 
+  const extraArgs = (env?.NW_WRLD_ELECTRON_ARGS || process.env.NW_WRLD_ELECTRON_ARGS || "")
+    .split(",")
+    .map((arg) => arg.trim())
+    .filter(Boolean);
+
   return await electron.launch({
     executablePath: require("electron") as string,
-    args: [appPath],
+    args: [...extraArgs, appPath],
     env: {
       ...process.env,
       NODE_ENV: "test",

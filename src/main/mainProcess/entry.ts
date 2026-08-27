@@ -5,6 +5,7 @@ import { registerIpcBridge } from "./ipcBridge";
 import { registerLifecycle, registerActivate } from "./lifecycle";
 import { registerProtocols } from "./protocols";
 import { registerSandboxIpc } from "./sandbox";
+import { createObservatoryWindow } from "./observatoryWindow";
 import { state } from "./state";
 import { createWindow, registerMessagingIpc } from "./windows";
 import {
@@ -48,5 +49,6 @@ export function start() {
     }
     registerActivate({ createWindow });
     createWindow(testProjectDir);
+    createObservatoryWindow();
   });
 }

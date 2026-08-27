@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Observatory Route Atlas</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+        background: #0b0e11;
+        color: #d5dbe1;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-width: 760px;
+        min-height: 100vh;
+        margin: 0;
+        background: #0b0e11;
+      }
+
+      button,
+      input {
+        font: inherit;
+      }
+
+      button {
+        cursor: pointer;
+      }
+
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
+      }
+
+      #atlas {
+        display: grid;
+        min-height: 100vh;
+        grid-template-rows: auto minmax(0, 1fr) auto auto;
+        gap: 12px;
+        padding: 16px;
+      }
+
+      #atlas-header,
+      #controls,
+      #spine,
+      #chronology,
+      #inspector,
+      #status-line {
+        border: 1px solid #2a3138;
+        background: #12161b;
+      }
+
+      #atlas-header {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 16px;
+        padding: 14px 16px;
+      }
+
+      .atlas-brand {
+        color: #e8a33d;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+      }
+
+      .atlas-destination {
+        margin-top: 6px;
+        color: #d5dbe1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .atlas-badge {
+        color: #8b949e;
+        font-size: 0.8rem;
+        text-align: right;
+      }
+
+      .atlas-body {
+        display: grid;
+        min-height: 0;
+        grid-template-columns: minmax(0, 1fr) 360px;
+        gap: 12px;
+      }
+
+      .atlas-main {
+        display: grid;
+        min-width: 0;
+        align-content: start;
+        gap: 12px;
+      }
+
+      #controls,
+      #spine,
+      #chronology,
+      #inspector {
+        padding: 14px;
+      }
+
+      #controls {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+      }
+
+      #controls input {
+        min-width: 220px;
+        flex: 1 1 260px;
+        border: 1px solid #2a3138;
+        padding: 9px 10px;
+        background: #0b0e11;
+        color: #d5dbe1;
+      }
+
+      .action-button,
+      .run-switcher button,
+      .spine-node,
+      .chrono-cell {
+        border: 1px solid #2a3138;
+        background: #171c22;
+        color: #d5dbe1;
+      }
+
+      .action-button {
+        padding: 9px 12px;
+      }
+
+      .action-button.primary {
+        border-color: #e8a33d;
+        color: #e8a33d;
+      }
+
+      .action-button.outcome {
+        border-color: #7bc96f;
+        color: #7bc96f;
+      }
+
+      .action-button.end {
+        border-color: #8b949e;
+        color: #8b949e;
+      }
+
+      .run-switcher {
+        display: flex;
+        width: 100%;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .run-switcher button {
+        padding: 6px 8px;
+        color: #8b949e;
+        font-size: 0.75rem;
+      }
+
+      .run-switcher button.is-selected {
+        border-color: #e8a33d;
+        color: #e8a33d;
+      }
+
+      #spine {
+        display: flex;
+        min-height: 260px;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .spine-node {
+        display: grid;
+        width: 100%;
+        grid-template-columns: auto minmax(90px, 0.32fr) minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 10px;
+        padding: 10px;
+        text-align: left;
+      }
+
+      .spine-node.is-selected,
+      .chrono-cell.is-selected {
+        border-color: #e8a33d;
+        box-shadow: inset 3px 0 0 #e8a33d;
+      }
+
+      .kind-chip {
+        border: 1px solid currentColor;
+        padding: 3px 5px;
+        font-size: 0.72rem;
+        white-space: nowrap;
+      }
+
+      .kind-run_start,
+      .kind-run_end {
+        color: #8b949e;
+      }
+
+      .kind-move {
+        color: #e8a33d;
+      }
+
+      .kind-tool_attempt,
+      .kind-tool_observed {
+        color: #75a7d8;
+      }
+
+      .kind-approval_request,
+      .kind-approval_resolved {
+        color: #b595dc;
+      }
+
+      .kind-artifact {
+        color: #56b8ad;
+      }
+
+      .kind-outcome {
+        color: #7bc96f;
+      }
+
+      .kind-withheld_at_capture {
+        color: #dc6670;
+      }
+
+      .node-actor,
+      .node-time,
+      .muted {
+        color: #8b949e;
+        font-size: 0.78rem;
+      }
+
+      .node-summary {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .outcome-node {
+        border-color: #7bc96f;
+        background: #132017;
+      }
+
+      .outcome-card {
+        grid-column: 1 / -1;
+        color: #7bc96f;
+        font-weight: 700;
+      }
+
+      .outcome-placeholder {
+        border: 1px dashed #7bc96f;
+        padding: 12px;
+        color: #7bc96f;
+      }
+
+      .outcome-missing {
+        border-color: #dc6670;
+        color: #dc6670;
+      }
+
+      .node-pulse {
+        animation: atlas-node-arrival 720ms ease-out 1;
+      }
+
+      @keyframes atlas-node-arrival {
+        0% {
+          border-color: #e8a33d;
+          box-shadow: 0 0 0 rgba(232, 163, 61, 0.7);
+        }
+        45% {
+          box-shadow: 0 0 16px rgba(232, 163, 61, 0.45);
+        }
+        100% {
+          box-shadow: none;
+        }
+      }
+
+      #inspector {
+        display: flex;
+        min-height: 0;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      #inspector h2,
+      #chronology h2 {
+        margin: 0;
+        color: #e8a33d;
+        font-size: 0.82rem;
+        letter-spacing: 0.08em;
+      }
+
+      .breadcrumb {
+        color: #8b949e;
+        font-size: 0.76rem;
+        line-height: 1.6;
+        overflow-wrap: anywhere;
+      }
+
+      .inspector-node-title {
+        color: #d5dbe1;
+        font-size: 0.86rem;
+      }
+
+      #inspector pre {
+        min-height: 0;
+        margin: 0;
+        overflow: auto;
+        color: #c5d1db;
+        font-size: 0.75rem;
+        line-height: 1.5;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      #chronology {
+        display: grid;
+        gap: 10px;
+      }
+
+      .chrono-strip {
+        display: flex;
+        overflow-x: auto;
+        gap: 8px;
+        padding-bottom: 2px;
+      }
+
+      .chrono-cell {
+        min-width: 132px;
+        padding: 8px;
+        text-align: left;
+      }
+
+      .chrono-seq {
+        color: #e8a33d;
+        font-size: 0.76rem;
+      }
+
+      .chrono-kind {
+        display: block;
+        margin-top: 3px;
+        color: #8b949e;
+        font-size: 0.7rem;
+      }
+
+      .chrono-summary {
+        display: block;
+        max-width: 150px;
+        margin-top: 6px;
+        overflow: hidden;
+        color: #d5dbe1;
+        font-size: 0.73rem;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      #status-line {
+        min-height: 40px;
+        padding: 11px 14px;
+        color: #8b949e;
+        font-size: 0.78rem;
+      }
+
+      @media (max-width: 980px) {
+        body {
+          min-width: 0;
+        }
+
+        #atlas {
+          padding: 10px;
+        }
+
+        .atlas-body {
+          grid-template-columns: 1fr;
+        }
+
+        #inspector {
+          min-height: 220px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main id="atlas" aria-label="Observatory Route Atlas"></main>
+    <script src="../../../dist/observatory.js"></script>
+  </body>
+</html>

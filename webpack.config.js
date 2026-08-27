@@ -9,6 +9,7 @@ module.exports = (env, argv) => {
     entry: {
       dashboard: ["./src/rendererPolyfills.ts", "./src/dashboard/entry.ts"],
       projector: ["./src/rendererPolyfills.ts", "./src/projector/entry.ts"],
+      observatory: ["./src/rendererPolyfills.ts", "./src/observatory/entry.ts"],
       moduleSandbox: "./src/projector/moduleSandboxEntry.ts",
     },
     resolve: {
@@ -48,10 +49,7 @@ module.exports = (env, argv) => {
           use: {
             loader: "babel-loader",
             options: {
-              presets: [
-                "@babel/preset-env",
-                ["@babel/preset-react", { runtime: "automatic" }],
-              ],
+              presets: ["@babel/preset-env", ["@babel/preset-react", { runtime: "automatic" }]],
             },
           },
         },

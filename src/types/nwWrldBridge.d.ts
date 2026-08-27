@@ -1,3 +1,16 @@
+import type {
+  ApplyEventResult,
+  ObservatoryRefusalCode,
+  ObservatoryState,
+  StartCaptureResult,
+} from "../shared/observatory/types";
+
+type ObservatoryBridgeResult = { ok: true } | { ok: false; code: ObservatoryRefusalCode };
+
+type ObservatoryGetStateResult =
+  | { ok: true; state: ObservatoryState }
+  | { ok: false; code: ObservatoryRefusalCode };
+
 export {};
 
 declare global {
@@ -10,6 +23,14 @@ declare global {
             getVersion?: () => string | null;
             openProjectorDevTools?: () => void;
             getRepositoryUrl?: () => string | null;
+          };
+          observatory?: {
+            getState?: () => Promise<ObservatoryGetStateResult>;
+            startCapture?: (payload: unknown) => Promise<StartCaptureResult>;
+            runTestEmitter?: (payload: unknown) => Promise<ObservatoryBridgeResult>;
+            declareOutcome?: (payload: unknown) => Promise<ApplyEventResult>;
+            endRun?: (payload: unknown) => Promise<ApplyEventResult>;
+            onState?: (handler: (state: ObservatoryState) => void) => void | (() => void);
           };
           messaging?: {
             sendToProjector?: (type: string, props?: Record<string, unknown>) => void;
