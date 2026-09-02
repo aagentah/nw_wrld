@@ -161,7 +161,7 @@ class PulsingCircle extends ModuleBase {
     this.canvas = null;
     this.ctx = null;
     this.circleScale = 1;
-    this.color = "#00FF00";
+    this.circleColor = "#00FF00"
     this.init();
   }
 
@@ -189,7 +189,7 @@ class PulsingCircle extends ModuleBase {
     // Draw circle
     ctx.beginPath();
     ctx.arc(width / 2, height / 2, radius, 0, Math.PI * 2);
-    ctx.fillStyle = this.color;
+    ctx.fillStyle = this.circleColor;
     ctx.fill();
   }
 
@@ -223,7 +223,7 @@ class PulsingCircle extends ModuleBase {
   }
 
   color({ color = "#00FF00" }) {
-    this.color = color;
+    this.circleColor = color;
     this.draw();
   }
 
