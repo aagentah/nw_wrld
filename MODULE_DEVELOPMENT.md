@@ -161,7 +161,7 @@ class PulsingCircle extends ModuleBase {
     this.canvas = null;
     this.ctx = null;
     this.circleScale = 1;
-    this.circleColor = "#00FF00"
+    this.circleColor = "#00FF00";
     this.init();
   }
 
