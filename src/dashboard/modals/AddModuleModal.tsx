@@ -49,6 +49,39 @@ type UserData = {
   [key: string]: unknown;
 };
 
+const buildConstructorMethods = (methods: ModuleMethod[]) => {
+  const moduleMethods = Array.isArray(methods) ? methods : [];
+  const constructorMethods = moduleMethods
+    .filter((m) => m.executeOnLoad)
+    .map((m) => ({
+      name: m.name,
+      options: m?.options?.length
+        ? m.options.map((opt) => ({
+            name: opt.name,
+            value: opt.defaultVal,
+          }))
+        : [],
+    }));
+
+  const final = [...constructorMethods];
+  if (!final.some((m) => m.name === "matrix")) {
+    final.unshift({
+      name: "matrix",
+      options: [
+        { name: "matrix", value: { rows: 1, cols: 1, excludedCells: [] } },
+        { name: "border", value: false },
+      ],
+    });
+  }
+  if (!final.some((m) => m.name === "show")) {
+    final.push({
+      name: "show",
+      options: [{ name: "duration", value: 0 }],
+    });
+  }
+  return final;
+};
+
 type AddModuleModalProps = {
   isOpen: boolean;
   onClose: () => void;
@@ -216,37 +249,7 @@ export const AddModuleModal = ({
       });
       t.modules = modulesArray;
 
-      const moduleMethods = Array.isArray(module.methods) ? module.methods : [];
-      const hasMethodData = moduleMethods.length > 0;
-      const constructorMethods = hasMethodData
-        ? moduleMethods
-            .filter((m) => m.executeOnLoad)
-            .map((m) => ({
-              name: m.name,
-              options: m?.options?.length
-                ? m.options.map((opt) => ({
-                    name: opt.name,
-                    value: opt.defaultVal,
-                  }))
-                : [],
-            }))
-        : [];
-
-      if (!constructorMethods.some((m) => m.name === "matrix")) {
-        constructorMethods.unshift({
-          name: "matrix",
-          options: [
-            { name: "matrix", value: { rows: 1, cols: 1, excludedCells: [] } },
-            { name: "border", value: false },
-          ],
-        });
-      }
-      if (!constructorMethods.some((m) => m.name === "show")) {
-        constructorMethods.push({
-          name: "show",
-          options: [{ name: "duration", value: 0 }],
-        });
-      }
+      const constructorMethods = buildConstructorMethods(module.methods);
 
       const modulesData =
         typeof t.modulesData === "object" && t.modulesData
@@ -408,34 +411,7 @@ export const AddModuleModal = ({
     const moduleMethods = Array.isArray(mod.methods) ? mod.methods : [];
     if (moduleMethods.length === 0) return;
 
-    const constructorMethods = moduleMethods
-      .filter((m) => m.executeOnLoad)
-      .map((m) => ({
-        name: m.name,
-        options: m?.options?.length
-          ? m.options.map((opt) => ({
-              name: opt.name,
-              value: opt.defaultVal,
-            }))
-          : null,
-      }));
-
-    const finalConstructorMethods = [...constructorMethods];
-    if (!finalConstructorMethods.some((m) => m.name === "matrix")) {
-      finalConstructorMethods.unshift({
-        name: "matrix",
-        options: [
-          { name: "matrix", value: { rows: 1, cols: 1, excludedCells: [] } },
-          { name: "border", value: false },
-        ],
-      });
-    }
-    if (!finalConstructorMethods.some((m) => m.name === "show")) {
-      finalConstructorMethods.push({
-        name: "show",
-        options: [{ name: "duration", value: 0 }],
-      });
-    }
+    const finalConstructorMethods = buildConstructorMethods(moduleMethods);
 
     sendToProjector("preview-module", {
       moduleName: mod.id || mod.name,
@@ -512,39 +488,7 @@ export const AddModuleModal = ({
                       return;
                     }
 
-                    const constructorMethods = hasMethodData
-                      ? moduleMethods
-                          .filter((m) => m.executeOnLoad)
-                          .map((m) => ({
-                            name: m.name,
-                            options: m?.options?.length
-                              ? m.options.map((opt) => ({
-                                  name: opt.name,
-                                  value: opt.defaultVal,
-                                }))
-                              : null,
-                          }))
-                      : [];
-
-                    const finalConstructorMethods = [...constructorMethods];
-                    if (!finalConstructorMethods.some((m) => m.name === "matrix")) {
-                      finalConstructorMethods.unshift({
-                        name: "matrix",
-                        options: [
-                          {
-                            name: "matrix",
-                            value: { rows: 1, cols: 1, excludedCells: [] },
-                          },
-                          { name: "border", value: false },
-                        ],
-                      });
-                    }
-                    if (!finalConstructorMethods.some((m) => m.name === "show")) {
-                      finalConstructorMethods.push({
-                        name: "show",
-                        options: [{ name: "duration", value: 0 }],
-                      });
-                    }
+                    const finalConstructorMethods = buildConstructorMethods(moduleMethods);
 
                     const previewData = {
                       type: "preview-module",
