@@ -50,6 +50,7 @@ type OptionDef = {
   max?: number;
   values?: string[];
   allowRandomization?: boolean;
+  unit?: string;
 };
 
 type ModuleMethod = {
@@ -338,6 +339,7 @@ export const MethodConfiguratorModal = ({
               min: typeof oObj.min === "number" ? oObj.min : undefined,
               max: typeof oObj.max === "number" ? oObj.max : undefined,
               allowRandomization: oObj.allowRandomization === true,
+              unit: oObj.unit != null ? String(oObj.unit) : undefined,
             };
           })
           .filter((o: OptionDef | null): o is OptionDef => Boolean(o));
