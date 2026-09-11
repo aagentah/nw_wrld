@@ -43,7 +43,7 @@ test("resolveWithinDir rejects symlink escape", () => {
     fs.writeFileSync(target, "x", "utf-8");
 
     const linkPath = path.join(base, "link");
-    fs.symlinkSync(outside, linkPath, "dir");
+    fs.symlinkSync(outside, linkPath, process.platform === "win32" ? "junction" : "dir");
 
     assert.equal(resolveWithinDir(base, "link/secret.txt"), null);
   } finally {
