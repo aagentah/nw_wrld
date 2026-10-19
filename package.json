@@ -107,7 +107,7 @@
     "postcss-loader": "^8.1.1",
     "prettier": "^3.0.0",
     "style-loader": "^3.3.4",
-    "tailwindcss": "^3.4.3",
+    "tailwindcss": "^4.3.3",
     "typescript": "^5.9.3",
     "wait-on": "^7.2.0",
     "webpack": "^5.89.0",
